@@ -1,0 +1,21 @@
+# Claude Code 本地会话与记忆，不上传公开仓库
+.claude/
+
+# OS / 编辑器临时产物
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# 常见构建输出与本地环境
+build/
+dist/
+*.log
+
+# 固件开发常见本地产物
+.pio/
+.vscode/
+.idea/
+sdkconfig.old
+sdkconfig.orig
