@@ -1,0 +1,15 @@
+{
+  "msg_id": "msg-get-status-002",
+  "type": "status",
+  "task_id": "",
+  "state": "ALARM",
+  "homed": false,
+  "position": {
+    "x": 120.5,
+    "y": 45.0,
+    "z": 0.0
+  },
+  "active_task_id": null,
+  "alarm_code": "E005",
+  "error_code": null
+}

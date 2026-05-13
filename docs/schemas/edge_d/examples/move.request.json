@@ -1,0 +1,9 @@
+{
+  "msg_id": "msg-move-001",
+  "task_id": "task-move-001",
+  "cmd": "MOVE",
+  "x": 120.5,
+  "y": 45.0,
+  "z": 0.0,
+  "feed": 1500.0
+}

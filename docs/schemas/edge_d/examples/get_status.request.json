@@ -1,0 +1,5 @@
+{
+  "msg_id": "msg-get-status-001",
+  "task_id": "",
+  "cmd": "GET_STATUS"
+}

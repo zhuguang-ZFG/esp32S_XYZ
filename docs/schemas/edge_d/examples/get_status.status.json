@@ -1,0 +1,15 @@
+{
+  "msg_id": "msg-get-status-001",
+  "type": "status",
+  "task_id": "",
+  "state": "IDLE",
+  "homed": false,
+  "position": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "active_task_id": null,
+  "alarm_code": null,
+  "error_code": null
+}

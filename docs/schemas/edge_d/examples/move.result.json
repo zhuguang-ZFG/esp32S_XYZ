@@ -1,0 +1,7 @@
+{
+  "msg_id": "msg-move-001",
+  "type": "result",
+  "task_id": "task-move-001",
+  "result": "DONE",
+  "state": "RUNNING"
+}
