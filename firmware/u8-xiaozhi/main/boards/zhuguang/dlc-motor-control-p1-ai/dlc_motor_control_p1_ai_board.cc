@@ -12,7 +12,9 @@
 #include <driver/uart.h>
 #include <esp_log.h>
 
+#include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <string>
 
@@ -48,6 +50,18 @@ public:
 
 class DlcMotorControlP1AiBoard : public WifiBoard {
 private:
+    struct U1CapabilityResult {
+        bool ok = false;
+        uint32_t msg_id = 0;
+        std::string task_id;
+        std::string cmd;
+        std::string response_type;
+        std::string state;
+        std::string error_code;
+        std::string error_message;
+        std::string raw_response;
+    };
+
     i2c_master_bus_handle_t i2c_bus_ = nullptr;
     Button boot_button_;
     Esp32Camera* camera_ = nullptr;
@@ -172,6 +186,110 @@ private:
         return NormalizeResponse(response);
     }
 
+    static std::string GetJsonStringValue(cJSON* root, const char* key) {
+        cJSON* item = cJSON_GetObjectItemCaseSensitive(root, key);
+        if (item != nullptr && cJSON_IsString(item) && item->valuestring != nullptr) {
+            return item->valuestring;
+        }
+        return "";
+    }
+
+    static cJSON* BuildCapabilityResponseJson(const U1CapabilityResult& result) {
+        cJSON* root = cJSON_CreateObject();
+        cJSON_AddBoolToObject(root, "ok", result.ok);
+        cJSON_AddNumberToObject(root, "msg_id", static_cast<double>(result.msg_id));
+        cJSON_AddStringToObject(root, "task_id", result.task_id.c_str());
+        cJSON_AddStringToObject(root, "cmd", result.cmd.c_str());
+        cJSON_AddStringToObject(root, "response_type", result.response_type.c_str());
+        cJSON_AddStringToObject(root, "raw", result.raw_response.c_str());
+        if (!result.state.empty()) {
+            cJSON_AddStringToObject(root, "state", result.state.c_str());
+        }
+        if (!result.error_code.empty()) {
+            cJSON_AddStringToObject(root, "error_code", result.error_code.c_str());
+        }
+        if (!result.error_message.empty()) {
+            cJSON_AddStringToObject(root, "error_message", result.error_message.c_str());
+        }
+        return root;
+    }
+
+    ReturnValue ParseCapabilityResponse(const std::string& raw_response,
+                                        uint32_t msg_id,
+                                        const std::string& task_id,
+                                        const std::string& cmd) {
+        U1CapabilityResult result;
+        result.msg_id = msg_id;
+        result.task_id = task_id;
+        result.cmd = cmd;
+        result.raw_response = raw_response;
+
+        if (raw_response.empty()) {
+            result.response_type = "timeout";
+            result.error_code = "timeout";
+            result.error_message = "empty response from u1";
+            return BuildCapabilityResponseJson(result);
+        }
+
+        cJSON* root = cJSON_Parse(raw_response.c_str());
+        if (root == nullptr || !cJSON_IsObject(root)) {
+            if (root != nullptr) {
+                cJSON_Delete(root);
+            }
+            result.response_type = "invalid";
+            result.error_code = "invalid_response";
+            result.error_message = "u1 response is not valid json";
+            return BuildCapabilityResponseJson(result);
+        }
+
+        result.response_type = GetJsonStringValue(root, "type");
+        result.state = GetJsonStringValue(root, "state");
+        result.error_code = GetJsonStringValue(root, "code");
+        result.error_message = GetJsonStringValue(root, "message");
+
+        bool parsed_msg_id = false;
+        cJSON* msg_id_item = cJSON_GetObjectItemCaseSensitive(root, "msg_id");
+        if (msg_id_item != nullptr && cJSON_IsString(msg_id_item) && msg_id_item->valuestring != nullptr) {
+            result.msg_id = static_cast<uint32_t>(strtoul(msg_id_item->valuestring, nullptr, 10));
+            parsed_msg_id = true;
+        }
+
+        auto response_task_id = GetJsonStringValue(root, "task_id");
+        if (!response_task_id.empty()) {
+            result.task_id = response_task_id;
+        }
+
+        result.ok = result.response_type == "ack" || result.response_type == "status" || result.response_type == "result";
+        if (parsed_msg_id && result.msg_id != msg_id) {
+            result.ok = false;
+            result.response_type = "invalid";
+            result.error_code = "msg_id_mismatch";
+            result.error_message = "u1 response msg_id does not match request";
+        } else if (!response_task_id.empty() && response_task_id != task_id) {
+            result.ok = false;
+            result.response_type = "invalid";
+            result.error_code = "task_id_mismatch";
+            result.error_message = "u1 response task_id does not match request";
+        }
+        if (result.response_type == "error" && result.error_message.empty()) {
+            result.error_message = "u1 returned error";
+        }
+        if (result.response_type.empty()) {
+            result.response_type = "unknown";
+            if (result.error_message.empty()) {
+                result.error_message = "u1 response missing type";
+            }
+        }
+
+        cJSON_Delete(root);
+        return BuildCapabilityResponseJson(result);
+    }
+
+    uint32_t NextProtocolMessageId() {
+        std::lock_guard<std::mutex> lock(job_mutex_);
+        return ++protocol_msg_id_;
+    }
+
     std::string SendU1Line(const std::string& line, int timeout_ms = 120) {
         std::lock_guard<std::mutex> lock(uart_mutex_);
         uart_flush_input(U1_UART_PORT_NUM);
@@ -187,46 +305,58 @@ private:
         return response;
     }
 
-    std::string SendU1ProtocolCommand(const std::string& task_id, const std::string& cmd, int timeout_ms = 120) {
-        uint32_t msg_id = 0;
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            msg_id = ++protocol_msg_id_;
-        }
-
-        std::string line = "{\"msg_id\":\"" + std::to_string(msg_id) + "\",\"type\":\"cmd\",\"task_id\":\"" + task_id +
-                           "\",\"cmd\":\"" + cmd + "\"}";
-        return SendU1Line("@" + line, timeout_ms);
-    }
-
-    std::string SendU1ProtocolJson(const std::string& task_id, const std::string& cmd, const std::string& extra_fields, int timeout_ms = 120) {
-        uint32_t msg_id = 0;
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            msg_id = ++protocol_msg_id_;
-        }
-
+    std::string BuildProtocolCommandJson(uint32_t msg_id,
+                                         const std::string& task_id,
+                                         const std::string& cmd,
+                                         const std::string& extra_fields = "") {
         std::string line = "{\"msg_id\":\"" + std::to_string(msg_id) + "\",\"type\":\"cmd\",\"task_id\":\"" + task_id +
                            "\",\"cmd\":\"" + cmd + "\"";
         if (!extra_fields.empty()) {
             line += "," + extra_fields;
         }
         line += "}";
+        return line;
+    }
+
+    std::string SendU1ProtocolCommand(uint32_t msg_id, const std::string& task_id, const std::string& cmd, int timeout_ms = 120) {
+        std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd);
         return SendU1Line("@" + line, timeout_ms);
     }
 
-    std::string SendU1MoveCommand(int x, int y, int z, int feed, int timeout_ms = 150) {
-        uint32_t msg_id = 0;
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            msg_id = ++protocol_msg_id_;
+    std::string SendU1ProtocolJson(uint32_t msg_id,
+                                   const std::string& task_id,
+                                   const std::string& cmd,
+                                   const std::string& extra_fields,
+                                   int timeout_ms = 120) {
+        std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd, extra_fields);
+        return SendU1Line("@" + line, timeout_ms);
+    }
+
+    ReturnValue ExecuteHomeCapability() {
+        const std::string task_id = "t_home_local";
+        const uint32_t msg_id = NextProtocolMessageId();
+        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "HOME", 250), msg_id, task_id, "HOME");
+    }
+
+    ReturnValue ExecuteGetStatusCapability() {
+        const std::string task_id = "t_status_local";
+        const uint32_t msg_id = NextProtocolMessageId();
+        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "GET_STATUS", 120), msg_id, task_id, "GET_STATUS");
+    }
+
+    ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed) {
+        if (feed < 1 || feed > 20000) {
+            return std::string("invalid move params: feed must be within [1, 20000]");
         }
 
-        std::string line = "{\"msg_id\":\"" + std::to_string(msg_id) +
-                           "\",\"type\":\"cmd\",\"task_id\":\"t_move_local\",\"cmd\":\"MOVE\",\"x\":" +
-                           std::to_string(x) + ",\"y\":" + std::to_string(y) + ",\"z\":" + std::to_string(z) +
-                           ",\"feed\":" + std::to_string(feed) + "}";
-        return SendU1Line("@" + line, timeout_ms);
+        const std::string task_id = "t_move_local";
+        const uint32_t msg_id = NextProtocolMessageId();
+        const std::string extra_fields = "\"x\":" + std::to_string(x) +
+                                         ",\"y\":" + std::to_string(y) +
+                                         ",\"z\":" + std::to_string(z) +
+                                         ",\"feed\":" + std::to_string(feed);
+        auto response = SendU1ProtocolJson(msg_id, task_id, "MOVE", extra_fields, 200);
+        return ParseCapabilityResponse(response, msg_id, task_id, "MOVE");
     }
 
     void InitializeWebSocketControlServer() {
@@ -252,7 +382,7 @@ private:
         }
 
         const std::string task_id = "t_path_local";
-        auto response = SendU1ProtocolJson(task_id, "PATH_BEGIN",
+        auto response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_BEGIN",
                                            "\"total_segments\":" + std::to_string(total_segments) +
                                                ",\"feed\":" + std::to_string(feed_rate),
                                            150);
@@ -288,7 +418,7 @@ private:
                 return std::string("unsupported segment cmd");
             }
 
-            response = SendU1ProtocolJson(task_id,
+            response = SendU1ProtocolJson(NextProtocolMessageId(), task_id,
                                           "PATH_SEG",
                                           "\"segment_index\":" + std::to_string(segment_index) +
                                               ",\"segment_cmd\":\"" + cmd +
@@ -305,7 +435,7 @@ private:
 
         cJSON_Delete(root);
 
-        response = SendU1ProtocolJson(task_id, "PATH_END", "", 120000);
+        response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_END", "", 120000);
         if (response.empty()) {
             return std::string("path end failed: timeout");
         }
@@ -322,14 +452,14 @@ private:
                            "Send HOME through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return SendU1ProtocolCommand("t_home_local", "HOME", 250);
+                               return ExecuteHomeCapability();
                            });
 
         mcp_server.AddTool("self.motor.get_status",
                            "Query U1 status through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return SendU1ProtocolCommand("t_status_local", "GET_STATUS", 120);
+                               return ExecuteGetStatusCapability();
                            });
 
         mcp_server.AddTool("self.motor.move_abs",
@@ -341,12 +471,12 @@ private:
                                Property("feed", kPropertyTypeInteger, 1000, 1, 20000)
                            }),
                            [this](const PropertyList& properties) -> ReturnValue {
-                               int x = properties["x"].value<int>();
-                               int y = properties["y"].value<int>();
-                               int z = properties["z"].value<int>();
-                               int feed = properties["feed"].value<int>();
-                               return SendU1MoveCommand(x, y, z, feed, 200);
-                           });
+                                int x = properties["x"].value<int>();
+                                int y = properties["y"].value<int>();
+                                int z = properties["z"].value<int>();
+                                int feed = properties["feed"].value<int>();
+                                return ExecuteMoveCapability(x, y, z, feed);
+                            });
 
         mcp_server.AddTool("self.motor.run_path",
                            "Run a path capability on U8 through the private protocol.",
