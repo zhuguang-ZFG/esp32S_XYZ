@@ -399,6 +399,15 @@ void           init_motors() {
 #endif
 
     if (STEPPERS_DISABLE_PIN != UNDEFINED_PIN) {
+#ifdef STEPPERS_ALWAYS_ENABLED
+        digitalWrite(STEPPERS_DISABLE_PIN, STEPPERS_ALWAYS_ENABLED_LEVEL);
+        pinMode(STEPPERS_DISABLE_PIN, OUTPUT);
+        grbl_msg_sendf(CLIENT_SERIAL,
+                       MsgLevel::Info,
+                       "Global stepper disable pin:%s forced always-enabled level=%d",
+                       pinName(STEPPERS_DISABLE_PIN),
+                       (int)STEPPERS_ALWAYS_ENABLED_LEVEL);
+#else
         // Avoid a low-level glitch when switching the pin to OUTPUT.
         // On some MCUs the output register defaults low, so calling pinMode(OUTPUT) first can
         // briefly drive nEN low (enabling the driver) until the next digitalWrite().
@@ -419,6 +428,7 @@ void           init_motors() {
             (int)digitalRead(STEPPERS_DISABLE_PIN),
             (int)get_stepper_disable()
         );
+#endif
     }
 
     // certain motors need features to be turned on. Check them here
@@ -430,6 +440,15 @@ void           init_motors() {
 }
 
 void motors_set_disable(bool disable, uint8_t mask) {
+#ifdef STEPPERS_ALWAYS_ENABLED
+    (void)disable;
+    (void)mask;
+    if (STEPPERS_DISABLE_PIN != UNDEFINED_PIN) {
+        digitalWrite(STEPPERS_DISABLE_PIN, STEPPERS_ALWAYS_ENABLED_LEVEL);
+    }
+    return;
+#endif
+
     static bool    prev_disable = true;
     static uint8_t prev_mask    = 0;
 

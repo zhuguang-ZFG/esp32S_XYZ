@@ -53,6 +53,12 @@
 // Shared enable line for all external drivers.
 #define STEPPERS_DISABLE_PIN    GPIO_NUM_4
 
+// This board should keep the external drivers enabled all the time.
+// TMC2208 PDN/UART is not used here, and the user requirement is to avoid
+// any runtime disable behavior on MOTOR_EN.
+#define STEPPERS_ALWAYS_ENABLED
+#define STEPPERS_ALWAYS_ENABLED_LEVEL LOW
+
 // Independent home / limit inputs.
 #define X_LIMIT_PIN             GPIO_NUM_9
 #define Y_LIMIT_PIN             GPIO_NUM_12
