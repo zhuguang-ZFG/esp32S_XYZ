@@ -13,6 +13,9 @@ build/
 dist/
 *.log
 
+# 第三方库升级前的本地备份副本，历史依赖 git 本身即可
+firmware/u1-grbl/libraries/arduinoWebSockets-*-backup/
+
 # 固件开发常见本地产物
 .pio/
 .vscode/
