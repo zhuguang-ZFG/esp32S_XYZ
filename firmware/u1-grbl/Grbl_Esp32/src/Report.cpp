@@ -818,6 +818,9 @@ static const char* private_protocol_state_text() {
         case State::Homing:
             return "HOMING";
         case State::Alarm:
+            if (sys.last_alarm == ExecAlarm::EmergencyStop) {
+                return "ESTOP";
+            }
             return "ALARM";
         case State::CheckMode:
         case State::Sleep:
@@ -849,7 +852,8 @@ static const char* private_protocol_alarm_code(ExecAlarm alarm) {
 void report_private_status_json(uint8_t client, const char* msg_id, const char* task_id, const char* active_task_id) {
     float* position = system_get_mpos();
     const char* state = private_protocol_state_text();
-    const char* alarm_code = sys.state == State::Alarm && sys_rt_exec_alarm != ExecAlarm::None ? private_protocol_alarm_code(sys_rt_exec_alarm) : "null";
+    ExecAlarm active_alarm = sys_rt_exec_alarm != ExecAlarm::None ? sys_rt_exec_alarm : sys.last_alarm;
+    const char* alarm_code = sys.state == State::Alarm && active_alarm != ExecAlarm::None ? private_protocol_alarm_code(active_alarm) : "null";
     const char* error_code = sys.state == State::Alarm ? "null" : "null";
     const char* active_task = (sys.state == State::Cycle || sys.state == State::Jog || sys.state == State::Hold || sys.state == State::Homing) &&
                                           active_task_id != nullptr

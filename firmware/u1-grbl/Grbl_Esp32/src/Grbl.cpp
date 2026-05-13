@@ -75,10 +75,12 @@ void grbl_init() {
 
 static void reset_variables() {
     // Reset system variables.
-    State prior_state = sys.state;
+    State     prior_state = sys.state;
+    ExecAlarm prior_alarm = sys.last_alarm;
     memset(&sys, 0, sizeof(system_t));  // Clear system struct variable.
     sys.state             = prior_state;
     sys.is_homed          = !homing_enable->get();
+    sys.last_alarm        = prior_state == State::Alarm ? prior_alarm : ExecAlarm::None;
     sys.f_override        = FeedOverride::Default;              // Set to 100%
     sys.r_override        = RapidOverride::Default;             // Set to 100%
     sys.spindle_speed_ovr = SpindleSpeedOverride::Default;      // Set to 100%

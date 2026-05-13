@@ -25,6 +25,7 @@
 #include "Grbl.h"
 
 static void protocol_exec_rt_suspend();
+static void send_private_protocol_ack_with_state(uint8_t client, const char* msg_id, const char* task_id, const char* state);
 
 static char    line[LINE_BUFFER_SIZE];     // Line to be executed. Zero-terminated.
 static char    comment[LINE_BUFFER_SIZE];  // Line to be executed. Zero-terminated.
@@ -138,12 +139,37 @@ static void send_private_protocol_error(uint8_t client, const char* msg_id, cons
                message);
 }
 
+static const char* private_protocol_ack_state_text() {
+    switch (sys.state) {
+        case State::Idle:
+            return "IDLE";
+        case State::Cycle:
+        case State::Jog:
+            return "RUNNING";
+        case State::Hold:
+        case State::SafetyDoor:
+            return "PAUSED";
+        case State::Homing:
+            return "HOMING";
+        case State::Alarm:
+            return sys.last_alarm == ExecAlarm::EmergencyStop ? "ESTOP" : "ALARM";
+        case State::CheckMode:
+        case State::Sleep:
+        default:
+            return "ERROR";
+    }
+}
+
 static void send_private_protocol_ack(uint8_t client, const char* msg_id, const char* task_id) {
+    send_private_protocol_ack_with_state(client, msg_id, task_id, private_protocol_ack_state_text());
+}
+
+static void send_private_protocol_ack_with_state(uint8_t client, const char* msg_id, const char* task_id, const char* state) {
     grbl_sendf(client,
                "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"%s\"}\r\n",
                msg_id != nullptr ? msg_id : "",
                task_id != nullptr ? task_id : "",
-               report_state_text());
+               state != nullptr ? state : "ERROR");
 }
 
 static bool private_protocol_begin_controlled_stop() {
@@ -326,8 +352,9 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         private_stop_requested = false;
         private_active_task_reset();
         sys.is_homed = false;
+        sys.last_alarm = ExecAlarm::EmergencyStop;
         sys_rt_exec_alarm = ExecAlarm::EmergencyStop;
-        send_private_protocol_error(client, msg_id, task_id, "E008", "estop triggered");
+        send_private_protocol_ack_with_state(client, msg_id, task_id, "ESTOP");
         mc_reset();
         return true;
     }
@@ -689,6 +716,7 @@ void protocol_exec_rt_system() {
         // the source of the error to the user. If critical, Grbl disables by entering an infinite
         // loop until system reset/abort.
         sys.state = State::Alarm;  // Set system alarm state
+        sys.last_alarm = alarm;
         report_alarm_message(alarm);
         // Halt everything upon a critical event flag. Currently hard and soft limits flag this.
         if ((alarm == ExecAlarm::HardLimit) || (alarm == ExecAlarm::SoftLimit)) {
