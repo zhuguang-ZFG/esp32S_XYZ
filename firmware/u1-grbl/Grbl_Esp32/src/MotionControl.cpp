@@ -363,6 +363,7 @@ void mc_homing_cycle(uint8_t cycle_mask) {
     }
     protocol_execute_realtime();  // Check for reset and set system abort.
     if (sys.abort) {
+        sys.is_homed = false;
         return;  // Did not complete. Alarm state set by mc_alarm.
     }
     // Homing cycle complete! Setup system for normal operation.
@@ -370,6 +371,7 @@ void mc_homing_cycle(uint8_t cycle_mask) {
     // Sync gcode parser and planner positions to homed position.
     gc_sync_position();
     plan_sync_position();
+    sys.is_homed = true;
     // This give kinematics a chance to do something after normal homing
     kinematics_post_homing();
     // If hard limits feature enabled, re-enable hard limits pin change register after homing cycle.
@@ -531,7 +533,7 @@ void mc_reset() {
                 if (sys_rt_exec_alarm == ExecAlarm::None) {
                     sys_rt_exec_alarm = ExecAlarm::HomingFailReset;
                 }
-            } else {
+            } else if (sys_rt_exec_alarm == ExecAlarm::None) {
                 sys_rt_exec_alarm = ExecAlarm::AbortCycle;
             }
             st_go_idle();  // Force kill steppers. Position has likely been lost.

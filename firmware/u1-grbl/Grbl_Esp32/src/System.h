@@ -92,6 +92,7 @@ union SpindleStop {
 typedef struct {
     volatile State state;               // Tracks the current system state of Grbl.
     bool           abort;               // System abort flag. Forces exit back to main loop for reset.
+    bool           is_homed;            // Tracks whether a successful homing cycle has completed since boot/reset.
     Suspend        suspend;             // System suspend bitflag variable that manages holds, cancels, and safety door.
     bool           soft_limit;          // Tracks soft limit errors for the state machine. (boolean)
     StepControl    step_control;        // Governs the step segment generator depending on system state.

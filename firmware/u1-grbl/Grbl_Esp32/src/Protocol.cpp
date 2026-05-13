@@ -35,6 +35,7 @@ static String  private_path_gcode   = "";
 static int     private_path_total_segments = 0;
 static int     private_path_received_segments = 0;
 static char    private_path_task_id[64] = {0};
+static bool    private_stop_requested = false;
 
 static bool json_extract_string_field(const char* json, const char* field, char* output, size_t output_size) {
     if (json == nullptr || field == nullptr || output == nullptr || output_size == 0) {
@@ -99,6 +100,47 @@ static void private_path_reset() {
     private_path_task_id[0] = '\0';
 }
 
+static void send_private_protocol_error(uint8_t client, const char* msg_id, const char* task_id, const char* error_code, const char* message) {
+    grbl_sendf(client,
+               "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+               "\"error_code\":\"%s\",\"message\":\"%s\"}\r\n",
+               msg_id != nullptr ? msg_id : "",
+               task_id != nullptr ? task_id : "",
+               error_code,
+               message);
+}
+
+static void send_private_protocol_ack(uint8_t client, const char* msg_id, const char* task_id) {
+    grbl_sendf(client,
+               "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"%s\"}\r\n",
+               msg_id != nullptr ? msg_id : "",
+               task_id != nullptr ? task_id : "",
+               report_state_text());
+}
+
+static bool private_protocol_begin_controlled_stop() {
+    if (sys.state == State::Cycle) {
+        private_stop_requested = true;
+        sys_rt_exec_state.bit.feedHold = true;
+        return true;
+    }
+
+    if (sys.state == State::Hold && sys.suspend.bit.holdComplete) {
+        private_stop_requested       = false;
+        sys.suspend.bit.motionCancel = true;
+        sys_rt_exec_state.bit.cycleStart = true;
+        return true;
+    }
+
+    if (sys.state == State::Jog) {
+        private_stop_requested = false;
+        sys_rt_exec_state.bit.feedHold = true;
+        return true;
+    }
+
+    return false;
+}
+
 static Error execute_private_path_gcode(uint8_t client) {
     Error result = Error::Ok;
     int start = 0;
@@ -140,11 +182,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
     json_extract_string_field(json, "msg_id", msg_id, sizeof(msg_id));
     json_extract_string_field(json, "task_id", task_id, sizeof(task_id));
     if (!json_extract_string_field(json, "cmd", cmd, sizeof(cmd))) {
-        grbl_sendf(client,
-                   "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                   "\"error_code\":\"E009\",\"message\":\"missing cmd\"}\r\n",
-                   msg_id,
-                   task_id);
+        send_private_protocol_error(client, msg_id, task_id, "E009", "missing cmd");
         return true;
     }
 
@@ -216,6 +254,50 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
                        msg_id,
                        task_id);
         }
+        return true;
+    }
+
+    if (strcmp(cmd, "PAUSE") == 0) {
+        if (sys.state == State::Cycle || sys.state == State::Jog) {
+            private_stop_requested = false;
+            sys_rt_exec_state.bit.feedHold = true;
+            send_private_protocol_ack(client, msg_id, task_id);
+        } else if (sys.state == State::Hold || sys.state == State::SafetyDoor) {
+            send_private_protocol_ack(client, msg_id, task_id);
+        } else {
+            send_private_protocol_error(client, msg_id, task_id, "E010", "pause invalid in current state");
+        }
+        return true;
+    }
+
+    if (strcmp(cmd, "RESUME") == 0) {
+        if ((sys.state == State::Hold && sys.suspend.bit.holdComplete) || sys.state == State::Idle) {
+            private_stop_requested = false;
+            sys_rt_exec_state.bit.cycleStart = true;
+            send_private_protocol_ack(client, msg_id, task_id);
+        } else {
+            send_private_protocol_error(client, msg_id, task_id, "E010", "resume invalid in current state");
+        }
+        return true;
+    }
+
+    if (strcmp(cmd, "STOP") == 0) {
+        if (private_protocol_begin_controlled_stop()) {
+            send_private_protocol_ack(client, msg_id, task_id);
+        } else if (sys.state == State::Idle) {
+            send_private_protocol_ack(client, msg_id, task_id);
+        } else {
+            send_private_protocol_error(client, msg_id, task_id, "E010", "stop invalid in current state");
+        }
+        return true;
+    }
+
+    if (strcmp(cmd, "ESTOP") == 0) {
+        private_stop_requested = false;
+        sys.is_homed = false;
+        sys_rt_exec_alarm = ExecAlarm::EmergencyStop;
+        send_private_protocol_error(client, msg_id, task_id, "E008", "estop triggered");
+        mc_reset();
         return true;
     }
 
@@ -404,6 +486,7 @@ bool can_park() {
 void protocol_main_loop() {
     client_reset_read_buffer(CLIENT_ALL);
     empty_lines();
+    private_stop_requested = false;
     // Ensure steppers start in a known disabled state when entering the protocol loop.
     // Some boards/drivers can appear enabled due to earlier initialization side effects;
     // motion will re-enable via st_wake_up() when needed.
@@ -763,6 +846,12 @@ void protocol_exec_rt_system() {
                 }
             }
             cycle_stop = false;
+        }
+
+        if (private_stop_requested && sys.state == State::Hold && sys.suspend.bit.holdComplete) {
+            private_stop_requested       = false;
+            sys.suspend.bit.motionCancel = true;
+            sys_rt_exec_state.bit.cycleStart = true;
         }
     }
     // Execute overrides.

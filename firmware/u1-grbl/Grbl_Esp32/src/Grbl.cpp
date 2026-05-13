@@ -78,6 +78,7 @@ static void reset_variables() {
     State prior_state = sys.state;
     memset(&sys, 0, sizeof(system_t));  // Clear system struct variable.
     sys.state             = prior_state;
+    sys.is_homed          = !homing_enable->get();
     sys.f_override        = FeedOverride::Default;              // Set to 100%
     sys.r_override        = RapidOverride::Default;             // Set to 100%
     sys.spindle_speed_ovr = SpindleSpeedOverride::Default;      // Set to 100%

@@ -826,11 +826,31 @@ static const char* private_protocol_state_text() {
     }
 }
 
+static const char* private_protocol_alarm_code(ExecAlarm alarm) {
+    switch (alarm) {
+        case ExecAlarm::HardLimit:
+            return "E005";
+        case ExecAlarm::SoftLimit:
+            return "E002";
+        case ExecAlarm::HomingFailReset:
+        case ExecAlarm::HomingFailDoor:
+        case ExecAlarm::HomingFailPulloff:
+        case ExecAlarm::HomingFailApproach:
+            return "E006";
+        case ExecAlarm::AbortCycle:
+            return "E007";
+        case ExecAlarm::EmergencyStop:
+            return "E008";
+        default:
+            return "E009";
+    }
+}
+
 void report_private_status_json(uint8_t client, const char* msg_id, const char* task_id) {
     float* position = system_get_mpos();
     const char* state = private_protocol_state_text();
-    const char* alarm_code = sys.state == State::Alarm && sys_rt_exec_alarm != ExecAlarm::None ? "E006" : "null";
-    const char* error_code = sys.state == State::Alarm ? "E006" : "null";
+    const char* alarm_code = sys.state == State::Alarm && sys_rt_exec_alarm != ExecAlarm::None ? private_protocol_alarm_code(sys_rt_exec_alarm) : "null";
+    const char* error_code = sys.state == State::Alarm ? "null" : "null";
     const char* active_task = (sys.state == State::Cycle || sys.state == State::Jog || sys.state == State::Hold) && task_id != nullptr
                                   ? task_id
                                   : "";
@@ -842,7 +862,7 @@ void report_private_status_json(uint8_t client, const char* msg_id, const char* 
                msg_id != nullptr ? msg_id : "",
                task_id != nullptr ? task_id : "",
                state,
-               sys.state == State::Alarm ? "false" : "true",
+               sys.is_homed ? "true" : "false",
                position[0],
                position[1],
                position[2],
