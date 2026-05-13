@@ -28,8 +28,12 @@
 
 #define U1_UART_PORT_NUM  UART_NUM_1
 #define U1_UART_BAUD_RATE 115200
-#define U1_UART_TXD       GPIO_NUM_10
-#define U1_UART_RXD       GPIO_NUM_11
+// U8 的 TX 必须接到 U1 的 RX。按硬件文档：
+//   U8.IO11 = M_U1TXD (U8 发给 U1) → U1.IO11 = M_U1RXD
+//   U8.IO10 = M_U1RXD (U8 收自 U1) ← U1.IO10 = M_U1TXD
+// 之前此处 TX/RX 对调，导致 UART 双向哑通道。
+#define U1_UART_TXD       GPIO_NUM_11
+#define U1_UART_RXD       GPIO_NUM_10
 #define U1_UART_RTS       UART_PIN_NO_CHANGE
 #define U1_UART_CTS       UART_PIN_NO_CHANGE
 #define U1_UART_BUF_SIZE  1024
