@@ -12,11 +12,9 @@
 #include <driver/uart.h>
 #include <esp_log.h>
 
-#include <cctype>
 #include <cstdio>
 #include <mutex>
 #include <string>
-#include <vector>
 
 #define TAG "DlcMotorP1AiBoard"
 
@@ -50,79 +48,13 @@ public:
 
 class DlcMotorControlP1AiBoard : public WifiBoard {
 private:
-    enum class JobState {
-        Idle,
-        Staged,
-        Running,
-        Paused,
-        Completed,
-        Failed,
-        Cancelled
-    };
-
     i2c_master_bus_handle_t i2c_bus_ = nullptr;
     Button boot_button_;
     Esp32Camera* camera_ = nullptr;
     WebSocketControlServer* ws_control_server_ = nullptr;
     std::mutex uart_mutex_;
     std::mutex job_mutex_;
-    TaskHandle_t job_task_handle_ = nullptr;
-    std::vector<std::string> job_lines_;
-    size_t job_next_line_ = 0;
-    uint32_t job_id_ = 0;
     uint32_t protocol_msg_id_ = 0;
-    JobState job_state_ = JobState::Idle;
-    bool job_cancel_requested_ = false;
-    bool job_pause_requested_ = false;
-    std::string job_error_;
-    std::string job_last_response_;
-
-    static const char* JobStateName(JobState state) {
-        switch (state) {
-            case JobState::Idle:
-                return "idle";
-            case JobState::Staged:
-                return "staged";
-            case JobState::Running:
-                return "running";
-            case JobState::Paused:
-                return "paused";
-            case JobState::Completed:
-                return "completed";
-            case JobState::Failed:
-                return "failed";
-            case JobState::Cancelled:
-                return "cancelled";
-        }
-        return "unknown";
-    }
-
-    static std::string Trim(const std::string& text) {
-        size_t start = 0;
-        while (start < text.size() && isspace(static_cast<unsigned char>(text[start]))) {
-            ++start;
-        }
-
-        size_t end = text.size();
-        while (end > start && isspace(static_cast<unsigned char>(text[end - 1]))) {
-            --end;
-        }
-
-        return text.substr(start, end - start);
-    }
-
-    static bool IsIgnorableGcodeLine(const std::string& line) {
-        if (line.empty()) {
-            return true;
-        }
-        if (line[0] == ';') {
-            return true;
-        }
-        if (line.front() == '(' && line.back() == ')') {
-            return true;
-        }
-        return false;
-    }
 
     static bool JsonNumberToString(cJSON* item, char* buffer, size_t buffer_size) {
         if (item == nullptr || buffer == nullptr || buffer_size == 0 || !cJSON_IsNumber(item)) {
@@ -130,119 +62,6 @@ private:
         }
         snprintf(buffer, buffer_size, "%.3f", item->valuedouble);
         return true;
-    }
-
-    static bool BuildPathGcode(cJSON* root, int feed_rate, std::string& gcode, std::string& error) {
-        if (root == nullptr || !cJSON_IsArray(root)) {
-            error = "invalid path json";
-            return false;
-        }
-
-        gcode = "G90\n";
-        cJSON* segment = nullptr;
-        cJSON_ArrayForEach(segment, root) {
-            if (!cJSON_IsObject(segment)) {
-                error = "invalid path segment";
-                return false;
-            }
-
-            cJSON* cmd_item = cJSON_GetObjectItemCaseSensitive(segment, "cmd");
-            cJSON* x_item = cJSON_GetObjectItemCaseSensitive(segment, "x");
-            cJSON* y_item = cJSON_GetObjectItemCaseSensitive(segment, "y");
-            if (!cJSON_IsString(cmd_item) || cmd_item->valuestring == nullptr || !cJSON_IsNumber(x_item) || !cJSON_IsNumber(y_item)) {
-                error = "path segment missing cmd/x/y";
-                return false;
-            }
-
-            char xbuf[32];
-            char ybuf[32];
-            JsonNumberToString(x_item, xbuf, sizeof(xbuf));
-            JsonNumberToString(y_item, ybuf, sizeof(ybuf));
-
-            std::string cmd = cmd_item->valuestring;
-            if (cmd == "M") {
-                gcode += "G0 X";
-                gcode += xbuf;
-                gcode += " Y";
-                gcode += ybuf;
-                gcode += "\n";
-            } else if (cmd == "L") {
-                gcode += "G1 X";
-                gcode += xbuf;
-                gcode += " Y";
-                gcode += ybuf;
-                gcode += " F";
-                gcode += std::to_string(feed_rate);
-                gcode += "\n";
-            } else {
-                error = "unsupported segment cmd";
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    static std::vector<std::string> ParseGcodeLines(const std::string& gcode) {
-        std::vector<std::string> lines;
-        std::string current;
-        current.reserve(gcode.size());
-
-        for (char ch : gcode) {
-            if (ch == '\r') {
-                continue;
-            }
-            if (ch == '\n') {
-                auto line = Trim(current);
-                if (!IsIgnorableGcodeLine(line)) {
-                    lines.push_back(line);
-                }
-                current.clear();
-                continue;
-            }
-            current.push_back(ch);
-        }
-
-        auto tail = Trim(current);
-        if (!IsIgnorableGcodeLine(tail)) {
-            lines.push_back(tail);
-        }
-        return lines;
-    }
-
-    cJSON* BuildJobStatusJsonSnapshot() {
-        uint32_t job_id;
-        size_t total_lines;
-        size_t sent_lines;
-        bool cancel_requested;
-        bool pause_requested;
-        JobState state;
-        std::string last_response;
-        std::string error;
-
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            job_id = job_id_;
-            total_lines = job_lines_.size();
-            sent_lines = job_next_line_;
-            cancel_requested = job_cancel_requested_;
-            pause_requested = job_pause_requested_;
-            state = job_state_;
-            last_response = job_last_response_;
-            error = job_error_;
-        }
-
-        auto root = cJSON_CreateObject();
-        cJSON_AddNumberToObject(root, "job_id", static_cast<double>(job_id));
-        cJSON_AddStringToObject(root, "state", JobStateName(state));
-        cJSON_AddNumberToObject(root, "total_lines", static_cast<int>(total_lines));
-        cJSON_AddNumberToObject(root, "sent_lines", static_cast<int>(sent_lines));
-        cJSON_AddNumberToObject(root, "pending_lines", static_cast<int>(total_lines - sent_lines));
-        cJSON_AddBoolToObject(root, "cancel_requested", cancel_requested);
-        cJSON_AddBoolToObject(root, "pause_requested", pause_requested);
-        cJSON_AddStringToObject(root, "last_response", last_response.c_str());
-        cJSON_AddStringToObject(root, "error", error.c_str());
-        return root;
     }
 
     void InitializeI2c() {
@@ -396,7 +215,7 @@ private:
         return SendU1Line("@" + line, timeout_ms);
     }
 
-    std::string SendU1MoveAbsCommand(int x, int y, int z, int feed, int timeout_ms = 150) {
+    std::string SendU1MoveCommand(int x, int y, int z, int feed, int timeout_ms = 150) {
         uint32_t msg_id = 0;
         {
             std::lock_guard<std::mutex> lock(job_mutex_);
@@ -410,125 +229,12 @@ private:
         return SendU1Line("@" + line, timeout_ms);
     }
 
-    std::string SendU1Realtime(char command, int timeout_ms = 80) {
-        std::lock_guard<std::mutex> lock(uart_mutex_);
-        uart_flush_input(U1_UART_PORT_NUM);
-        uart_write_bytes(U1_UART_PORT_NUM, &command, 1);
-        ESP_LOGI(TAG, "U8 -> U1 realtime: 0x%02x", static_cast<unsigned char>(command));
-
-        auto response = ReadU1Response(timeout_ms);
-        if (!response.empty()) {
-            ESP_LOGI(TAG, "U1 -> U8: %s", response.c_str());
-        }
-        return response;
-    }
-
     void InitializeWebSocketControlServer() {
         ws_control_server_ = new WebSocketControlServer();
         if (!ws_control_server_->Start(8080)) {
             delete ws_control_server_;
             ws_control_server_ = nullptr;
         }
-    }
-
-    static void JobTaskThunk(void* arg) {
-        static_cast<DlcMotorControlP1AiBoard*>(arg)->RunJobTask();
-    }
-
-    void RunJobTask() {
-        for (;;) {
-            std::string line;
-            {
-                std::lock_guard<std::mutex> lock(job_mutex_);
-                if (job_cancel_requested_) {
-                    job_state_ = JobState::Cancelled;
-                    break;
-                }
-                if (job_pause_requested_) {
-                    job_state_ = JobState::Paused;
-                } else if (job_state_ == JobState::Paused) {
-                    job_state_ = JobState::Running;
-                }
-
-                if (job_state_ == JobState::Paused) {
-                    line.clear();
-                } else if (job_next_line_ >= job_lines_.size()) {
-                    job_state_ = JobState::Completed;
-                    break;
-                } else {
-                    line = job_lines_[job_next_line_];
-                }
-            }
-
-            if (line.empty()) {
-                vTaskDelay(pdMS_TO_TICKS(20));
-                continue;
-            }
-
-            auto response = SendU1Line(line, 300);
-
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            job_last_response_ = response;
-
-            if (job_cancel_requested_) {
-                job_state_ = JobState::Cancelled;
-                break;
-            }
-            if (response.empty()) {
-                job_state_ = JobState::Failed;
-                job_error_ = "timeout waiting for grbl response";
-                break;
-            }
-            if (response.find("error") != std::string::npos || response.find("ALARM") != std::string::npos) {
-                job_state_ = JobState::Failed;
-                job_error_ = response;
-                break;
-            }
-
-            ++job_next_line_;
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            job_task_handle_ = nullptr;
-        }
-        vTaskDelete(nullptr);
-    }
-
-    ReturnValue LoadJob(const std::string& gcode, bool append) {
-        auto lines = ParseGcodeLines(gcode);
-
-        uint32_t job_id;
-        size_t total_lines;
-        JobState state;
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            if (job_state_ == JobState::Running || job_state_ == JobState::Paused) {
-                return std::string("job busy");
-            }
-            if (!append) {
-                job_lines_.clear();
-                job_next_line_ = 0;
-                job_error_.clear();
-                job_last_response_.clear();
-                job_cancel_requested_ = false;
-                job_pause_requested_ = false;
-                ++job_id_;
-            }
-
-            job_lines_.insert(job_lines_.end(), lines.begin(), lines.end());
-            job_state_ = job_lines_.empty() ? JobState::Idle : JobState::Staged;
-            job_id = job_id_;
-            total_lines = job_lines_.size();
-            state = job_state_;
-        }
-
-        auto root = cJSON_CreateObject();
-        cJSON_AddNumberToObject(root, "job_id", static_cast<double>(job_id));
-        cJSON_AddNumberToObject(root, "lines_added", static_cast<int>(lines.size()));
-        cJSON_AddNumberToObject(root, "total_lines", static_cast<int>(total_lines));
-        cJSON_AddStringToObject(root, "state", JobStateName(state));
-        return root;
     }
 
     ReturnValue RunPath(const std::string& path_json, int feed_rate) {
@@ -538,12 +244,6 @@ private:
                 cJSON_Delete(root);
             }
             return std::string("invalid path json");
-        }
-        std::string fallback_gcode;
-        std::string fallback_error;
-        if (!BuildPathGcode(root, feed_rate, fallback_gcode, fallback_error)) {
-            cJSON_Delete(root);
-            return fallback_error;
         }
         int total_segments = cJSON_GetArraySize(root);
         if (total_segments <= 0) {
@@ -558,11 +258,7 @@ private:
                                            150);
         if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
             cJSON_Delete(root);
-            auto staged = LoadJob(fallback_gcode, false);
-            if (std::holds_alternative<std::string>(staged)) {
-                return std::string("path begin failed: ") + (response.empty() ? "timeout" : response);
-            }
-            return StartJob();
+            return std::string("path begin failed: ") + (response.empty() ? "timeout" : response);
         }
 
         cJSON* segment = nullptr;
@@ -602,11 +298,7 @@ private:
                                           150);
             if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
                 cJSON_Delete(root);
-                auto staged = LoadJob(fallback_gcode, false);
-                if (std::holds_alternative<std::string>(staged)) {
-                    return std::string("path segment failed: ") + (response.empty() ? "timeout" : response);
-                }
-                return StartJob();
+                return std::string("path segment failed: ") + (response.empty() ? "timeout" : response);
             }
             ++segment_index;
         }
@@ -614,189 +306,37 @@ private:
         cJSON_Delete(root);
 
         response = SendU1ProtocolJson(task_id, "PATH_END", "", 120000);
-        if (!response.empty()) {
-            return response;
+        if (response.empty()) {
+            return std::string("path end failed: timeout");
         }
-
-        auto staged = LoadJob(fallback_gcode, false);
-        if (std::holds_alternative<std::string>(staged)) {
-            return std::string("path end sent");
+        if (response.find("\"type\":\"error\"") != std::string::npos) {
+            return std::string("path end failed: ") + response;
         }
-        return StartJob();
-    }
-
-    ReturnValue StartJob() {
-        bool started = false;
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            if (job_task_handle_ != nullptr || job_state_ == JobState::Running || job_state_ == JobState::Paused) {
-                return std::string("job already running");
-            }
-            if (job_lines_.empty()) {
-                return std::string("no staged gcode");
-            }
-
-            job_state_ = JobState::Running;
-            job_next_line_ = 0;
-            job_error_.clear();
-            job_last_response_.clear();
-            job_cancel_requested_ = false;
-            job_pause_requested_ = false;
-
-            if (xTaskCreate(JobTaskThunk, "u1_gcode_job", 6144, this, 5, &job_task_handle_) == pdPASS) {
-                started = true;
-            } else {
-                job_task_handle_ = nullptr;
-                job_state_ = JobState::Failed;
-                job_error_ = "failed to start gcode worker";
-                return std::string(job_error_);
-            }
-        }
-
-        if (started) {
-            return BuildJobStatusJsonSnapshot();
-        }
-        return std::string("failed to start job");
-    }
-
-    ReturnValue CancelJob() {
-        bool send_hold = false;
-        bool return_status = false;
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            if (job_state_ == JobState::Idle) {
-                return std::string("no active job");
-            }
-            if (job_state_ == JobState::Staged) {
-                job_lines_.clear();
-                job_next_line_ = 0;
-                job_state_ = JobState::Cancelled;
-                job_cancel_requested_ = false;
-                job_pause_requested_ = false;
-                return_status = true;
-            } else {
-                job_cancel_requested_ = true;
-                send_hold = true;
-            }
-        }
-
-        if (return_status) {
-            return BuildJobStatusJsonSnapshot();
-        }
-        if (send_hold) {
-            SendU1Realtime('!', 80);
-        }
-        return BuildJobStatusJsonSnapshot();
-    }
-
-    ReturnValue PauseJob() {
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            if (job_state_ != JobState::Running && job_state_ != JobState::Paused) {
-                return std::string("job not running");
-            }
-            job_pause_requested_ = true;
-        }
-        SendU1Realtime('!', 80);
-        return BuildJobStatusJsonSnapshot();
-    }
-
-    ReturnValue ResumeJob() {
-        {
-            std::lock_guard<std::mutex> lock(job_mutex_);
-            if (job_state_ != JobState::Paused) {
-                return std::string("job not paused");
-            }
-            job_pause_requested_ = false;
-            job_state_ = JobState::Running;
-        }
-        SendU1Realtime('~', 80);
-        return BuildJobStatusJsonSnapshot();
+        return response;
     }
 
     void InitializeTools() {
         auto& mcp_server = McpServer::GetInstance();
 
         mcp_server.AddTool("self.motor.home",
-                           "Send HOME through the private protocol, with Grbl $H fallback.",
+                           "Send HOME through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               auto response = SendU1ProtocolCommand("t_home_local", "HOME", 250);
-                               if (!response.empty()) {
-                                   return response;
-                               }
-
-                               response = SendU1Line("$H", 250);
-                               return response.empty() ? std::string("sent: $H") : std::string("sent: $H; response: ") + response;
-                           });
-
-        mcp_server.AddTool("self.motor.unlock",
-                           "Send Grbl unlock command $X to U1.",
-                           PropertyList(),
-                           [this](const PropertyList&) -> ReturnValue {
-                               auto response = SendU1Line("$X", 150);
-                               return response.empty() ? std::string("sent: $X") : std::string("sent: $X; response: ") + response;
+                               return SendU1ProtocolCommand("t_home_local", "HOME", 250);
                            });
 
         mcp_server.AddTool("self.motor.get_status",
-                           "Query U1 status through the private protocol, with Grbl realtime status fallback.",
+                           "Query U1 status through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               auto response = SendU1ProtocolCommand("t_status_local", "GET_STATUS", 120);
-                               if (!response.empty()) {
-                                   return response;
-                               }
-
-                               response = SendU1Realtime('?', 100);
-                               return response.empty() ? std::string("status query sent") : response;
-                           });
-
-        mcp_server.AddTool("self.motor.send_gcode",
-                           "Send a raw Grbl command line to U1.",
-                           PropertyList({
-                               Property("command", kPropertyTypeString)
-                           }),
-                           [this](const PropertyList& properties) -> ReturnValue {
-                               auto command = properties["command"].value<std::string>();
-                               auto response = SendU1Line(command, 150);
-                               return response.empty() ? std::string("sent: ") + command : std::string("sent: ") + command + "; response: " + response;
-                           });
-
-        mcp_server.AddTool("self.motor.jog",
-                           "Send a relative Grbl jog command to U1.",
-                           PropertyList({
-                               Property("x", kPropertyTypeInteger, 0),
-                               Property("y", kPropertyTypeInteger, 0),
-                               Property("z", kPropertyTypeInteger, 0),
-                               Property("feed", kPropertyTypeInteger, 1000, 1, 20000)
-                           }),
-                           [this](const PropertyList& properties) -> ReturnValue {
-                               int x = properties["x"].value<int>();
-                               int y = properties["y"].value<int>();
-                               int z = properties["z"].value<int>();
-                               int feed = properties["feed"].value<int>();
-
-                               std::string command = "$J=G91";
-                               if (x != 0) {
-                                   command += " X" + std::to_string(x);
-                               }
-                               if (y != 0) {
-                                   command += " Y" + std::to_string(y);
-                               }
-                               if (z != 0) {
-                                   command += " Z" + std::to_string(z);
-                               }
-                               command += " F" + std::to_string(feed);
-
-                               auto response = SendU1Line(command, 150);
-                               return response.empty() ? std::string("sent: ") + command : std::string("sent: ") + command + "; response: " + response;
+                               return SendU1ProtocolCommand("t_status_local", "GET_STATUS", 120);
                            });
 
         mcp_server.AddTool("self.motor.move_abs",
-                           "Send absolute MOVE through the private protocol.",
+                           "Send MOVE through the private protocol.",
                            PropertyList({
-                               Property("x", kPropertyTypeInteger, 0),
-                               Property("y", kPropertyTypeInteger, 0),
+                                Property("x", kPropertyTypeInteger, 0),
+                                Property("y", kPropertyTypeInteger, 0),
                                Property("z", kPropertyTypeInteger, 0),
                                Property("feed", kPropertyTypeInteger, 1000, 1, 20000)
                            }),
@@ -805,76 +345,19 @@ private:
                                int y = properties["y"].value<int>();
                                int z = properties["z"].value<int>();
                                int feed = properties["feed"].value<int>();
-
-                               auto response = SendU1MoveAbsCommand(x, y, z, feed, 200);
-                               if (!response.empty()) {
-                                   return response;
-                               }
-
-                               std::string command = "G90 G1 X" + std::to_string(x) + " Y" + std::to_string(y) +
-                                                     " Z" + std::to_string(z) + " F" + std::to_string(feed);
-                               response = SendU1Line(command, 150);
-                               return response.empty() ? std::string("sent: ") + command : std::string("sent: ") + command + "; response: " + response;
+                               return SendU1MoveCommand(x, y, z, feed, 200);
                            });
 
         mcp_server.AddTool("self.motor.run_path",
-                           "Run a path capability on U8 using JSON array segments and the existing async job pipeline.",
+                           "Run a path capability on U8 through the private protocol.",
                            PropertyList({
-                               Property("path_json", kPropertyTypeString),
-                               Property("feed", kPropertyTypeInteger, 1200, 1, 20000)
+                                Property("path_json", kPropertyTypeString),
+                                Property("feed", kPropertyTypeInteger, 1200, 1, 20000)
                            }),
                            [this](const PropertyList& properties) -> ReturnValue {
                                return RunPath(properties["path_json"].value<std::string>(),
                                               properties["feed"].value<int>());
                            });
-
-        mcp_server.AddTool("self.motor.set_laser_power",
-                           "Set U1 laser power through standard Grbl spindle commands.",
-                           PropertyList({
-                               Property("power", kPropertyTypeInteger, 0, 0, 1000)
-                           }),
-                           [this](const PropertyList& properties) -> ReturnValue {
-                               int power = properties["power"].value<int>();
-                               std::string command = power == 0 ? "M5" : "M3 S" + std::to_string(power);
-                               auto response = SendU1Line(command, 150);
-                               return response.empty() ? std::string("sent: ") + command : std::string("sent: ") + command + "; response: " + response;
-                           });
-
-        mcp_server.AddTool("self.motor.pause",
-                           "Send realtime feed hold to U1 and pause staged job dispatch.",
-                           PropertyList(),
-                           [this](const PropertyList&) -> ReturnValue { return PauseJob(); });
-
-        mcp_server.AddTool("self.motor.resume",
-                           "Send realtime cycle start to U1 and resume staged job dispatch.",
-                           PropertyList(),
-                           [this](const PropertyList&) -> ReturnValue { return ResumeJob(); });
-
-        mcp_server.AddTool("self.motor.job_load",
-                           "Stage G-code lines for asynchronous execution over the U8 to U1 UART bridge.",
-                           PropertyList({
-                               Property("gcode", kPropertyTypeString),
-                               Property("append", kPropertyTypeBoolean, false)
-                           }),
-                           [this](const PropertyList& properties) -> ReturnValue {
-                               return LoadJob(properties["gcode"].value<std::string>(),
-                                              properties["append"].value<bool>());
-                           });
-
-        mcp_server.AddTool("self.motor.job_start",
-                           "Start the staged G-code job.",
-                           PropertyList(),
-                           [this](const PropertyList&) -> ReturnValue { return StartJob(); });
-
-        mcp_server.AddTool("self.motor.job_status",
-                           "Get staged or running job status.",
-                           PropertyList(),
-                           [this](const PropertyList&) -> ReturnValue { return BuildJobStatusJsonSnapshot(); });
-
-        mcp_server.AddTool("self.motor.job_cancel",
-                           "Cancel the staged or running G-code job.",
-                           PropertyList(),
-                           [this](const PropertyList&) -> ReturnValue { return CancelJob(); });
     }
 
 public:
