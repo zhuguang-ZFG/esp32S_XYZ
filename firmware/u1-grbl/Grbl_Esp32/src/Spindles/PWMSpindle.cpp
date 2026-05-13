@@ -234,7 +234,6 @@ namespace Spindles {
         bool on                                           = !!duty;
         LEDC.channel_group[0].channel[0].conf0.sig_out_en = on;
         LEDC.channel_group[0].channel[0].conf1.duty_start = on;
-        LEDC.channel_group[0].channel[0].conf0.clk_en     = on;
     }
 
     void PWM::set_enable_pin(bool enable) {

@@ -94,6 +94,7 @@ void report_echo_line_received(char* line, uint8_t client);
 
 // Prints realtime status report
 void report_realtime_status(uint8_t client);
+void report_private_status_json(uint8_t client, const char* msg_id, const char* task_id);
 
 // Prints recorded probe position
 void report_probe_parameters(uint8_t client);

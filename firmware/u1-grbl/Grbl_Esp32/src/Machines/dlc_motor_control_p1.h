@@ -34,6 +34,10 @@
 
 #define N_AXIS 3
 
+#ifdef USE_RMT_STEPS
+#    undef USE_RMT_STEPS
+#endif
+
 // Home Y/Y2 independently to square the gantry.
 #define DEFAULT_HOMING_SQUARED_AXES (bit(Y_AXIS))
 
@@ -52,12 +56,6 @@
 
 // Shared enable line for all external drivers.
 #define STEPPERS_DISABLE_PIN    GPIO_NUM_4
-
-// This board should keep the external drivers enabled all the time.
-// TMC2208 PDN/UART is not used here, and the user requirement is to avoid
-// any runtime disable behavior on MOTOR_EN.
-#define STEPPERS_ALWAYS_ENABLED
-#define STEPPERS_ALWAYS_ENABLED_LEVEL LOW
 
 // Independent home / limit inputs.
 #define X_LIMIT_PIN             GPIO_NUM_9
@@ -79,7 +77,9 @@
 // Motion defaults.
 // These are conservative bring-up values and will likely need machine-specific tuning.
 #define DEFAULT_STEP_PULSE_MICROSECONDS   4
-#define DEFAULT_STEPPER_IDLE_LOCK_TIME    255
+// Release motor enable shortly after motion stops so XY can de-energize and
+// the spring-loaded Z mechanism can return to pen-up when the motor is idle.
+#define DEFAULT_STEPPER_IDLE_LOCK_TIME    25
 
 #define DEFAULT_STEPPING_INVERT_MASK      0
 #define DEFAULT_DIRECTION_INVERT_MASK     0

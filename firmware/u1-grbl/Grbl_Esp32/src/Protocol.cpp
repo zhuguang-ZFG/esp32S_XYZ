@@ -31,6 +31,305 @@ static char    comment[LINE_BUFFER_SIZE];  // Line to be executed. Zero-terminat
 static uint8_t line_flags           = 0;
 static uint8_t char_counter         = 0;
 static uint8_t comment_char_counter = 0;
+static String  private_path_gcode   = "";
+static int     private_path_total_segments = 0;
+static int     private_path_received_segments = 0;
+static char    private_path_task_id[64] = {0};
+
+static bool json_extract_string_field(const char* json, const char* field, char* output, size_t output_size) {
+    if (json == nullptr || field == nullptr || output == nullptr || output_size == 0) {
+        return false;
+    }
+
+    char pattern[32];
+    snprintf(pattern, sizeof(pattern), "\"%s\":\"", field);
+    const char* start = strstr(json, pattern);
+    if (start == nullptr) {
+        output[0] = '\0';
+        return false;
+    }
+
+    start += strlen(pattern);
+    const char* end = strchr(start, '"');
+    if (end == nullptr) {
+        output[0] = '\0';
+        return false;
+    }
+
+    size_t len = end - start;
+    if (len >= output_size) {
+        len = output_size - 1;
+    }
+
+    memcpy(output, start, len);
+    output[len] = '\0';
+    return true;
+}
+
+static bool json_extract_float_field(const char* json, const char* field, float* output) {
+    if (json == nullptr || field == nullptr || output == nullptr) {
+        return false;
+    }
+
+    char pattern[32];
+    snprintf(pattern, sizeof(pattern), "\"%s\":", field);
+    const char* start = strstr(json, pattern);
+    if (start == nullptr) {
+        return false;
+    }
+
+    start += strlen(pattern);
+    *output = strtof(start, nullptr);
+    return true;
+}
+
+static bool json_extract_int_field(const char* json, const char* field, int* output) {
+    float value = 0.0f;
+    if (!json_extract_float_field(json, field, &value)) {
+        return false;
+    }
+    *output = static_cast<int>(value);
+    return true;
+}
+
+static void private_path_reset() {
+    private_path_gcode = "";
+    private_path_total_segments = 0;
+    private_path_received_segments = 0;
+    private_path_task_id[0] = '\0';
+}
+
+static Error execute_private_path_gcode(uint8_t client) {
+    Error result = Error::Ok;
+    int start = 0;
+    while (start < private_path_gcode.length()) {
+        int end = private_path_gcode.indexOf('\n', start);
+        if (end < 0) {
+            end = private_path_gcode.length();
+        }
+
+        String command = private_path_gcode.substring(start, end);
+        if (command.length() > 0) {
+            char command_buffer[LINE_BUFFER_SIZE];
+            command.toCharArray(command_buffer, sizeof(command_buffer));
+            result = execute_line(command_buffer, client, WebUI::AuthenticationLevel::LEVEL_GUEST);
+            if (result != Error::Ok) {
+                return result;
+            }
+            protocol_auto_cycle_start();
+            protocol_buffer_synchronize();
+            if (sys.abort) {
+                return Error::MessageFailed;
+            }
+        }
+        start = end + 1;
+    }
+    return result;
+}
+
+static bool execute_private_protocol_line(char* input, uint8_t client) {
+    if (input == nullptr || input[0] != '@') {
+        return false;
+    }
+
+    const char* json = input + 1;
+    char msg_id[32] = {0};
+    char task_id[64] = {0};
+    char cmd[32] = {0};
+
+    json_extract_string_field(json, "msg_id", msg_id, sizeof(msg_id));
+    json_extract_string_field(json, "task_id", task_id, sizeof(task_id));
+    if (!json_extract_string_field(json, "cmd", cmd, sizeof(cmd))) {
+        grbl_sendf(client,
+                   "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                   "\"error_code\":\"E009\",\"message\":\"missing cmd\"}\r\n",
+                   msg_id,
+                   task_id);
+        return true;
+    }
+
+    if (strcmp(cmd, "GET_STATUS") == 0) {
+        report_private_status_json(client, msg_id, task_id);
+        return true;
+    }
+
+    if (strcmp(cmd, "HOME") == 0) {
+        char home_line[] = "$H";
+        Error result = execute_line(home_line, client, WebUI::AuthenticationLevel::LEVEL_GUEST);
+        if (result == Error::Ok) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"result\",\"task_id\":\"%s\","
+                       "\"result\":\"DONE\",\"state\":\"%s\"}\r\n",
+                       msg_id,
+                       task_id,
+                       report_state_text());
+        } else {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E010\",\"message\":\"home failed\"}\r\n",
+                       msg_id,
+                       task_id);
+        }
+        return true;
+    }
+
+    if (strcmp(cmd, "MOVE") == 0) {
+        float x = 0.0f;
+        float y = 0.0f;
+        float z = 0.0f;
+        float feed = 1000.0f;
+        bool has_x = json_extract_float_field(json, "x", &x);
+        bool has_y = json_extract_float_field(json, "y", &y);
+        bool has_z = json_extract_float_field(json, "z", &z);
+        json_extract_float_field(json, "feed", &feed);
+
+        if (!has_x && !has_y && !has_z) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E009\",\"message\":\"missing axis target\"}\r\n",
+                       msg_id,
+                       task_id);
+            return true;
+        }
+
+        char move_line[96];
+        snprintf(move_line,
+                 sizeof(move_line),
+                 "G90 G1 X%.3f Y%.3f Z%.3f F%.3f",
+                 has_x ? x : system_get_mpos()[0],
+                 has_y ? y : system_get_mpos()[1],
+                 has_z ? z : system_get_mpos()[2],
+                 feed);
+
+        Error result = execute_line(move_line, client, WebUI::AuthenticationLevel::LEVEL_GUEST);
+        if (result == Error::Ok) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"result\",\"task_id\":\"%s\","
+                       "\"result\":\"DONE\",\"state\":\"%s\"}\r\n",
+                       msg_id,
+                       task_id,
+                       report_state_text());
+        } else {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E010\",\"message\":\"move failed\"}\r\n",
+                       msg_id,
+                       task_id);
+        }
+        return true;
+    }
+
+    if (strcmp(cmd, "PATH_BEGIN") == 0) {
+        int total_segments = 0;
+        if (!json_extract_int_field(json, "total_segments", &total_segments) || total_segments <= 0) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E003\",\"message\":\"invalid total_segments\"}\r\n",
+                       msg_id,
+                       task_id);
+            return true;
+        }
+
+        private_path_reset();
+        private_path_total_segments = total_segments;
+        strncpy(private_path_task_id, task_id, sizeof(private_path_task_id) - 1);
+        private_path_gcode = "G90\n";
+        grbl_sendf(client,
+                   "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"IDLE\"}\r\n",
+                   msg_id,
+                   task_id);
+        return true;
+    }
+
+    if (strcmp(cmd, "PATH_SEG") == 0) {
+        char segment_cmd[8] = {0};
+        int segment_index = 0;
+        float x = 0.0f;
+        float y = 0.0f;
+        float feed = 1000.0f;
+        if (private_path_total_segments <= 0 ||
+            !json_extract_int_field(json, "segment_index", &segment_index) ||
+            !json_extract_string_field(json, "segment_cmd", segment_cmd, sizeof(segment_cmd)) ||
+            !json_extract_float_field(json, "x", &x) ||
+            !json_extract_float_field(json, "y", &y)) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E003\",\"message\":\"invalid path segment\"}\r\n",
+                       msg_id,
+                       task_id);
+            return true;
+        }
+        json_extract_float_field(json, "feed", &feed);
+
+        if (segment_index != private_path_received_segments) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E009\",\"message\":\"unexpected segment index\"}\r\n",
+                       msg_id,
+                       task_id);
+            return true;
+        }
+
+        char command[96];
+        if (strcmp(segment_cmd, "M") == 0) {
+            snprintf(command, sizeof(command), "G0 X%.3f Y%.3f\n", x, y);
+        } else if (strcmp(segment_cmd, "L") == 0) {
+            snprintf(command, sizeof(command), "G1 X%.3f Y%.3f F%.3f\n", x, y, feed);
+        } else {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E003\",\"message\":\"unsupported segment cmd\"}\r\n",
+                       msg_id,
+                       task_id);
+            return true;
+        }
+
+        private_path_gcode += command;
+        private_path_received_segments++;
+        grbl_sendf(client,
+                   "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"IDLE\"}\r\n",
+                   msg_id,
+                   task_id);
+        return true;
+    }
+
+    if (strcmp(cmd, "PATH_END") == 0) {
+        if (private_path_total_segments <= 0 || private_path_received_segments != private_path_total_segments) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E009\",\"message\":\"incomplete path\"}\r\n",
+                       msg_id,
+                       task_id);
+            private_path_reset();
+            return true;
+        }
+
+        Error result = execute_private_path_gcode(client);
+        if (result == Error::Ok) {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"result\",\"task_id\":\"%s\","
+                       "\"result\":\"DONE\",\"state\":\"%s\"}\r\n",
+                       msg_id,
+                       task_id,
+                       report_state_text());
+        } else {
+            grbl_sendf(client,
+                       "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+                       "\"error_code\":\"E010\",\"message\":\"path execution failed\"}\r\n",
+                       msg_id,
+                       task_id);
+        }
+        private_path_reset();
+        return true;
+    }
+
+    grbl_sendf(client,
+               "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
+               "\"error_code\":\"E010\",\"message\":\"unsupported cmd\"}\r\n",
+               msg_id,
+               task_id);
+    return true;
+}
 
 typedef struct {
     char buffer[LINE_BUFFER_SIZE];
@@ -185,6 +484,10 @@ void protocol_main_loop() {
 #ifdef REPORT_ECHO_RAW_LINE_RECEIVED
                         report_echo_line_received(line, client);
 #endif
+                        if (execute_private_protocol_line(line, client)) {
+                            empty_line(client);
+                            break;
+                        }
                         // auth_level can be upgraded by supplying a password on the command line
                         report_status_message(execute_line(line, client, WebUI::AuthenticationLevel::LEVEL_GUEST), client);
                         empty_line(client);

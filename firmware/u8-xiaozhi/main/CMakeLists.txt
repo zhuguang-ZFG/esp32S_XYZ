@@ -60,8 +60,12 @@ list(APPEND SOURCES
     "boards/common/sleep_timer.cc"
     "boards/common/sy6970.cc"
     "boards/common/system_reset.cc"
+    "boards/otto-robot/websocket_control_server.cc"
 )
-list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/boards/common)
+list(APPEND INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/boards/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/boards/otto-robot
+)
 
 
 idf_build_get_property(build_components BUILD_COMPONENTS)
@@ -729,6 +733,12 @@ elseif(CONFIG_BOARD_TYPE_ZHENGCHEN_CAM_ML307)
     set(BUILTIN_TEXT_FONT font_puhui_basic_20_4)
     set(BUILTIN_ICON_FONT font_awesome_20_4)
     set(DEFAULT_EMOJI_COLLECTION twemoji_64)
+elseif(CONFIG_BOARD_TYPE_ZHUGUANG_DLC_MOTOR_CONTROL_P1_AI)
+    set(MANUFACTURER "zhuguang")
+    set(BOARD_TYPE "dlc-motor-control-p1-ai")
+    set(BUILTIN_TEXT_FONT font_puhui_basic_20_4)
+    set(BUILTIN_ICON_FONT font_awesome_20_4)
+    set(DEFAULT_EMOJI_COLLECTION twemoji_64)
 elseif(CONFIG_BOARD_TYPE_SPOTPEAR_ESP32_S3_1_54_MUMA)
     set(BOARD_TYPE "sp-esp32-s3-1.54-muma")
     set(BUILTIN_TEXT_FONT font_puhui_basic_16_4)
@@ -986,6 +996,7 @@ idf_component_register(SRCS ${SOURCES}
                         esp_pm
                         esp_psram
                         esp_netif
+                        esp_http_server
                         esp_driver_gpio
                         esp_driver_uart
                         esp_driver_spi

@@ -43,7 +43,10 @@ enum class SpindleType : int8_t {
 };
 
 #include "../Grbl.h"
-#include <driver/dac.h>
+#include <soc/soc_caps.h>
+#if SOC_DAC_SUPPORTED
+#    include <driver/dac.h>
+#endif
 #include <driver/uart.h>
 
 // ===============  No floats! ===========================

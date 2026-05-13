@@ -200,13 +200,13 @@ void IRAM_ATTR onStepperDriverTimer(void* para) {
     //
     // When handling an interrupt within an interrupt serivce routine (ISR), the interrupt status bit
     // needs to be explicitly cleared.
-    TIMERG0.int_clr_timers.t0 = 1;
+    timer_group_clr_intr_status_in_isr(STEP_TIMER_GROUP, STEP_TIMER_INDEX);
 
     bool expected = false;
     if (busy.compare_exchange_strong(expected, true)) {
         stepper_pulse_func();
 
-        TIMERG0.hw_timer[STEP_TIMER_INDEX].config.alarm_en = TIMER_ALARM_EN;
+        timer_group_enable_alarm_in_isr(STEP_TIMER_GROUP, STEP_TIMER_INDEX);
 
         busy.store(false);
     }
@@ -227,9 +227,11 @@ static void stepper_pulse_func() {
         if (wait_direction > 0) {
             // Stepper drivers need some time between changing direction and doing a pulse.
             switch (current_stepper) {
+#ifdef USE_I2S_STEPS
                 case ST_I2S_STREAM:
                     i2s_out_push_sample(wait_direction);
                     break;
+#endif
                 case ST_I2S_STATIC:
                 case ST_TIMED: {
                     // wait for step pulse time to complete...some time expired during code above
@@ -333,11 +335,13 @@ static void stepper_pulse_func() {
     }
 
     switch (current_stepper) {
+#ifdef USE_I2S_STEPS
         case ST_I2S_STREAM:
             // Generate the number of pulses needed to span pulse_microseconds
             i2s_out_push_sample(pulse_microseconds->get());
             motors_unstep();
             break;
+#endif
         case ST_I2S_STATIC:
         case ST_TIMED:
             // wait for step pulse time to complete...some time expired during code above
@@ -958,7 +962,7 @@ void IRAM_ATTR Stepper_Timer_Init() {
     config.counter_en  = TIMER_PAUSE;
     config.alarm_en    = TIMER_ALARM_EN;
     config.intr_type   = TIMER_INTR_LEVEL;
-    config.auto_reload = true;
+    config.auto_reload = TIMER_AUTORELOAD_EN;
     timer_init(STEP_TIMER_GROUP, STEP_TIMER_INDEX, &config);
     timer_set_counter_value(STEP_TIMER_GROUP, STEP_TIMER_INDEX, 0x00000000ULL);
     timer_enable_intr(STEP_TIMER_GROUP, STEP_TIMER_INDEX);
@@ -976,7 +980,7 @@ void IRAM_ATTR Stepper_Timer_Start() {
     } else {
         timer_set_counter_value(STEP_TIMER_GROUP, STEP_TIMER_INDEX, 0x00000000ULL);
         timer_start(STEP_TIMER_GROUP, STEP_TIMER_INDEX);
-        TIMERG0.hw_timer[STEP_TIMER_INDEX].config.alarm_en = TIMER_ALARM_EN;
+        timer_group_enable_alarm_in_isr(STEP_TIMER_GROUP, STEP_TIMER_INDEX);
     }
 }
 

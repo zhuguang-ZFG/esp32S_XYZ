@@ -805,6 +805,54 @@ void report_realtime_status(uint8_t client) {
     grbl_send(client, status);
 }
 
+static const char* private_protocol_state_text() {
+    switch (sys.state) {
+        case State::Idle:
+            return "IDLE";
+        case State::Cycle:
+        case State::Jog:
+            return "RUNNING";
+        case State::Hold:
+        case State::SafetyDoor:
+            return "PAUSED";
+        case State::Homing:
+            return "HOMING";
+        case State::Alarm:
+            return "ALARM";
+        case State::CheckMode:
+        case State::Sleep:
+        default:
+            return "ERROR";
+    }
+}
+
+void report_private_status_json(uint8_t client, const char* msg_id, const char* task_id) {
+    float* position = system_get_mpos();
+    const char* state = private_protocol_state_text();
+    const char* alarm_code = sys.state == State::Alarm && sys_rt_exec_alarm != ExecAlarm::None ? "E006" : "null";
+    const char* error_code = sys.state == State::Alarm ? "E006" : "null";
+    const char* active_task = (sys.state == State::Cycle || sys.state == State::Jog || sys.state == State::Hold) && task_id != nullptr
+                                  ? task_id
+                                  : "";
+
+    grbl_sendf(client,
+               "{\"msg_id\":\"%s\",\"type\":\"status\",\"task_id\":\"%s\",\"state\":\"%s\","
+               "\"homed\":%s,\"position\":{\"x\":%.3f,\"y\":%.3f,\"z\":%.3f},"
+               "\"active_task_id\":%s%s%s,\"alarm_code\":%s,\"error_code\":%s}\r\n",
+               msg_id != nullptr ? msg_id : "",
+               task_id != nullptr ? task_id : "",
+               state,
+               sys.state == State::Alarm ? "false" : "true",
+               position[0],
+               position[1],
+               position[2],
+               active_task[0] != '\0' ? "\"" : "",
+               active_task,
+               active_task[0] != '\0' ? "\"" : "null",
+               alarm_code,
+               error_code);
+}
+
 void report_realtime_steps() {
     uint8_t idx;
     auto    n_axis = number_axis->get();

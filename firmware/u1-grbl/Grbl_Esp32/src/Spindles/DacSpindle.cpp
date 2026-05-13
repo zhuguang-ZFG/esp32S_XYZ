@@ -38,11 +38,19 @@ namespace Spindles {
         _pwm_max_value = 255;  // not actually PWM...DAC counts
         _gpio_ok       = true;
 
+#if !SOC_DAC_SUPPORTED
+        _gpio_ok = false;
+        grbl_msg_sendf(CLIENT_ALL, MsgLevel::Info, "DAC spindle is not supported on this target");
+        return;
+#endif
+
+#if SOC_DAC_SUPPORTED
         if (_output_pin != GPIO_NUM_25 && _output_pin != GPIO_NUM_26) {  // DAC can only be used on these pins
             _gpio_ok = false;
             grbl_msg_sendf(CLIENT_ALL, MsgLevel::Info, "DAC spindle pin invalid GPIO_NUM_%d (pin 25 or 26 only)", _output_pin);
             return;
         }
+#endif
 
         pinMode(_enable_pin, OUTPUT);
         pinMode(_direction_pin, OUTPUT);
@@ -101,8 +109,12 @@ namespace Spindles {
     }
 
     void Dac::set_output(uint32_t duty) {
+#if SOC_DAC_SUPPORTED
         if (_gpio_ok) {
             dacWrite(_output_pin, (uint8_t)duty);
         }
+#else
+        (void)duty;
+#endif
     }
 }
