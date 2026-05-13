@@ -35,6 +35,7 @@ static String  private_path_gcode   = "";
 static int     private_path_total_segments = 0;
 static int     private_path_received_segments = 0;
 static char    private_path_task_id[64] = {0};
+static char    private_active_task_id[64] = {0};
 static bool    private_stop_requested = false;
 
 static bool json_extract_string_field(const char* json, const char* field, char* output, size_t output_size) {
@@ -98,6 +99,33 @@ static void private_path_reset() {
     private_path_total_segments = 0;
     private_path_received_segments = 0;
     private_path_task_id[0] = '\0';
+}
+
+static void private_active_task_reset() {
+    private_active_task_id[0] = '\0';
+}
+
+static void private_active_task_set(const char* task_id) {
+    private_active_task_reset();
+    if (task_id == nullptr || task_id[0] == '\0') {
+        return;
+    }
+
+    strncpy(private_active_task_id, task_id, sizeof(private_active_task_id) - 1);
+}
+
+static const char* private_active_task_get() {
+    return private_active_task_id;
+}
+
+static void private_sync_active_task_state() {
+    if (private_active_task_id[0] == '\0') {
+        return;
+    }
+
+    if (sys.state == State::Idle || sys.state == State::Alarm) {
+        private_active_task_reset();
+    }
 }
 
 static void send_private_protocol_error(uint8_t client, const char* msg_id, const char* task_id, const char* error_code, const char* message) {
@@ -187,7 +215,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
     }
 
     if (strcmp(cmd, "GET_STATUS") == 0) {
-        report_private_status_json(client, msg_id, task_id);
+        report_private_status_json(client, msg_id, task_id, private_active_task_get());
         return true;
     }
 
@@ -195,6 +223,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         char home_line[] = "$H";
         Error result = execute_line(home_line, client, WebUI::AuthenticationLevel::LEVEL_GUEST);
         if (result == Error::Ok) {
+            private_active_task_set(task_id);
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"result\",\"task_id\":\"%s\","
                        "\"result\":\"DONE\",\"state\":\"%s\"}\r\n",
@@ -241,6 +270,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
 
         Error result = execute_line(move_line, client, WebUI::AuthenticationLevel::LEVEL_GUEST);
         if (result == Error::Ok) {
+            private_active_task_set(task_id);
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"result\",\"task_id\":\"%s\","
                        "\"result\":\"DONE\",\"state\":\"%s\"}\r\n",
@@ -294,6 +324,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
 
     if (strcmp(cmd, "ESTOP") == 0) {
         private_stop_requested = false;
+        private_active_task_reset();
         sys.is_homed = false;
         sys_rt_exec_alarm = ExecAlarm::EmergencyStop;
         send_private_protocol_error(client, msg_id, task_id, "E008", "estop triggered");
@@ -386,6 +417,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
             return true;
         }
 
+        private_active_task_set(private_path_task_id);
         Error result = execute_private_path_gcode(client);
         if (result == Error::Ok) {
             grbl_sendf(client,
@@ -395,6 +427,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
                        task_id,
                        report_state_text());
         } else {
+            private_active_task_reset();
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
                        "\"error_code\":\"E010\",\"message\":\"path execution failed\"}\r\n",
@@ -486,6 +519,7 @@ bool can_park() {
 void protocol_main_loop() {
     client_reset_read_buffer(CLIENT_ALL);
     empty_lines();
+    private_active_task_reset();
     private_stop_requested = false;
     // Ensure steppers start in a known disabled state when entering the protocol loop.
     // Some boards/drivers can appear enabled due to earlier initialization side effects;
@@ -853,6 +887,8 @@ void protocol_exec_rt_system() {
             sys.suspend.bit.motionCancel = true;
             sys_rt_exec_state.bit.cycleStart = true;
         }
+
+        private_sync_active_task_state();
     }
     // Execute overrides.
     if ((sys_rt_f_override != sys.f_override) || (sys_rt_r_override != sys.r_override)) {
