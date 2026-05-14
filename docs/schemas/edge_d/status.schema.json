@@ -24,10 +24,10 @@
         "z": { "type": "number" }
       }
     },
-    "active_task_id": { "type": "string" },
+    "active_task_id": { "type": ["string", "null"] },
     "alarm_code": {
-      "type": "string",
-      "enum": ["E001", "E002", "E005", "E006", "E007", "E008", "E009"]
+      "type": ["string", "null"],
+      "enum": ["E001", "E002", "E005", "E006", "E007", "E008", "E009", null]
     },
     "error_code": {
       "type": "null",

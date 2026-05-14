@@ -2,133 +2,81 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   schema-validate:
+    name: Schema validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install jsonschema
-      - name: Validate all schemas
-        run: |
-          python -c "
-          import json, sys
-          from pathlib import Path
-          from jsonschema import Draft202012Validator, ValidationError
 
-          schemas_dir = Path('docs/schemas')
-          errors = []
-          for edge in ['edge_a','edge_b','edge_c','edge_d']:
-              edge_dir = schemas_dir / edge
-              if not edge_dir.exists():
-                  continue
-              for sf in sorted(edge_dir.glob('*.schema.json')):
-                  schema = json.loads(sf.read_text(encoding='utf-8'))
-                  Draft202012Validator.check_schema(schema)
-                  validator = Draft202012Validator(schema)
-                  examples_dir = edge_dir / 'examples'
-                  if examples_dir.exists():
-                      name_stem = sf.stem
-                      for ex in examples_dir.glob(f'*{name_stem}*.json'):
-                          instance = json.loads(ex.read_text(encoding='utf-8'))
-                          try:
-                              validator.validate(instance)
-                          except ValidationError as e:
-                              errors.append(f'{ex}: {e.message}')
-                  print(f'OK {sf}')
-          if errors:
-              for e in errors:
-                  print(f'FAIL {e}', file=sys.stderr)
-              sys.exit(1)
-          print(f'All schemas validated')
-          "
+      - name: Install dependencies
+        run: python -m pip install jsonschema
+
+      - name: Validate schema contracts
+        run: python tools/validate_schemas.py
 
   gpio-check:
+    name: GPIO static check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Run GPIO checker
         run: python tools/check_gpio.py
 
   python-unit:
+    name: Python unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run unit tests
-        run: python -m unittest discover -s tools -p 'test_*.py' -v
+
+      - name: Install dependencies
+        run: python -m pip install jsonschema
+
+      - name: Run Python unit tests
+        run: |
+          python tools/test_check_gpio.py -v
+          python -m unittest discover -s tests -p "test_*.py" -v
 
   fake-integration:
+    name: Fake U1 integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run fake U1 integration tests
+
+      - name: Run fake U1 tests
         run: |
-          python tools/fake_u1/app.py --port 17799 &
-          sleep 2
-          python -c "
-          import socket, json, sys
-
-          def send(cmd_json):
-              s = socket.create_connection(('127.0.0.1', 17799))
-              s.sendall((cmd_json + '\n').encode())
-              resp = s.recv(8192).decode().strip()
-              s.close()
-              # 取最后一个 JSON 对象（可能有多帧）
-              for seg in resp.split('\n'):
-                  seg = seg.strip().lstrip('@')
-                  if seg:
-                      data = json.loads(seg)
-              return data
-
-          # happy path: GET_STATUS
-          r = send('@{\"msg_id\":\"1\",\"task_id\":\"\",\"cmd\":\"GET_STATUS\"}')
-          assert r['type'] == 'status', f'GET_STATUS expected status, got {r.get(\"type\")}'
-          print('PASS GET_STATUS')
-
-          # happy path: HOME
-          r = send('@{\"msg_id\":\"2\",\"task_id\":\"t1\",\"cmd\":\"HOME\"}')
-          assert r['type'] == 'result', f'HOME expected result, got {r.get(\"type\")}'
-          assert r['result'] == 'DONE', f'HOME expected DONE, got {r.get(\"result\")}'
-          print('PASS HOME')
-
-          # happy path: MOVE
-          r = send('@{\"msg_id\":\"3\",\"task_id\":\"t2\",\"cmd\":\"MOVE\",\"x\":10,\"y\":10,\"z\":0,\"feed\":1200}')
-          assert r['type'] == 'result', f'MOVE expected result, got {r.get(\"type\")}'
-          print('PASS MOVE')
-
-          # error injection: E001 (not homed)
-          python tools/fake_u1/app.py --port 17798 --inject E001 &
-          sleep 2
-          r = send('@{\"msg_id\":\"4\",\"task_id\":\"\",\"cmd\":\"MOVE\",\"x\":1,\"y\":1,\"z\":0,\"feed\":100}')
-          assert r['type'] == 'error', f'E001 expected error, got {r.get(\"type\")}'
-          assert r['error_code'] == 'E001', f'E001 expected, got {r.get(\"error_code\")}'
-          print('PASS E001 injection')
-          kill %2 2>/dev/null || true
-
-          print('fake-integration: all 4 tests passed')
-          "
-          kill %1 2>/dev/null || true
+          python tools/fake_u1/test_fake_u1.py -v
+          python -m unittest tools.fake_u1.tests.test_app tests.ci.test_fake_integration -v
 
   markdown-link-check:
+    name: Markdown link check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+
+      - name: Check markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           use-quiet-mode: "yes"
-          config-file: ".github/workflows/mlc_config.json"
+          config-file: ".github/markdown-link-check-config.json"

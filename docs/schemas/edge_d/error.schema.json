@@ -4,16 +4,24 @@
   "title": "Edge-D 错误帧（U1→U8）",
   "type": "object",
   "additionalProperties": false,
-  "required": ["msg_id", "type", "error_code"],
+  "required": ["msg_id", "type", "error_code", "state"],
   "properties": {
     "msg_id": { "type": "string", "minLength": 1 },
     "type": { "const": "error" },
     "task_id": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["IDLE", "HOMING", "RUNNING", "PAUSED", "ALARM", "ERROR", "ESTOP"]
+    },
     "error_code": {
       "type": "string",
       "enum": ["E001", "E002", "E005", "E006", "E007", "E008", "E009"],
       "description": "E001=NotHomed, E002=SoftLimit, E005=HardLimit, E006=HomingFail, E007=AbortCycle, E008=EmergencyStop, E009=Other"
     },
-    "error_message": { "type": "string" }
+    "alarm_code": {
+      "type": ["string", "null"],
+      "enum": ["E001", "E002", "E005", "E006", "E007", "E008", "E009", null]
+    },
+    "message": { "type": "string" }
   }
 }

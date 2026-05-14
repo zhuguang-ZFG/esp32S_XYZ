@@ -1,0 +1,24 @@
+﻿{
+  "schema_type": "https://json-schema.org/draft/2020-12/schema",
+  "id_field": "https://example.com/test.schema.json",
+  "title": "Test Schema",
+  "description": "A valid test schema for CI testing",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name field"
+    },
+    "age": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The age field"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "The email field"
+    }
+  },
+  "required": ["name", "age"]
+}
