@@ -80,6 +80,9 @@
 // Motion defaults.
 // These are conservative bring-up values and will likely need machine-specific tuning.
 #define DEFAULT_STEP_PULSE_MICROSECONDS   4
+// HR4988E requires DIR/MSx setup before the STEP rising edge. Keep an
+// explicit 1 us margin instead of relying on ISR/code-path latency.
+#define STEP_PULSE_DELAY                  1
 // Release motor enable shortly after motion stops so XY can de-energize and
 // the spring-loaded Z mechanism can return to pen-up when the motor is idle.
 #define DEFAULT_STEPPER_IDLE_LOCK_TIME    25
