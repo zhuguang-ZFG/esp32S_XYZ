@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_b/motion_event.schema.json",
+  "title": "Edge-B motion_event 上行（DeviceServer→BusinessServer HTTP）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["device_id", "task_id", "phase"],
+  "properties": {
+    "device_id": { "type": "string", "minLength": 1 },
+    "task_id": { "type": "string", "minLength": 1 },
+    "phase": {
+      "type": "string",
+      "enum": ["accepted", "running", "done", "failed", "cancelled"]
+    },
+    "capability": { "type": "string" },
+    "error_code": { "type": "string" },
+    "error_message": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "ts": { "type": "integer", "minimum": 0 },
+    "result": { "type": "object" }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "task_id": "550e8400-e29b-41d4-a716-446655440003",
+  "device_id": "dev_SN001",
+  "account_id": 42,
+  "capability": "home",
+  "source": "client",
+  "request_id": "req-001",
+  "trace_id": "trace-001",
+  "params": {},
+  "constraints": { "timeout_ms": 30000, "safety_level": "strict" }
+}

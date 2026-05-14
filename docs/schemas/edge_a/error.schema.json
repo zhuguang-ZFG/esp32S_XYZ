@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_a/error.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "code", "message"],
+  "properties": {
+    "type": { "const": "error" },
+    "code": {
+      "type": "string",
+      "enum": ["E_AUTH", "E_BAD_REQUEST", "E_FORBIDDEN", "E_NOT_FOUND", "E_INTERNAL"]
+    },
+    "message": { "type": "string", "minLength": 1 }
+  }
+}

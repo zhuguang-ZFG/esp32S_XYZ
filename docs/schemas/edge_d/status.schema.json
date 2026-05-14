@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_d/status.schema.json",
+  "title": "Edge-D 状态帧（U1→U8）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["msg_id", "type", "state", "homed", "position"],
+  "properties": {
+    "msg_id": { "type": "string", "minLength": 1 },
+    "type": { "const": "status" },
+    "task_id": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["IDLE", "HOMING", "RUNNING", "PAUSED", "ALARM", "ERROR", "ESTOP"]
+    },
+    "homed": { "type": "boolean" },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    },
+    "active_task_id": { "type": "string" },
+    "alarm_code": {
+      "type": "string",
+      "enum": ["E001", "E002", "E005", "E006", "E007", "E008", "E009"]
+    },
+    "error_code": {
+      "type": "null",
+      "description": "status 帧 error_code 恒为 null，错误码走独立 error 帧"
+    }
+  }
+}

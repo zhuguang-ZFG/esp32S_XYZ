@@ -287,18 +287,19 @@ public class AppV2ServiceImpl implements AppV2Service {
         }
 
         String normalizedStatus = normalizeTaskStatus(payload.get("phase"));
-        Date eventAt = extractEventTime(payload);
+        Date startedAt = extractStartedAt(payload);
+        Date finishedAt = extractFinishedAt(payload);
         if (StringUtils.isNotBlank(normalizedStatus)) {
             task.setStatus(normalizedStatus);
         }
         if (TASK_STATUS_RUNNING.equals(task.getStatus()) && task.getStartedAt() == null) {
-            task.setStartedAt(eventAt != null ? eventAt : new Date());
+            task.setStartedAt(startedAt != null ? startedAt : new Date());
         }
         if (isTerminalStatus(task.getStatus())) {
             if (task.getStartedAt() == null) {
-                task.setStartedAt(eventAt != null ? eventAt : new Date());
+                task.setStartedAt(startedAt != null ? startedAt : new Date());
             }
-            task.setFinishedAt(eventAt != null ? eventAt : new Date());
+            task.setFinishedAt(finishedAt != null ? finishedAt : new Date());
         }
 
         String errorCode = stringValue(payload.get("error_code"));
@@ -362,18 +363,29 @@ public class AppV2ServiceImpl implements AppV2Service {
         };
     }
 
-    private static Date extractEventTime(Map<String, Object> payload) {
-        Object raw = payload.get("started_at");
-        if (raw == null) {
-            raw = payload.get("finished_at");
+    private static Date extractStartedAt(Map<String, Object> payload) {
+        Date explicitStartedAt = toDate(payload.get("started_at"));
+        if (explicitStartedAt != null) {
+            return explicitStartedAt;
         }
-        if (raw == null) {
-            raw = payload.get("ts");
+        return toDate(firstNonNull(payload.get("ts"), payload.get("timestamp")));
+    }
+
+    private static Date extractFinishedAt(Map<String, Object> payload) {
+        Date explicitFinishedAt = toDate(payload.get("finished_at"));
+        if (explicitFinishedAt != null) {
+            return explicitFinishedAt;
         }
-        if (raw == null) {
-            raw = payload.get("timestamp");
+        return toDate(firstNonNull(payload.get("ts"), payload.get("timestamp"), payload.get("started_at")));
+    }
+
+    private static Object firstNonNull(Object... values) {
+        for (Object value : values) {
+            if (value != null) {
+                return value;
+            }
         }
-        return toDate(raw);
+        return null;
     }
 
     private static Date toDate(Object raw) {

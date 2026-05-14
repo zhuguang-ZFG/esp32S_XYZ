@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_b/intent_submit.schema.json",
+  "title": "Edge-B intent_submit（DeviceServer→BusinessServer HTTP，M4.3 语音意图提交）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["device_id", "session_id"],
+  "properties": {
+    "device_id": { "type": "string", "minLength": 1 },
+    "session_id": { "type": "string", "minLength": 1 },
+    "intent": {
+      "type": "string",
+      "enum": ["home", "pause", "resume", "stop", "get_device_info", "move_relative"]
+    },
+    "params": { "type": "object" },
+    "voice_text": { "type": "string" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "voiceprint_id": { "type": "string" },
+    "ts": { "type": "integer", "minimum": 0 }
+  }
+}

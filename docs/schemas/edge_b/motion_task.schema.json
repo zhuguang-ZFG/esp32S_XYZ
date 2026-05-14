@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_b/motion_task.schema.json",
+  "title": "Edge-B motion_task 下发（BusinessServer→DeviceServer HTTP）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "device_id", "capability"],
+  "properties": {
+    "task_id": { "type": "string", "minLength": 1 },
+    "device_id": { "type": "string", "minLength": 1 },
+    "account_id": { "type": "integer" },
+    "capability": {
+      "type": "string",
+      "enum": ["home", "get_status", "move_abs", "run_path", "get_device_info", "pause", "resume", "stop", "estop"]
+    },
+    "source": { "type": "string", "enum": ["client", "voice"] },
+    "request_id": { "type": "string" },
+    "trace_id": { "type": "string" },
+    "params": { "type": "object" },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "timeout_ms": { "type": "integer", "minimum": 0 },
+        "safety_level": { "type": "string", "enum": ["strict", "loose"] }
+      }
+    }
+  }
+}

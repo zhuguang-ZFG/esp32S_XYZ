@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_d/result.schema.json",
+  "title": "Edge-D 命令结果帧（U1→U8）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["msg_id", "type", "task_id", "result", "state"],
+  "properties": {
+    "msg_id": { "type": "string", "minLength": 1 },
+    "type": { "const": "result" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "result": {
+      "type": "string",
+      "enum": ["DONE", "CANCELLED", "FAILED"]
+    },
+    "state": {
+      "type": "string",
+      "enum": ["IDLE", "HOMING", "RUNNING", "PAUSED", "ALARM", "ERROR", "ESTOP"]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_c/motion_event.schema.json",
+  "title": "Edge-C motion_event 上行（U8→DeviceServer WSS）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["session_id", "type", "task_id", "phase"],
+  "properties": {
+    "session_id": { "type": "string", "minLength": 1 },
+    "type": { "const": "motion_event" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "phase": {
+      "type": "string",
+      "enum": ["accepted", "running", "done", "failed"]
+    },
+    "device_id": { "type": "string" },
+    "capability": { "type": "string" }
+  }
+}

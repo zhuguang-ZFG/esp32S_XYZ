@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_d/cmd.schema.json",
+  "title": "Edge-D 命令请求封包（U8→U1）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["msg_id", "cmd"],
+  "properties": {
+    "msg_id": { "type": "string", "minLength": 1 },
+    "task_id": { "type": "string" },
+    "cmd": {
+      "type": "string",
+      "enum": ["GET_STATUS", "HOME", "MOVE", "PAUSE", "RESUME", "STOP", "ESTOP", "PATH_BEGIN", "PATH_SEG", "PATH_END"]
+    },
+    "x": { "type": "number" },
+    "y": { "type": "number" },
+    "z": { "type": "number" },
+    "feed": { "type": "number", "exclusiveMinimum": 0 },
+    "total_segments": { "type": "integer", "minimum": 0 },
+    "segment_index": { "type": "integer", "minimum": 0 },
+    "segment_cmd": { "type": "string", "enum": ["M", "L"] }
+  }
+}

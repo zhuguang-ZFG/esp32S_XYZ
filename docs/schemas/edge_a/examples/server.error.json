@@ -1,0 +1,5 @@
+{
+  "type": "error",
+  "code": "E_FORBIDDEN",
+  "message": "no active binding for device"
+}

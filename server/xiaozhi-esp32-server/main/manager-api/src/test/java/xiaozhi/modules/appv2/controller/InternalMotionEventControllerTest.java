@@ -27,6 +27,17 @@ class InternalMotionEventControllerTest {
     private AppV2Service appV2Service;
 
     @Test
+    void rejectsWhenInternalTokenIsNotConfigured() {
+        when(properties.getInternalToken()).thenReturn(" ");
+        InternalMotionEventController controller = new InternalMotionEventController(properties, appV2Service);
+
+        Result<Void> response = controller.motionEvent("Bearer secret-token", payload());
+
+        assertEquals(ErrorCode.INTERNAL_SERVER_ERROR, response.getCode());
+        assertEquals("motion_event ingest disabled", response.getMsg());
+    }
+
+    @Test
     void rejectsMissingBearerToken() {
         when(properties.getInternalToken()).thenReturn("secret-token");
         InternalMotionEventController controller = new InternalMotionEventController(properties, appV2Service);

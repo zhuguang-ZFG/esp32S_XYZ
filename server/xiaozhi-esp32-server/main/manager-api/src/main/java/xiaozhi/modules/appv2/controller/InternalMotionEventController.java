@@ -38,7 +38,7 @@ public class InternalMotionEventController {
         String expected = StringUtils.trimToEmpty(deviceServerProperties.getInternalToken());
         if (StringUtils.isBlank(expected)) {
             log.debug("motion_event ingest 已禁用（v2.device-server.internal-token 未配置）");
-            return new Result<Void>().error("motion_event ingest disabled");
+            return new Result<Void>().error(ErrorCode.INTERNAL_SERVER_ERROR, "motion_event ingest disabled");
         }
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return new Result<Void>().error(ErrorCode.UNAUTHORIZED, "missing bearer token");
