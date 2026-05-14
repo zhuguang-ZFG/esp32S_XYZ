@@ -41,6 +41,8 @@ server:
   mqtt_signature_key: null
   # BusinessServer 内部调用 motion_task 的共享密钥（须与 manager-api v2.device-server.internal-token 一致）
   internal_motion_task_token: ""
+  # M2.6：设备上行 motion_event 转发目标（manager-api 根 URL，无尾斜杠）。与 internal_motion_task_token 同时配置时生效。
+  motion_event_business_base_url: ""
   # UDP网关配置
   udp_gateway: null
 log:

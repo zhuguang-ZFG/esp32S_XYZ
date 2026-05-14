@@ -73,6 +73,8 @@ public:
     virtual void SendStopListening();
     virtual void SendAbortSpeaking(AbortReason reason);
     virtual void SendMcpMessage(const std::string& message);
+    /** M2.6：经云端 WSS 上行的 motion_event（与 type 同级的其它字段由 fields 提供，会合并 session_id）。 */
+    void SendMotionEvent(cJSON* fields);
 
 protected:
     std::function<void(const cJSON* root)> on_incoming_json_;

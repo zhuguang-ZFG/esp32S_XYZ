@@ -8,7 +8,8 @@ import lombok.Data;
 /**
  * BusinessServer → DeviceServer（xiaozhi-server HTTP）内部调用配置（M2.3 Edge-B）。
  * <p>
- * base-url 与 internal-token 均非空时，提交任务成功落库后会转发 {@code POST /internal/v1/motion_task}。
+ * base-url 与 internal-token 均非空时，提交任务成功落库后会转发 {@code POST /internal/v1/motion_task}；
+ * 同一份 {@code internal-token} 用于校验 DeviceServer 上行的 {@code POST /internal/v1/motion_event}（M2.6）。
  * 开发/CI 未接 DeviceServer 时可留空以跳过转发。
  */
 @Data

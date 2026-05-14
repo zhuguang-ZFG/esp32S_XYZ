@@ -71,6 +71,8 @@ private:
     std::mutex uart_mutex_;
     std::mutex job_mutex_;
     uint32_t protocol_msg_id_ = 0;
+    std::string last_motion_device_id_;
+    std::string last_motion_capability_raw_;
 
     static bool JsonNumberToString(cJSON* item, char* buffer, size_t buffer_size) {
         if (item == nullptr || buffer == nullptr || buffer_size == 0 || !cJSON_IsNumber(item)) {
@@ -508,6 +510,45 @@ private:
         return RunPathWithTaskId(NextLocalTaskId("path"), path_json, feed_rate);
     }
 
+    void EmitMotionEventPhase(const std::string& task_id, const char* phase) {
+        cJSON* o = cJSON_CreateObject();
+        if (o == nullptr) {
+            return;
+        }
+        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
+        cJSON_AddStringToObject(o, "phase", phase);
+        if (!last_motion_device_id_.empty()) {
+            cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
+        }
+        if (!last_motion_capability_raw_.empty()) {
+            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
+        }
+        Application::GetInstance().SendMotionEvent(o);
+        cJSON_Delete(o);
+    }
+
+    static bool ReturnValueU1Ok(const ReturnValue& rv) {
+        const auto* pj = std::get_if<cJSON*>(&rv);
+        if (pj == nullptr || *pj == nullptr) {
+            return false;
+        }
+        cJSON* ok = cJSON_GetObjectItemCaseSensitive(*pj, "ok");
+        return cJSON_IsBool(ok) && cJSON_IsTrue(ok);
+    }
+
+    void EmitMotionEventDoneOrFailed(const ReturnValue& rv, const std::string& task_id) {
+        EmitMotionEventPhase(task_id, ReturnValueU1Ok(rv) ? "done" : "failed");
+    }
+
+    void EmitRunPathOutcome(const ReturnValue& rv, const std::string& task_id) {
+        if (const auto* msg = std::get_if<std::string>(&rv)) {
+            const bool ok = msg->find("failed") == std::string::npos && msg->find("invalid") == std::string::npos;
+            EmitMotionEventPhase(task_id, ok ? "done" : "failed");
+        } else {
+            EmitMotionEventPhase(task_id, "failed");
+        }
+    }
+
     void HandleMotionTaskJson(const cJSON* root) override {
         if (root == nullptr) {
             return;
@@ -528,21 +569,37 @@ private:
             task_id = NextLocalTaskId("motion");
         }
 
+        last_motion_capability_raw_ = cap_item->valuestring;
+        last_motion_device_id_.clear();
+        cJSON* dev_item = cJSON_GetObjectItemCaseSensitive(root, "device_id");
+        if (cJSON_IsString(dev_item) && dev_item->valuestring != nullptr) {
+            last_motion_device_id_ = dev_item->valuestring;
+        }
+
         cJSON* params = cJSON_GetObjectItemCaseSensitive(root, "params");
         ESP_LOGI(TAG, "motion_task capability=%s task_id=%s", cap_norm.c_str(), task_id.c_str());
 
         if (cap_norm == "home" || cap_norm == "motor.home") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
             ReturnValue rv = ExecuteHomeWithTaskId(task_id);
+            EmitMotionEventDoneOrFailed(rv, task_id);
             FreeReturnValueIfJson(rv);
         } else if (cap_norm == "get_status" || cap_norm == "motor.get_status" || cap_norm == "getstatus") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
             ReturnValue rv = ExecuteGetStatusWithTaskId(task_id);
+            EmitMotionEventDoneOrFailed(rv, task_id);
             FreeReturnValueIfJson(rv);
         } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" || cap_norm == "move" || cap_norm == "motor.move") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
             const int x = MotionParamsGetInt(params, "x", 0);
             const int y = MotionParamsGetInt(params, "y", 0);
             const int z = MotionParamsGetInt(params, "z", 0);
             const int feed = MotionParamsGetInt(params, "feed", 1000);
             ReturnValue rv = ExecuteMoveWithTaskId(task_id, x, y, z, feed);
+            EmitMotionEventDoneOrFailed(rv, task_id);
             FreeReturnValueIfJson(rv);
         } else if (cap_norm == "run_path" || cap_norm == "motor.run_path" || cap_norm == "path") {
             int feed_rate = MotionParamsGetInt(params, "feed", 1200);
@@ -569,7 +626,10 @@ private:
                 ESP_LOGW(TAG, "motion_task run_path: missing path_json/path in params");
                 return;
             }
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
             ReturnValue rv = RunPathWithTaskId(task_id, path_json, feed_rate);
+            EmitRunPathOutcome(rv, task_id);
             if (const auto* msg = std::get_if<std::string>(&rv)) {
                 if (msg->find("failed") != std::string::npos || msg->find("invalid") != std::string::npos) {
                     ESP_LOGW(TAG, "motion_task run_path: %s", msg->c_str());

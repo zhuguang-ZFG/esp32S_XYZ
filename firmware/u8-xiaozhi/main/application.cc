@@ -1074,6 +1074,22 @@ void Application::SendMcpMessage(const std::string& payload) {
     });
 }
 
+void Application::SendMotionEvent(cJSON* fields) {
+    if (fields == nullptr) {
+        return;
+    }
+    cJSON* copy = cJSON_Duplicate(fields, 1);
+    if (copy == nullptr) {
+        return;
+    }
+    Schedule([this, copy]() {
+        if (protocol_) {
+            protocol_->SendMotionEvent(copy);
+        }
+        cJSON_Delete(copy);
+    });
+}
+
 void Application::SetAecMode(AecMode mode) {
     aec_mode_ = mode;
     Schedule([this]() {

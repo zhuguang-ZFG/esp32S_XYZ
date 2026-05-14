@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 import cn.hutool.json.JSONUtil;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.exception.RenException;
 import xiaozhi.common.page.TokenDTO;
@@ -46,6 +47,7 @@ import xiaozhi.modules.sys.service.SysUserService;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class AppV2ServiceImpl implements AppV2Service {
     private static final String ACCOUNT_STATUS_ACTIVE = "active";
     private static final String DEVICE_STATUS_PROVISIONED = "provisioned";
@@ -196,6 +198,16 @@ public class AppV2ServiceImpl implements AppV2Service {
         v2TaskDao.insert(task);
         deviceServerMotionGateway.forwardAcceptedTask(deviceId, task, request);
         return new V2SubmitTaskResponse(task.getId(), task.getStatus());
+    }
+
+    @Override
+    public void ingestMotionEvent(Map<String, Object> payload) {
+        log.info(
+                "motion_event ingest task_id={} phase={} device_id={} capability={}",
+                payload.get("task_id"),
+                payload.get("phase"),
+                payload.get("device_id"),
+                payload.get("capability"));
     }
 
     private static String buildUsername(String unionid) {

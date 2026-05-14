@@ -1,5 +1,6 @@
 #include "protocol.h"
 
+#include <cJSON.h>
 #include <esp_log.h>
 
 #define TAG "Protocol"
@@ -76,6 +77,31 @@ void Protocol::SendStopListening() {
 void Protocol::SendMcpMessage(const std::string& payload) {
     std::string message = "{\"session_id\":\"" + session_id_ + "\",\"type\":\"mcp\",\"payload\":" + payload + "}";
     SendText(message);
+}
+
+void Protocol::SendMotionEvent(cJSON* fields) {
+    if (fields == nullptr) {
+        return;
+    }
+    cJSON* root = cJSON_Duplicate(fields, 1);
+    if (root == nullptr) {
+        return;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(root, "session_id");
+    cJSON_AddStringToObject(root, "session_id", session_id_.c_str());
+    cJSON_DeleteItemFromObjectCaseSensitive(root, "type");
+    cJSON_AddStringToObject(root, "type", "motion_event");
+    char* serialized = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (serialized == nullptr) {
+        ESP_LOGE(TAG, "SendMotionEvent: cJSON_Print failed");
+        return;
+    }
+    std::string message(serialized);
+    cJSON_free(serialized);
+    if (!SendText(message)) {
+        ESP_LOGW(TAG, "SendMotionEvent failed (channel closed?)");
+    }
 }
 
 bool Protocol::IsTimeout() const {

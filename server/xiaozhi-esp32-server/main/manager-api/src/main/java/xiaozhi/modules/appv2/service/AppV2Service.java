@@ -1,5 +1,7 @@
 package xiaozhi.modules.appv2.service;
 
+import java.util.Map;
+
 import xiaozhi.modules.appv2.dto.V2BindDeviceRequest;
 import xiaozhi.modules.appv2.dto.V2BindDeviceResponse;
 import xiaozhi.modules.appv2.dto.V2LoginRequest;
@@ -13,4 +15,9 @@ public interface AppV2Service {
     V2BindDeviceResponse bindDevice(V2BindDeviceRequest request);
 
     V2SubmitTaskResponse submitTask(String deviceId, V2SubmitTaskRequest request);
+
+    /**
+     * 接收设备经 DeviceServer 转发的 motion_event（M2.6）；落库与五态映射见 M2.9。
+     */
+    void ingestMotionEvent(Map<String, Object> payload);
 }
