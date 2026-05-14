@@ -147,33 +147,6 @@
     {
       "path": "pages/voiceprint/index",
       "type": "page"
-    },
-    {
-      "path": "pages/v2/login/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "DLC 登录"
-      }
-    },
-    {
-      "path": "pages/v2/device-list/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "我的设备"
-      }
-    },
-    {
-      "path": "pages/v2/device-detail/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "设备详情"
-      }
     }
   ],
   "subPackages": [
