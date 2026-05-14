@@ -43,7 +43,9 @@
 
 // Driver outputs.
 #define X_STEP_PIN              GPIO_NUM_46
+// ↑ strapping pin IO46 — 已知风险：上电时若 IO46=0 可能导致启动异常，实测确认 PCB 无外部下拉
 #define X_DIRECTION_PIN         GPIO_NUM_3
+// ↑ strapping pin IO3 — 已知风险：JTAG 复用，上电时序依赖内部弱上拉
 
 #define Y_STEP_PIN              GPIO_NUM_8
 #define Y_DIRECTION_PIN         GPIO_NUM_18
@@ -69,6 +71,7 @@
 // Laser output through low-side MOSFET.
 #define SPINDLE_TYPE            SpindleType::PWM
 #define SPINDLE_OUTPUT_PIN      GPIO_NUM_45
+// ↑ strapping pin IO45 — 已知风险：VDD_SPI 电压选择，上电电平影响内部 flash 电压
 
 #ifndef ENABLE_SOFTWARE_DEBOUNCE
 #    define ENABLE_SOFTWARE_DEBOUNCE

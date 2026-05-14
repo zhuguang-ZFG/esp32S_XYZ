@@ -81,15 +81,46 @@ jobs:
           python tools/fake_u1/app.py --port 17799 &
           sleep 2
           python -c "
-          import socket, json
-          s = socket.create_connection(('127.0.0.1', 17799))
-          s.sendall(b'@{\"msg_id\":\"1\",\"task_id\":\"\",\"cmd\":\"GET_STATUS\"}\n')
-          resp = s.recv(4096).decode()
-          data = json.loads(resp.strip())
-          assert data['type'] == 'status'
-          assert 'state' in data
-          s.close()
-          print('fake-integration: GET_STATUS OK')
+          import socket, json, sys
+
+          def send(cmd_json):
+              s = socket.create_connection(('127.0.0.1', 17799))
+              s.sendall((cmd_json + '\n').encode())
+              resp = s.recv(8192).decode().strip()
+              s.close()
+              # 取最后一个 JSON 对象（可能有多帧）
+              for seg in resp.split('\n'):
+                  seg = seg.strip().lstrip('@')
+                  if seg:
+                      data = json.loads(seg)
+              return data
+
+          # happy path: GET_STATUS
+          r = send('@{\"msg_id\":\"1\",\"task_id\":\"\",\"cmd\":\"GET_STATUS\"}')
+          assert r['type'] == 'status', f'GET_STATUS expected status, got {r.get(\"type\")}'
+          print('PASS GET_STATUS')
+
+          # happy path: HOME
+          r = send('@{\"msg_id\":\"2\",\"task_id\":\"t1\",\"cmd\":\"HOME\"}')
+          assert r['type'] == 'result', f'HOME expected result, got {r.get(\"type\")}'
+          assert r['result'] == 'DONE', f'HOME expected DONE, got {r.get(\"result\")}'
+          print('PASS HOME')
+
+          # happy path: MOVE
+          r = send('@{\"msg_id\":\"3\",\"task_id\":\"t2\",\"cmd\":\"MOVE\",\"x\":10,\"y\":10,\"z\":0,\"feed\":1200}')
+          assert r['type'] == 'result', f'MOVE expected result, got {r.get(\"type\")}'
+          print('PASS MOVE')
+
+          # error injection: E001 (not homed)
+          python tools/fake_u1/app.py --port 17798 --inject E001 &
+          sleep 2
+          r = send('@{\"msg_id\":\"4\",\"task_id\":\"\",\"cmd\":\"MOVE\",\"x\":1,\"y\":1,\"z\":0,\"feed\":100}')
+          assert r['type'] == 'error', f'E001 expected error, got {r.get(\"type\")}'
+          assert r['error_code'] == 'E001', f'E001 expected, got {r.get(\"error_code\")}'
+          print('PASS E001 injection')
+          kill %2 2>/dev/null || true
+
+          print('fake-integration: all 4 tests passed')
           "
           kill %1 2>/dev/null || true
 

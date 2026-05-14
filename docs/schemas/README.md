@@ -1,28 +1,21 @@
 # Schemas
 
-This directory holds protocol contracts and examples for the motion-control stack.
+This directory holds protocol contracts, JSON Schema files, and examples for all four edges of the motion-control stack.
 
 ## Layout
 
-- `edge_c/`: DeviceServer ↔ U8（小智 WSS 文本 JSON）——`motion_task` / `motion_event`；见 `edge_c/README.md`。
-- `edge_d/examples/`: U8 -> U1 private protocol request and response examples.
+| Edge | Path | Role | Contents |
+|------|------|------|----------|
+| Edge-A | `edge_a/` | Client ↔ BusinessServer WSS | `auth`, `subscribe_device`, `subscribe_task`, `unsubscribe`, `ack`, `ping` (client); `authed`, `subscribed`, `event(job_status)`, `pong`, `error` (server) — 10 schemas |
+| Edge-B | `edge_b/` | BusinessServer ↔ DeviceServer HTTP | `motion_task`, `motion_event`, `intent_submit` — 3 schemas |
+| Edge-C | `edge_c/` | DeviceServer ↔ U8 WSS | `motion_task` (downlink), `motion_event` (uplink) — 2 schemas |
+| Edge-D | `edge_d/` | U8 ↔ U1 UART JSON | `cmd`, `status`, `result`, `error` — 4 schemas, 7 examples |
 
-## Current scope
+See each edge's `README.md` for protocol details and field semantics.
 
-The first committed contract surface is Edge-D for the M1 minimal command set:
+## Completion
 
-- `GET_STATUS`
-- `HOME`
-- `MOVE`
-
-Examples in `edge_d/examples/` are grounded in the current U1 implementation under
-`firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp` and
-`firmware/u1-grbl/Grbl_Esp32/src/Report.cpp`.
-
-Note: the example filenames follow the milestone plan wording. At the moment,
-current U1 behavior returns an immediate `type: "result"` payload for `HOME`
-and `MOVE` success paths, so `home.ack.json` is intentionally named after the
-plan while still reflecting the current on-wire response shape.
+19 schemas + 22 examples across all 4 edges. JSON Schema 2020-12, `additionalProperties: false`, `const` discriminators.
 
 ## Field evolution rule
 
