@@ -290,6 +290,12 @@ private:
         return ++protocol_msg_id_;
     }
 
+    // 给 MCP 调试入口用的本地 task_id 生成器：u8_<prefix>_<msg_id>。
+    // 真实链路（M2.5 起）task_id 由 BusinessServer 透传，**不要**复用本函数。
+    std::string NextLocalTaskId(const char* prefix) {
+        return std::string("u8_") + prefix + "_" + std::to_string(NextProtocolMessageId());
+    }
+
     std::string SendU1Line(const std::string& line, int timeout_ms = 120) {
         std::lock_guard<std::mutex> lock(uart_mutex_);
         uart_flush_input(U1_UART_PORT_NUM);
@@ -333,13 +339,13 @@ private:
     }
 
     ReturnValue ExecuteHomeCapability() {
-        const std::string task_id = "t_home_local";
+        const std::string task_id = NextLocalTaskId("home");
         const uint32_t msg_id = NextProtocolMessageId();
         return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "HOME", 250), msg_id, task_id, "HOME");
     }
 
     ReturnValue ExecuteGetStatusCapability() {
-        const std::string task_id = "t_status_local";
+        const std::string task_id = NextLocalTaskId("status");
         const uint32_t msg_id = NextProtocolMessageId();
         return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "GET_STATUS", 120), msg_id, task_id, "GET_STATUS");
     }
@@ -349,7 +355,7 @@ private:
             return std::string("invalid move params: feed must be within [1, 20000]");
         }
 
-        const std::string task_id = "t_move_local";
+        const std::string task_id = NextLocalTaskId("move");
         const uint32_t msg_id = NextProtocolMessageId();
         const std::string extra_fields = "\"x\":" + std::to_string(x) +
                                          ",\"y\":" + std::to_string(y) +
@@ -381,11 +387,14 @@ private:
             return std::string("path is empty");
         }
 
-        const std::string task_id = "t_path_local";
+        const std::string task_id = NextLocalTaskId("path");
+        // PATH_BEGIN/PATH_SEG 都只把段加进 U1 内部 G-code 缓冲区，未真正执行；
+        // 但 U1 主循环偶尔会被 feedHold/cycleStart 切换或 UART 抢占，150 ms 余量太紧，
+        // 给到 800 ms 仍属"非阻塞 ack"范畴。真实执行的等待由 PATH_END 长超时承担。
         auto response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_BEGIN",
                                            "\"total_segments\":" + std::to_string(total_segments) +
                                                ",\"feed\":" + std::to_string(feed_rate),
-                                           150);
+                                           800);
         if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
             cJSON_Delete(root);
             return std::string("path begin failed: ") + (response.empty() ? "timeout" : response);
@@ -425,7 +434,7 @@ private:
                                               "\",\"x\":" + xbuf +
                                               ",\"y\":" + ybuf +
                                               ",\"feed\":" + std::to_string(feed_rate),
-                                          150);
+                                          800);
             if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
                 cJSON_Delete(root);
                 return std::string("path segment failed: ") + (response.empty() ? "timeout" : response);
