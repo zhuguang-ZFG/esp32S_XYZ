@@ -67,6 +67,10 @@ Led* Board::GetLed() {
     return &led;
 }
 
+void Board::HandleMotionTaskJson(const cJSON* root) {
+    (void)root;
+}
+
 std::string Board::GetSystemInfoJson() {
     /* 
         {

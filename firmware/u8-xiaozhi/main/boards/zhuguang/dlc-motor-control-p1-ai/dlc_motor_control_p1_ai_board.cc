@@ -11,12 +11,14 @@
 #include <driver/i2c_master.h>
 #include <driver/uart.h>
 #include <esp_log.h>
+#include <cJSON.h>
 
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <mutex>
 #include <string>
+#include <variant>
 
 #define TAG "DlcMotorP1AiBoard"
 
@@ -338,24 +340,61 @@ private:
         return SendU1Line("@" + line, timeout_ms);
     }
 
-    ReturnValue ExecuteHomeCapability() {
-        const std::string task_id = NextLocalTaskId("home");
+    static std::string ToLowerAscii(std::string s) {
+        for (char& c : s) {
+            if (c >= 'A' && c <= 'Z') {
+                c = static_cast<char>(c - 'A' + 'a');
+            }
+        }
+        return s;
+    }
+
+    static std::string NormalizeMotionCapabilityName(const char* raw) {
+        if (raw == nullptr) {
+            return "";
+        }
+        std::string s = raw;
+        if (s.size() > 5 && s.compare(0, 5, "self.") == 0) {
+            s = s.substr(5);
+        }
+        return ToLowerAscii(std::move(s));
+    }
+
+    static int MotionParamsGetInt(cJSON* params, const char* key, int default_value) {
+        if (params == nullptr || !cJSON_IsObject(params)) {
+            return default_value;
+        }
+        cJSON* it = cJSON_GetObjectItemCaseSensitive(params, key);
+        if (it == nullptr || !cJSON_IsNumber(it)) {
+            return default_value;
+        }
+        return static_cast<int>(it->valuedouble);
+    }
+
+    static void FreeReturnValueIfJson(ReturnValue& rv) {
+        if (auto* p = std::get_if<cJSON*>(&rv)) {
+            if (*p != nullptr) {
+                cJSON_Delete(*p);
+                *p = nullptr;
+            }
+        }
+    }
+
+    ReturnValue ExecuteHomeWithTaskId(const std::string& task_id) {
         const uint32_t msg_id = NextProtocolMessageId();
         return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "HOME", 250), msg_id, task_id, "HOME");
     }
 
-    ReturnValue ExecuteGetStatusCapability() {
-        const std::string task_id = NextLocalTaskId("status");
+    ReturnValue ExecuteGetStatusWithTaskId(const std::string& task_id) {
         const uint32_t msg_id = NextProtocolMessageId();
         return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "GET_STATUS", 120), msg_id, task_id, "GET_STATUS");
     }
 
-    ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed) {
+    ReturnValue ExecuteMoveWithTaskId(const std::string& task_id, int x, int y, int z, int feed) {
         if (feed < 1 || feed > 20000) {
             return std::string("invalid move params: feed must be within [1, 20000]");
         }
 
-        const std::string task_id = NextLocalTaskId("move");
         const uint32_t msg_id = NextProtocolMessageId();
         const std::string extra_fields = "\"x\":" + std::to_string(x) +
                                          ",\"y\":" + std::to_string(y) +
@@ -363,6 +402,18 @@ private:
                                          ",\"feed\":" + std::to_string(feed);
         auto response = SendU1ProtocolJson(msg_id, task_id, "MOVE", extra_fields, 200);
         return ParseCapabilityResponse(response, msg_id, task_id, "MOVE");
+    }
+
+    ReturnValue ExecuteHomeCapability() {
+        return ExecuteHomeWithTaskId(NextLocalTaskId("home"));
+    }
+
+    ReturnValue ExecuteGetStatusCapability() {
+        return ExecuteGetStatusWithTaskId(NextLocalTaskId("status"));
+    }
+
+    ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed) {
+        return ExecuteMoveWithTaskId(NextLocalTaskId("move"), x, y, z, feed);
     }
 
     void InitializeWebSocketControlServer() {
@@ -373,7 +424,7 @@ private:
         }
     }
 
-    ReturnValue RunPath(const std::string& path_json, int feed_rate) {
+    ReturnValue RunPathWithTaskId(const std::string& task_id, const std::string& path_json, int feed_rate) {
         cJSON* root = cJSON_Parse(path_json.c_str());
         if (root == nullptr || !cJSON_IsArray(root)) {
             if (root != nullptr) {
@@ -387,7 +438,6 @@ private:
             return std::string("path is empty");
         }
 
-        const std::string task_id = NextLocalTaskId("path");
         // PATH_BEGIN/PATH_SEG 都只把段加进 U1 内部 G-code 缓冲区，未真正执行；
         // 但 U1 主循环偶尔会被 feedHold/cycleStart 切换或 UART 抢占，150 ms 余量太紧，
         // 给到 800 ms 仍属"非阻塞 ack"范畴。真实执行的等待由 PATH_END 长超时承担。
@@ -452,6 +502,84 @@ private:
             return std::string("path end failed: ") + response;
         }
         return response;
+    }
+
+    ReturnValue RunPath(const std::string& path_json, int feed_rate) {
+        return RunPathWithTaskId(NextLocalTaskId("path"), path_json, feed_rate);
+    }
+
+    void HandleMotionTaskJson(const cJSON* root) override {
+        if (root == nullptr) {
+            return;
+        }
+        cJSON* cap_item = cJSON_GetObjectItemCaseSensitive(root, "capability");
+        if (!cJSON_IsString(cap_item) || cap_item->valuestring == nullptr) {
+            ESP_LOGW(TAG, "motion_task: missing capability");
+            return;
+        }
+        const std::string cap_norm = NormalizeMotionCapabilityName(cap_item->valuestring);
+
+        std::string task_id;
+        cJSON* task_item = cJSON_GetObjectItemCaseSensitive(root, "task_id");
+        if (cJSON_IsString(task_item) && task_item->valuestring != nullptr && task_item->valuestring[0] != '\0') {
+            task_id = task_item->valuestring;
+        } else {
+            ESP_LOGW(TAG, "motion_task: missing task_id, generating local id");
+            task_id = NextLocalTaskId("motion");
+        }
+
+        cJSON* params = cJSON_GetObjectItemCaseSensitive(root, "params");
+        ESP_LOGI(TAG, "motion_task capability=%s task_id=%s", cap_norm.c_str(), task_id.c_str());
+
+        if (cap_norm == "home" || cap_norm == "motor.home") {
+            ReturnValue rv = ExecuteHomeWithTaskId(task_id);
+            FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "get_status" || cap_norm == "motor.get_status" || cap_norm == "getstatus") {
+            ReturnValue rv = ExecuteGetStatusWithTaskId(task_id);
+            FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" || cap_norm == "move" || cap_norm == "motor.move") {
+            const int x = MotionParamsGetInt(params, "x", 0);
+            const int y = MotionParamsGetInt(params, "y", 0);
+            const int z = MotionParamsGetInt(params, "z", 0);
+            const int feed = MotionParamsGetInt(params, "feed", 1000);
+            ReturnValue rv = ExecuteMoveWithTaskId(task_id, x, y, z, feed);
+            FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "run_path" || cap_norm == "motor.run_path" || cap_norm == "path") {
+            int feed_rate = MotionParamsGetInt(params, "feed", 1200);
+            if (feed_rate < 1 || feed_rate > 20000) {
+                feed_rate = 1200;
+            }
+            std::string path_json;
+            if (cJSON_IsObject(params)) {
+                cJSON* pj = cJSON_GetObjectItemCaseSensitive(params, "path_json");
+                if (cJSON_IsString(pj) && pj->valuestring != nullptr) {
+                    path_json = pj->valuestring;
+                } else {
+                    cJSON* parr = cJSON_GetObjectItemCaseSensitive(params, "path");
+                    if (parr != nullptr && (cJSON_IsArray(parr) || cJSON_IsObject(parr))) {
+                        char* printed = cJSON_PrintUnformatted(parr);
+                        if (printed != nullptr) {
+                            path_json = printed;
+                            cJSON_free(printed);
+                        }
+                    }
+                }
+            }
+            if (path_json.empty()) {
+                ESP_LOGW(TAG, "motion_task run_path: missing path_json/path in params");
+                return;
+            }
+            ReturnValue rv = RunPathWithTaskId(task_id, path_json, feed_rate);
+            if (const auto* msg = std::get_if<std::string>(&rv)) {
+                if (msg->find("failed") != std::string::npos || msg->find("invalid") != std::string::npos) {
+                    ESP_LOGW(TAG, "motion_task run_path: %s", msg->c_str());
+                } else {
+                    ESP_LOGI(TAG, "motion_task run_path completed");
+                }
+            }
+        } else {
+            ESP_LOGW(TAG, "motion_task: unsupported capability '%s'", cap_item->valuestring);
+        }
     }
 
     void InitializeTools() {

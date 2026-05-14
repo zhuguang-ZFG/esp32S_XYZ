@@ -567,6 +567,8 @@ void Application::InitializeProtocol() {
             if (cJSON_IsObject(payload)) {
                 McpServer::GetInstance().ParseMessage(payload);
             }
+        } else if (strcmp(type->valuestring, "motion_task") == 0) {
+            Board::GetInstance().HandleMotionTaskJson(root);
         } else if (strcmp(type->valuestring, "system") == 0) {
             auto command = cJSON_GetObjectItem(root, "command");
             if (cJSON_IsString(command)) {

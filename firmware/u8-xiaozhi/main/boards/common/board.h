@@ -46,6 +46,7 @@ using NetworkEventCallback = std::function<void(NetworkEvent event, const std::s
 void* create_board();
 class AudioCodec;
 class Display;
+struct cJSON;
 class Board {
 private:
     Board(const Board&) = delete; // 禁用拷贝构造函数
@@ -82,6 +83,9 @@ public:
     virtual void SetPowerSaveLevel(PowerSaveLevel level) = 0;
     virtual std::string GetBoardJson() = 0;
     virtual std::string GetDeviceStatusJson() = 0;
+
+    /** M2.5：云端 WSS 下行 `type=motion_task` 时由 Application 转发；默认忽略。 */
+    virtual void HandleMotionTaskJson(const cJSON* root);
 };
 
 #define DECLARE_BOARD(BOARD_CLASS_NAME) \
