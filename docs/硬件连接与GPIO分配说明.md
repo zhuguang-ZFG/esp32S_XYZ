@@ -15,12 +15,13 @@
 
 ## 0. 证据强度与核查记录
 
-本文档此前的 GPIO 信息来自 EDA 工程的人工整理。2026-05-14 收到新的 `.sch/.txt/.pcb/PDF/CAM/BOM/坐标` 硬件源文件后，已用 PADS Logic `.txt` 导出文件的 `*SIGNAL*` 段核对关键网络与 U1/U8 引脚；PDF 作为人读版交付图纸同步归档。证据分两等：
+本文档此前的 GPIO 信息来自 EDA 工程的人工整理。2026-05-14 收到新的 `.sch/.txt/.pcb/PDF/CAM/BOM/坐标` 硬件源文件后，已用 PADS Logic `.txt` 导出文件的 `*SIGNAL*` 段核对关键网络与 U1/U8 引脚；PDF 作为人读版交付图纸同步归档。证据分三等：
 
 - **强证（PADS `*SIGNAL*` 可证）**：导出文件直接列出网络到器件引脚的连接，例如 `TMC2208-1_DIR -> U1.15 -> IO3`、`PA_EN -> U8.32 -> IO39`、`DVP_PWDN -> U8.33 -> IO40`。
+- **型号强证（SCH PDF + BOM 可证）**：`DLC_Motor_Control_P1_V1.0_260513SCH.pdf` 第 4 页将四路步进驱动标为 `驱动芯片：HR4988`，并把 `U52/U2/U3/U4` 标为 `HR4988E`；`DLC_Motor_Control_P1_V1.0_260513BOM.xls` 同步列出 `HR4988E | U2-4 U52 | QFN-28-EP(5x5) | C128662`。因此当前实际步进驱动按 `HR4988E` 处理。
 - **待实机确认**：PADS 源文件已证明原理图连接，但生产板仍需用万用表/逻辑分析仪抽测 UART、步进 STEP/DIR、传感器输入、音频 MCLK/PA_EN、摄像头 PWDN 等关键线，确认 PCB 实物与源文件一致。
 
-本轮已确认新 `.txt/.sch/.pcb` 源文件中存在并延续以下关键网络族：`TMC2208-1/2/3/4_*`、`MOTOR_EN`、`UUT_SENSOR_1/2/3/4`、`SERVO_PWM1/2/3`、`HX711_SCLK/MISO`、`LASER_CONTROL`、`M_U1TXD/M_U1RXD`、`IO38_I2S_MCK`、`PA_EN`、`DVP_PWDN`、DVP/I2S/SD/I2C 网络。固件 GPIO 配置与 PADS 导出连接一致，未发现需要改动的引脚配置。
+本轮已确认新 `.txt/.sch/.pcb` 源文件中存在并延续以下关键网络族：`TMC2208-1/2/3/4_*`、`MOTOR_EN`、`UUT_SENSOR_1/2/3/4`、`SERVO_PWM1/2/3`、`HX711_SCLK/MISO`、`LASER_CONTROL`、`M_U1TXD/M_U1RXD`、`IO38_I2S_MCK`、`PA_EN`、`DVP_PWDN`、DVP/I2S/SD/I2C 网络。这里的 `TMC2208-*` 是遗留网络名和 PADS 元件属性名，不再作为实际芯片型号依据；实际步进驱动型号以 SCH PDF 与 BOM 的 `HR4988E` 为准。固件 GPIO 配置与 PADS 导出连接一致，未发现需要改动的引脚配置。
 
 下表 GPIO 均已用 PADS `.txt` 的 `*SIGNAL*` 段核对到 U1/U8 符号引脚；无 `*SIGNAL*` 证据的扩展候选脚不作为当前固件配置使用。
 
@@ -235,7 +236,7 @@ U1 侧除 MCU 间串口外，多数外设信号网络名不含 `IOxx_` 前缀。
 | U1 管脚 | GPIO | 网络名 | 用途 |
 |---|---:|---|---|
 | 3 | `EN` | `RESET` | 芯片使能/复位输入 |
-| 4 | `IO4` | `MOTOR_EN` | 4 路 TMC2208 共用使能 |
+| 4 | `IO4` | `MOTOR_EN` | 4 路 HR4988E 共用使能 |
 | 5 | `IO5` | `TMC2208-4_DIR` | 步进驱动 4 方向 |
 | 6 | `IO6` | `TMC2208-4_STEP` | 步进驱动 4 脉冲 |
 | 7 | `IO7` | `HX711_SCLK` | 压力传感器 ADC 时钟 |
@@ -269,6 +270,8 @@ U1 侧除 MCU 间串口外，多数外设信号网络名不含 `IOxx_` 前缀。
 ### 4.3 U1 对应外设关系
 
 #### 4.3.1 四路步进驱动
+
+实际驱动芯片为 `HR4988E`；下表保留 `TMC2208-*` 作为原理图/PADS 中的既有网络名，便于与 `.txt` 的 `*SIGNAL*` 证据逐项对应。
 
 | 功能 | GPIO |
 |---|---|

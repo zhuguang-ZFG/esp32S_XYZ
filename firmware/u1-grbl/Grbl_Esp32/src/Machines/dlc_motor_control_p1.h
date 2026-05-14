@@ -8,7 +8,7 @@
 
     Hardware summary from schematic/PCB:
     - MCU: ESP32-S3 (U1 / MOTOR_MCU)
-    - 4 external TMC2208 driver channels wired as:
+    - 4 external HR4988E driver channels wired in STEP/DIR mode as:
         J5 -> X
         J1 -> Y
         J3 -> Y2
@@ -26,8 +26,8 @@
     Notes:
     - This definition intentionally models the machine as XYYZ.
     - Y/Y2 are squared during homing by using two independent home inputs.
-    - TMC2208 UART is not currently routed to U1 in the schematic, so this uses
-      standard external step/dir driver mode rather than Trinamic UART mode.
+    - HR4988E is an A4988-class STEP/DIR driver in this board revision.
+      No Trinamic UART mode is routed or configured.
 */
 
 #define MACHINE_NAME "DLC Motor Control P1 XYYZ"
