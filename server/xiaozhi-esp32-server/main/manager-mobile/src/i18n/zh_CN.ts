@@ -502,6 +502,26 @@ export default {
   'deviceConfig.audioPlaybackError': '音频播放错误',
   'deviceConfig.playbackFailed': '播放失败',
 
+  // v2 pages (unibest template, wot-ui components only)
+  'v2.login.title': 'DLC 写字机',
+  'v2.login.subtitle': 'AI 语音写字绘图机',
+  'v2.login.wxLogin': '微信一键登录',
+  'v2.login.loggingIn': '登录中...',
+  'v2.login.privacy': '登录即同意《用户协议》和《隐私政策》',
+  'v2.deviceList.title': '我的设备',
+  'v2.deviceList.empty': '暂无绑定设备',
+  'v2.deviceList.addDevice': '添加设备',
+  'v2.deviceList.enterSn': '请输入设备 SN',
+  'v2.deviceList.enterCode': '请输入激活码',
+  'v2.deviceList.confirm': '确认绑定',
+  'v2.deviceList.cancel': '取消',
+  'v2.deviceDetail.title': '设备详情',
+  'v2.deviceDetail.homeButton': '归零',
+  'v2.deviceDetail.homing': '归零中...',
+  'v2.deviceDetail.disconnected': 'WSS 未连接',
+  'v2.deviceDetail.connected': 'WSS 已连接',
+  'v2.deviceDetail.connectAndSubscribe': '连接并订阅',
+
   // Voiceprint page
   'voiceprint.audioNotExist': '该音频不存在',
   'voiceprint.getAudioFailed': '获取音频失败',
