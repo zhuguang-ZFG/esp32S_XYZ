@@ -39,6 +39,8 @@ server:
   mqtt_gateway: null
   # MQTT签名密钥，用于生成MQTT连接密码，根据mqtt_gateway的.env文件配置
   mqtt_signature_key: null
+  # BusinessServer 内部调用 motion_task 的共享密钥（须与 manager-api v2.device-server.internal-token 一致）
+  internal_motion_task_token: ""
   # UDP网关配置
   udp_gateway: null
 log:

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 
 import websockets
@@ -67,6 +68,9 @@ class WebSocketServer:
         secret_key = self.config["server"]["auth_key"]
         expire_seconds = auth_config.get("expire_seconds", None)
         self.auth = AuthManager(secret_key=secret_key, expire_seconds=expire_seconds)
+        # M2.4：device-id -> 当前活跃设备 WebSocket（单连接覆盖重连）
+        self._motion_lock = asyncio.Lock()
+        self._motion_ws_by_device: dict[str, websockets.ServerConnection] = {}
 
     async def start(self):
         server_config = self.config["server"]
@@ -225,3 +229,44 @@ class WebSocketServer:
                 )
                 if not auth_success:
                     raise AuthenticationError("Invalid token")
+
+    async def attach_motion_device(
+        self, device_id: str, websocket: websockets.ServerConnection
+    ) -> None:
+        if not device_id:
+            return
+        async with self._motion_lock:
+            self._motion_ws_by_device[device_id] = websocket
+        self.logger.bind(tag=TAG).info("motion 会话注册 device_id={}", device_id)
+
+    async def detach_motion_device(
+        self, device_id: str, websocket: websockets.ServerConnection
+    ) -> None:
+        if not device_id:
+            return
+        async with self._motion_lock:
+            if self._motion_ws_by_device.get(device_id) is websocket:
+                self._motion_ws_by_device.pop(device_id, None)
+                self.logger.bind(tag=TAG).info("motion 会话注销 device_id={}", device_id)
+
+    async def send_motion_task_to_device(
+        self, device_id: str, message: dict
+    ) -> bool:
+        """将 JSON 对象经 WSS 发给该 device-id 的当前连接；失败返回 False。"""
+        import json
+
+        if not device_id:
+            return False
+        async with self._motion_lock:
+            ws = self._motion_ws_by_device.get(device_id)
+        if ws is None:
+            return False
+        text = json.dumps(message, ensure_ascii=False)
+        try:
+            await ws.send(text)
+            return True
+        except Exception as e:
+            self.logger.bind(tag=TAG).warning(
+                "motion_task WSS 发送失败 device_id={} err={}", device_id, e
+            )
+            return False

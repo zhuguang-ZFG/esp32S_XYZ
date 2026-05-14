@@ -36,6 +36,7 @@ import xiaozhi.modules.appv2.entity.V2DeviceBindingEntity;
 import xiaozhi.modules.appv2.entity.V2DeviceEntity;
 import xiaozhi.modules.appv2.entity.V2TaskEntity;
 import xiaozhi.modules.appv2.service.AppV2Service;
+import xiaozhi.modules.appv2.service.DeviceServerMotionGateway;
 import xiaozhi.modules.appv2.service.WechatLoginGateway;
 import xiaozhi.modules.appv2.service.WechatLoginGateway.WechatSession;
 import xiaozhi.modules.security.service.SysUserTokenService;
@@ -61,6 +62,7 @@ public class AppV2ServiceImpl implements AppV2Service {
     private final SysUserService sysUserService;
     private final SysUserTokenService sysUserTokenService;
     private final WechatLoginGateway wechatLoginGateway;
+    private final DeviceServerMotionGateway deviceServerMotionGateway;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -192,6 +194,7 @@ public class AppV2ServiceImpl implements AppV2Service {
         task.setConstraintsJson(toJson(request.getConstraints()));
         task.setStatus(TASK_STATUS_ACCEPTED);
         v2TaskDao.insert(task);
+        deviceServerMotionGateway.forwardAcceptedTask(deviceId, task, request);
         return new V2SubmitTaskResponse(task.getId(), task.getStatus());
     }
 

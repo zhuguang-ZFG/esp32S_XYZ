@@ -212,6 +212,8 @@ class ConnectionHandler:
 
             # 认证通过,继续处理
             self.websocket = ws
+            if self.server and self.device_id:
+                await self.server.attach_motion_device(self.device_id, ws)
 
             # 检查是否来自MQTT连接
             request_path = ws.request.path
@@ -250,6 +252,13 @@ class ConnectionHandler:
             self.logger.bind(tag=TAG).error(f"Connection error: {str(e)}-{stack_trace}")
             return
         finally:
+            try:
+                if self.server and self.device_id and self.websocket:
+                    await self.server.detach_motion_device(
+                        self.device_id, self.websocket
+                    )
+            except Exception:
+                pass
             try:
                 await self._save_and_close(ws)
             except Exception as final_error:

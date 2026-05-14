@@ -57,3 +57,10 @@ v2:
       app-id:
       app-secret:
       mock-mode: true
+  # M2.3：对接 xiaozhi-server POST /internal/v1/motion_task（与 server.internal_motion_task_token 一致）
+  device-server:
+    base-url: ""
+    internal-token: ""
+    # 本地联调示例（取消注释并同步 data/.config.yaml 中 server.internal_motion_task_token）:
+    # base-url: http://127.0.0.1:8003
+    # internal-token: dev-internal-motion-token

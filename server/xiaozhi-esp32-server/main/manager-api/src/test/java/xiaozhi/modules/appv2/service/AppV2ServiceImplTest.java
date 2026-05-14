@@ -2,7 +2,9 @@ package xiaozhi.modules.appv2.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +32,7 @@ import xiaozhi.modules.appv2.dto.V2SubmitTaskResponse;
 import xiaozhi.modules.appv2.entity.V2ActivationCodeEntity;
 import xiaozhi.modules.appv2.entity.V2DeviceBindingEntity;
 import xiaozhi.modules.appv2.entity.V2TaskEntity;
+import xiaozhi.modules.appv2.service.DeviceServerMotionGateway;
 import xiaozhi.modules.appv2.service.WechatLoginGateway.WechatSession;
 import xiaozhi.modules.appv2.service.impl.AppV2ServiceImpl;
 import xiaozhi.modules.security.service.SysUserTokenService;
@@ -55,6 +58,8 @@ class AppV2ServiceImplTest {
     private SysUserTokenService sysUserTokenService;
     @Mock
     private WechatLoginGateway wechatLoginGateway;
+    @Mock
+    private DeviceServerMotionGateway deviceServerMotionGateway;
 
     @InjectMocks
     private AppV2ServiceImpl service;
@@ -140,6 +145,33 @@ class AppV2ServiceImplTest {
 
             assertEquals("task-123", response.getTaskId());
             assertEquals("accepted", response.getStatus());
+            verify(deviceServerMotionGateway, never()).forwardAcceptedTask(any(), any(), any());
+        }
+    }
+
+    @Test
+    void submitTaskForwardsToDeviceServerForNewTask() {
+        V2SubmitTaskRequest request = new V2SubmitTaskRequest();
+        request.setCapability("home");
+
+        V2DeviceBindingEntity binding = new V2DeviceBindingEntity();
+        binding.setAccountId(31L);
+        binding.setDeviceId("dev-1");
+        binding.setBindingStatus("active");
+
+        when(v2DeviceBindingDao.selectOne(any())).thenReturn(binding);
+        when(v2TaskDao.selectOne(any())).thenReturn(null);
+
+        UserDetail user = new UserDetail();
+        user.setId(31L);
+        try (MockedStatic<SecurityUser> mockedSecurityUser = mockStatic(SecurityUser.class)) {
+            mockedSecurityUser.when(SecurityUser::getUser).thenReturn(user);
+
+            V2SubmitTaskResponse response = service.submitTask("dev-1", request);
+
+            assertEquals("accepted", response.getStatus());
+            verify(v2TaskDao).insert(any(V2TaskEntity.class));
+            verify(deviceServerMotionGateway).forwardAcceptedTask(eq("dev-1"), any(V2TaskEntity.class), eq(request));
         }
     }
 }
