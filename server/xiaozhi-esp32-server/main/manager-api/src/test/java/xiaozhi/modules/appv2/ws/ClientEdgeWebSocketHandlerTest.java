@@ -3,6 +3,7 @@ package xiaozhi.modules.appv2.ws;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,17 +29,11 @@ class ClientEdgeWebSocketHandlerTest {
     @Test
     void subscribeDeviceRequiresAuth() throws Exception {
         ClientEdgeWebSocketHandler handler = newHandler();
-        WebSocketSession session = session();
-
-        handler.afterConnectionEstablished(session);
+        WebSocketSession session = openSession(handler);
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"subscribe_device\",\"device_id\":\"dev-1\"}"));
 
-        TextMessage msg = captureLastTextMessage(session);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> payload = JSONUtil.toBean(msg.getPayload(), Map.class);
-        assertEquals("error", payload.get("type"));
-        assertEquals("E_AUTH", payload.get("code"));
-        verify(session).close(CloseStatus.POLICY_VIOLATION.withReason("E_AUTH"));
+        verify(session, never()).sendMessage(any(TextMessage.class));
+        verify(session).close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
     }
 
     @Test
@@ -46,17 +41,11 @@ class ClientEdgeWebSocketHandlerTest {
         SysUserTokenService sysUserTokenService = mock(SysUserTokenService.class);
         when(sysUserTokenService.getUserByToken("bad-token")).thenThrow(new RenException("bad token"));
         ClientEdgeWebSocketHandler handler = newHandler(sysUserTokenService, mock(V2DeviceBindingDao.class), mock(V2TaskDao.class));
-        WebSocketSession session = session();
-
-        handler.afterConnectionEstablished(session);
+        WebSocketSession session = openSession(handler);
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"auth\",\"token\":\"bad-token\"}"));
 
-        TextMessage msg = captureLastTextMessage(session);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> payload = JSONUtil.toBean(msg.getPayload(), Map.class);
-        assertEquals("error", payload.get("type"));
-        assertEquals("E_AUTH", payload.get("code"));
-        verify(session).close(CloseStatus.POLICY_VIOLATION.withReason("E_AUTH"));
+        verify(session, never()).sendMessage(any(TextMessage.class));
+        verify(session).close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
     }
 
     @Test
@@ -74,9 +63,7 @@ class ClientEdgeWebSocketHandlerTest {
         when(bindingDao.selectOne(any())).thenReturn(binding);
 
         ClientEdgeWebSocketHandler handler = newHandler(sysUserTokenService, bindingDao, mock(V2TaskDao.class));
-        WebSocketSession session = session();
-
-        handler.afterConnectionEstablished(session);
+        WebSocketSession session = openSession(handler);
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"auth\",\"token\":\"token-1\"}"));
         handler.handleTextMessage(session,
                 new TextMessage("{\"op\":\"subscribe_device\",\"device_id\":\"dev-1\",\"since_seq\":7}"));
@@ -104,9 +91,7 @@ class ClientEdgeWebSocketHandlerTest {
         when(bindingDao.selectOne(any())).thenReturn(binding);
 
         ClientEdgeWebSocketHandler handler = newHandler(sysUserTokenService, bindingDao, mock(V2TaskDao.class));
-        WebSocketSession session = session();
-
-        handler.afterConnectionEstablished(session);
+        WebSocketSession session = openSession(handler);
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"auth\",\"token\":\"token-1\"}"));
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"subscribe_device\",\"device_id\":\"dev-1\"}"));
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"ack\",\"topic\":\"device:dev-1\",\"seq\":5}"));
@@ -134,9 +119,7 @@ class ClientEdgeWebSocketHandlerTest {
         when(taskDao.selectById("task-1")).thenReturn(task);
 
         ClientEdgeWebSocketHandler handler = newHandler(sysUserTokenService, mock(V2DeviceBindingDao.class), taskDao);
-        WebSocketSession session = session();
-
-        handler.afterConnectionEstablished(session);
+        WebSocketSession session = openSession(handler);
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"auth\",\"token\":\"token-1\"}"));
         handler.handleTextMessage(session, new TextMessage("{\"op\":\"subscribe_task\",\"task_id\":\"task-1\"}"));
 
@@ -161,6 +144,13 @@ class ClientEdgeWebSocketHandlerTest {
         WebSocketSession session = mock(WebSocketSession.class);
         when(session.getAttributes()).thenReturn(new ConcurrentHashMap<>());
         when(session.isOpen()).thenReturn(true);
+        return session;
+    }
+
+    private static WebSocketSession openSession(ClientEdgeWebSocketHandler handler) throws Exception {
+        WebSocketSession session = session();
+        handler.afterConnectionEstablished(session);
+        session.getAttributes().put("edgeA.sendSession", session);
         return session;
     }
 
