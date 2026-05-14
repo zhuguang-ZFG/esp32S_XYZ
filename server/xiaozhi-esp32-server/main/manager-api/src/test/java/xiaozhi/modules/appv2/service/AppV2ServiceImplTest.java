@@ -3,6 +3,7 @@ package xiaozhi.modules.appv2.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,7 @@ import xiaozhi.modules.appv2.entity.V2TaskEntity;
 import xiaozhi.modules.appv2.service.DeviceServerMotionGateway;
 import xiaozhi.modules.appv2.service.WechatLoginGateway.WechatSession;
 import xiaozhi.modules.appv2.service.impl.AppV2ServiceImpl;
+import xiaozhi.modules.appv2.ws.EdgeAClientHub;
 import xiaozhi.modules.security.service.SysUserTokenService;
 import xiaozhi.modules.security.user.SecurityUser;
 import xiaozhi.modules.sys.dto.SysUserDTO;
@@ -60,6 +62,8 @@ class AppV2ServiceImplTest {
     private WechatLoginGateway wechatLoginGateway;
     @Mock
     private DeviceServerMotionGateway deviceServerMotionGateway;
+    @Mock
+    private EdgeAClientHub edgeAClientHub;
 
     @InjectMocks
     private AppV2ServiceImpl service;
@@ -133,7 +137,7 @@ class AppV2ServiceImplTest {
         existing.setId("task-123");
         existing.setStatus("accepted");
 
-        when(v2DeviceBindingDao.selectOne(any())).thenReturn(binding);
+        lenient().when(v2DeviceBindingDao.selectOne(any())).thenReturn(binding);
         when(v2TaskDao.selectOne(any())).thenReturn(existing);
 
         UserDetail user = new UserDetail();
@@ -159,9 +163,7 @@ class AppV2ServiceImplTest {
         binding.setDeviceId("dev-1");
         binding.setBindingStatus("active");
 
-        when(v2DeviceBindingDao.selectOne(any())).thenReturn(binding);
-        when(v2TaskDao.selectOne(any())).thenReturn(null);
-
+        lenient().when(v2DeviceBindingDao.selectOne(any())).thenReturn(binding);
         UserDetail user = new UserDetail();
         user.setId(31L);
         try (MockedStatic<SecurityUser> mockedSecurityUser = mockStatic(SecurityUser.class)) {
@@ -173,5 +175,18 @@ class AppV2ServiceImplTest {
             verify(v2TaskDao).insert(any(V2TaskEntity.class));
             verify(deviceServerMotionGateway).forwardAcceptedTask(eq("dev-1"), any(V2TaskEntity.class), eq(request));
         }
+    }
+
+    @Test
+    void ingestMotionEventPublishesToEdgeAHub() {
+        java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+        payload.put("task_id", "task-1");
+        payload.put("phase", "done");
+        payload.put("device_id", "dev-1");
+        payload.put("capability", "home");
+
+        service.ingestMotionEvent(payload);
+
+        verify(edgeAClientHub).publishMotionEvent(payload);
     }
 }
