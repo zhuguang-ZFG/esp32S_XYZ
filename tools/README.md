@@ -12,7 +12,7 @@ It checks:
 2. ESP32-S3 strapping pins used as normal outputs without an explicit known-risk marker;
 3. U8-to-U1 UART TX/RX crossover configuration;
 4. ESP32-S3-WROOM-1-N16R8 unavailable pins;
-5. weak-evidence pins that must be verified on real hardware.
+5. weak-evidence pins, if any remain after PADS source-file verification.
 
 Run:
 
@@ -24,10 +24,10 @@ python tools/test_check_gpio.py -v
 Expected current result:
 
 ```text
-Total: 0 errors, 0 warnings, 3 info
+OK: GPIO check passed; no issues found
 ```
 
-The three info items are weak-evidence U8 pins `GPIO38`, `GPIO39`, and `GPIO40`; they are allowed for software progress but must be verified during M0f real-board bring-up.
+`GPIO38`, `GPIO39`, and `GPIO40` are no longer weak evidence: `docs/DLC_Motor_Control_P1_V1.0_260513.txt` maps them to U8.31/32/33 through PADS `*SIGNAL*` records. M0f still needs real-board continuity and timing checks.
 
 ## JSON Schema Validator
 

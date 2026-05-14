@@ -1,19 +1,28 @@
 # DLC Motor Control P1 硬件连接与 GPIO 分配说明
 
-基于原理图文件：`DLC_Motor_Control_P1_V1.0_260513SCH(1).pdf`
+基于硬件源文件：
+
+- `DLC_Motor_Control_P1_V1.0_260513.sch`
+- `DLC_Motor_Control_P1_V1.0_260513.txt`
+- `DLC_Motor_Control_P1_V1.0_260513.pcb`
+- `DLC_Motor_Control_P1_V1.0_260513SCH.pdf`
+- `DLC_Motor_Control_P1_V1.0_260513PCB.pdf`
+- `DLC_Motor_Control_P1_V1.0_260513_CAM.zip`
+- `DLC_Motor_Control_P1_V1.0_260513BOM.xls`
+- `DLC_Motor_Control_P1_V1.0_260513坐标文件.xlsx`
 
 本文档用于整理本项目的外部接口接线方式、两颗 ESP32-S3 的角色分工，以及每个 GPIO 的连接去向。
 
 ## 0. 证据强度与核查记录
 
-本文档此前的 GPIO 信息来自 EDA 工程的人工整理，**未与原理图 PDF 做过结构化核查**。2026-05 用 PyMuPDF 提取 PDF 文本对照后，证据分两等：
+本文档此前的 GPIO 信息来自 EDA 工程的人工整理。2026-05-14 收到新的 `.sch/.txt/.pcb/PDF/CAM/BOM/坐标` 硬件源文件后，已用 PADS Logic `.txt` 导出文件的 `*SIGNAL*` 段核对关键网络与 U1/U8 引脚；PDF 作为人读版交付图纸同步归档。证据分两等：
 
-- **强证（PDF 文本可证）**：网络名内嵌 GPIO 编号（例如 `IO12_I2S_DI`、`IO46_DVP_HREF`），命名本身就是连接证据。U8 侧 22 条 DVP/I2S/SD/I2C 信号属于此类。
-- **弱证（PDF 文本不可证）**：网络名不带 `IOxx_` 前缀（例如 `MOTOR_EN`、`TMC2208-1_STEP`、`UUT_SENSOR_1`、`SERVO_PWM1`、`HX711_SCLK`、`LASER_CONTROL`、`PA_EN`、`DVP_PWDN`）。PDF 文本只能证实信号"接到 MCU"，无法证实"接到哪个 GPIO"。
+- **强证（PADS `*SIGNAL*` 可证）**：导出文件直接列出网络到器件引脚的连接，例如 `TMC2208-1_DIR -> U1.15 -> IO3`、`PA_EN -> U8.32 -> IO39`、`DVP_PWDN -> U8.33 -> IO40`。
+- **待实机确认**：PADS 源文件已证明原理图连接，但生产板仍需用万用表/逻辑分析仪抽测 UART、步进 STEP/DIR、传感器输入、音频 MCLK/PA_EN、摄像头 PWDN 等关键线，确认 PCB 实物与源文件一致。
 
-**弱证项的 GPIO 编号源于本文档与 U1 机型文件 `dlc_motor_control_p1.h` 的人工整理**。两者源头同一，未被 PDF 独立验证。该等数值在实机点亮前，需通过万用表或逻辑分析仪抽测确认。如果后续提供 EDA 源文件或 netlist，应以源文件为准并回填本文档。
+本轮已确认新 `.txt/.sch/.pcb` 源文件中存在并延续以下关键网络族：`TMC2208-1/2/3/4_*`、`MOTOR_EN`、`UUT_SENSOR_1/2/3/4`、`SERVO_PWM1/2/3`、`HX711_SCLK/MISO`、`LASER_CONTROL`、`M_U1TXD/M_U1RXD`、`IO38_I2S_MCK`、`PA_EN`、`DVP_PWDN`、DVP/I2S/SD/I2C 网络。固件 GPIO 配置与 PADS 导出连接一致，未发现需要改动的引脚配置。
 
-下表中以 ⚙ 标注弱证项（例如 ⚙IO4 = MOTOR_EN）。无标注者为强证。
+下表 GPIO 均已用 PADS `.txt` 的 `*SIGNAL*` 段核对到 U1/U8 符号引脚；无 `*SIGNAL*` 证据的扩展候选脚不作为当前固件配置使用。
 
 ## 1. 系统角色分工
 
@@ -69,7 +78,7 @@
 
 ## 3. 外部接口接线表
 
-结合 `DLC_Motor_Control_P1_V1.0_260513PCB(1).pdf` 的 PCB 丝印，可以进一步确认接口在板边的大致位置，方便装配和接线。
+结合 `DLC_Motor_Control_P1_V1.0_260513.pcb` 与 `DLC_Motor_Control_P1_V1.0_260513_CAM.zip` 的 PCB/CAM 数据，可以进一步确认接口在板边的大致位置，方便装配和接线。
 
 ### 3.1 电源与烧录接口
 
@@ -221,32 +230,32 @@ PCB 位置补充：
 
 ### 4.1 U1 已连接 GPIO
 
-U1 侧除 MCU 间串口外，所有外设信号网络名均不含 `IOxx_` 前缀，故 GPIO 列全部为弱证（⚙），数值源于 U1 机型文件 `dlc_motor_control_p1.h`，未被原理图 PDF 文本独立验证。
+U1 侧除 MCU 间串口外，多数外设信号网络名不含 `IOxx_` 前缀。本轮已用 PADS `.txt` 的 `*SIGNAL*` 段核到 U1 符号引脚，数值与 U1 机型文件 `dlc_motor_control_p1.h` 一致。
 
 | U1 管脚 | GPIO | 网络名 | 用途 |
 |---|---:|---|---|
 | 3 | `EN` | `RESET` | 芯片使能/复位输入 |
-| 4 | ⚙`IO4` | `MOTOR_EN` | 4 路 TMC2208 共用使能 |
-| 5 | ⚙`IO5` | `TMC2208-4_DIR` | 步进驱动 4 方向 |
-| 6 | ⚙`IO6` | `TMC2208-4_STEP` | 步进驱动 4 脉冲 |
-| 7 | ⚙`IO7` | `HX711_SCLK` | 压力传感器 ADC 时钟 |
-| 8 | ⚙`IO15` | `HX711_MISO` | 压力传感器 ADC 数据输出 |
-| 9 | ⚙`IO16` | `TMC2208-3_DIR` | 步进驱动 3 方向 |
-| 10 | ⚙`IO17` | `TMC2208-3_STEP` | 步进驱动 3 脉冲 |
-| 11 | ⚙`IO18` | `TMC2208-2_DIR` | 步进驱动 2 方向 |
-| 12 | ⚙`IO8` | `TMC2208-2_STEP` | 步进驱动 2 脉冲 |
-| 15 | ⚙`IO3` | `TMC2208-1_DIR` | 步进驱动 1 方向 |
-| 16 | ⚙`IO46` | `TMC2208-1_STEP` | 步进驱动 1 脉冲 |
-| 17 | ⚙`IO9` | `UUT_SENSOR_1` | 原点/到位传感器 1 输入 |
+| 4 | `IO4` | `MOTOR_EN` | 4 路 TMC2208 共用使能 |
+| 5 | `IO5` | `TMC2208-4_DIR` | 步进驱动 4 方向 |
+| 6 | `IO6` | `TMC2208-4_STEP` | 步进驱动 4 脉冲 |
+| 7 | `IO7` | `HX711_SCLK` | 压力传感器 ADC 时钟 |
+| 8 | `IO15` | `HX711_MISO` | 压力传感器 ADC 数据输出 |
+| 9 | `IO16` | `TMC2208-3_DIR` | 步进驱动 3 方向 |
+| 10 | `IO17` | `TMC2208-3_STEP` | 步进驱动 3 脉冲 |
+| 11 | `IO18` | `TMC2208-2_DIR` | 步进驱动 2 方向 |
+| 12 | `IO8` | `TMC2208-2_STEP` | 步进驱动 2 脉冲 |
+| 15 | `IO3` | `TMC2208-1_DIR` | 步进驱动 1 方向 |
+| 16 | `IO46` | `TMC2208-1_STEP` | 步进驱动 1 脉冲 |
+| 17 | `IO9` | `UUT_SENSOR_1` | 原点/到位传感器 1 输入 |
 | 18 | `IO10` | `M_U1TXD` | 发给 `U8` 的 MCU 间串口 TX |
 | 19 | `IO11` | `M_U1RXD` | 来自 `U8` 的 MCU 间串口 RX |
-| 20 | ⚙`IO12` | `UUT_SENSOR_2` | 原点/到位传感器 2 输入 |
-| 21 | ⚙`IO13` | `UUT_SENSOR_3` | 原点/到位传感器 3 输入 |
-| 22 | ⚙`IO14` | `UUT_SENSOR_4` | 原点/到位传感器 4 输入 |
-| 23 | ⚙`IO21` | `SERVO_PWM1` | 舵机 1 PWM |
-| 24 | ⚙`IO47` | `SERVO_PWM2` | 舵机 2 PWM |
-| 25 | ⚙`IO48` | `SERVO_PWM3` | 舵机 3 PWM |
-| 26 | ⚙`IO45` | `LASER_CONTROL` | 激光 MOS 开关控制 |
+| 20 | `IO12` | `UUT_SENSOR_2` | 原点/到位传感器 2 输入 |
+| 21 | `IO13` | `UUT_SENSOR_3` | 原点/到位传感器 3 输入 |
+| 22 | `IO14` | `UUT_SENSOR_4` | 原点/到位传感器 4 输入 |
+| 23 | `IO21` | `SERVO_PWM1` | 舵机 1 PWM |
+| 24 | `IO47` | `SERVO_PWM2` | 舵机 2 PWM |
+| 25 | `IO48` | `SERVO_PWM3` | 舵机 3 PWM |
+| 26 | `IO45` | `LASER_CONTROL` | 激光 MOS 开关控制 |
 | 27 | `IO0` | `BOOT` | 下载启动脚 |
 | 36 | `RXD0` | `M_U0RXD` | U1 本机 USB 下载串口 RX |
 | 37 | `TXD0` | `M_U0TXD` | U1 本机 USB 下载串口 TX |
@@ -255,7 +264,7 @@ U1 侧除 MCU 间串口外，所有外设信号网络名均不含 `IOxx_` 前缀
 
 `IO1 / IO2 / IO19 / IO20` 在本原理图页中未见功能网络引出，属于模组层已引脚但原理图未使用，可作为后续扩展候选。
 
-`IO35 / IO36 / IO37 / IO38 / IO39 / IO40 / IO41 / IO42` 在 ESP32-S3-WROOM-1-N16R8 模组内部已被 Flash / PSRAM 占用，**模组层不对外引出**，不可作为扩展候选。
+`IO35 / IO36 / IO37 / IO38 / IO39 / IO40 / IO41 / IO42` 在 U1 上未见功能网络引出；其中 `IO38/39/40` 已在 U8 上用于音频/摄像头控制，不作为 U1 扩展候选。`IO35/36/37/41/42` 是否可安全扩展仍需以 ESP32-S3-WROOM-1-N16R8 datasheet 与实物空焊盘核对为准，当前固件不得使用。
 
 ### 4.3 U1 对应外设关系
 
@@ -335,8 +344,8 @@ U1 侧除 MCU 间串口外，所有外设信号网络名均不含 `IOxx_` 前缀
 | 26 | `IO45` | `IO45_I2S_DO` | 音频 I2S 数据输出 |
 | 27 | `IO0` | `AI_BOOT` | 下载启动脚 |
 | 31 | `IO38` | `IO38_I2S_MCK` | 音频主时钟 MCK |
-| 32 | ⚙`IO39` | `PA_EN` | 功放使能 |
-| 33 | ⚙`IO40` | `DVP_PWDN` | 摄像头掉电控制 |
+| 32 | `IO39` | `PA_EN` | 功放使能 |
+| 33 | `IO40` | `DVP_PWDN` | 摄像头掉电控制 |
 | 36 | `RXD0` | `AI_U0RXD` | U8 本机 USB 下载串口 RX |
 | 37 | `TXD0` | `AI_U0TXD` | U8 本机 USB 下载串口 TX |
 | 38 | `IO2` | `IO2_I2C_SCL` | I2C 时钟 |
@@ -379,7 +388,7 @@ U1 侧除 MCU 间串口外，所有外设信号网络名均不含 `IOxx_` 前缀
 | `IO14_I2S_BCK` | `U8.IO14` |
 | `IO45_I2S_DO` | `U8.IO45` |
 | `IO38_I2S_MCK` | `U8.IO38` |
-| `PA_EN` | ⚙`U8.IO39` |
+| `PA_EN` | `U8.IO39` |
 
 #### 5.3.4 摄像头 DVP
 
@@ -397,7 +406,7 @@ U1 侧除 MCU 间串口外，所有外设信号网络名均不含 `IOxx_` 前缀
 | `IO6_DVP_D5` | `U8.IO6` |
 | `IO4_DVP_D6` | `U8.IO4` |
 | `IO9_DVP_D7` | `U8.IO9` |
-| `DVP_PWDN` | ⚙`U8.IO40` |
+| `DVP_PWDN` | `U8.IO40` |
 
 #### 5.3.5 SD 卡
 

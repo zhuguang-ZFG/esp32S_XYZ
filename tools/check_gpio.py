@@ -69,9 +69,9 @@ class GPIOChecker:
     # 仅 IO35/36/37/41/42 确认不可用
     UNAVAILABLE_PINS = {35, 36, 37, 41, 42}
     
-    # 弱证引脚：硬件文档中使用但未被原理图 PDF 独立验证
-    # 需要实机验证可用性
-    WEAK_EVIDENCE_PINS = {38, 39, 40}
+    # Weak-evidence pins. The 2026-05-14 PADS Logic .txt export proves
+    # U8 IO38/IO39/IO40 signal-to-pin mapping, so none are listed now.
+    WEAK_EVIDENCE_PINS = set()
     
     def __init__(self):
         self.gpio_definitions: List[GPIODefinition] = []
@@ -334,12 +334,12 @@ class GPIOChecker:
                 ))
     
     def _check_weak_evidence_pins(self):
-        """检查弱证引脚（需要实机验证）"""
+        """检查仍缺少设计源文件证据的引脚"""
         for defn in self.gpio_definitions:
             if defn.gpio in self.WEAK_EVIDENCE_PINS:
                 self.issues.append(Issue(
                     severity=Severity.INFO,
-                    message=f"{defn.mcu} GPIO{defn.gpio} 是弱证引脚，硬件文档中使用但未被原理图 PDF 独立验证，需要实机验证 ({defn.signal_name})",
+                    message=f"{defn.mcu} GPIO{defn.gpio} 缺少 PADS 源文件独立证据，需要实机验证 ({defn.signal_name})",
                     file_path=defn.file_path,
                     line_number=defn.line_number,
                     gpio=defn.gpio,
