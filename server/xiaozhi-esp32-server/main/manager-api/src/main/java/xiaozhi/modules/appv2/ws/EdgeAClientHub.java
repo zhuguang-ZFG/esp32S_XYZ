@@ -107,7 +107,7 @@ public class EdgeAClientHub {
             }
             catch (Exception e) {
                 log.debug("Edge-A replay skip session: {}", e.getMessage());
-                return;
+                continue;
             }
         }
     }

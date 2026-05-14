@@ -75,8 +75,7 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
 
         Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
         if (!"auth".equals(op) && userId == null) {
-            sendError(sendSession, "E_AUTH", "auth required");
-            session.close(CloseStatus.POLICY_VIOLATION.withReason("E_AUTH"));
+            session.close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
             return;
         }
 
@@ -107,8 +106,7 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
             sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
             log.debug("Edge-A auth ok userId={}", user.getId());
         } catch (RenException e) {
-            sendError(sendSession, "E_AUTH", e.getMsg() != null ? e.getMsg() : "invalid token");
-            raw.close(CloseStatus.POLICY_VIOLATION.withReason("E_AUTH"));
+            raw.close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
         }
     }
 
@@ -213,6 +211,11 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         log.warn("Edge-A transport error: {}", exception.getMessage());
         WebSocketSession sendSession = sendSession(session);
         edgeAClientHub.unsubscribeAll(session, sendSession);
+        try {
+            session.close(CloseStatus.SERVER_ERROR.withReason("transport error"));
+        } catch (IOException ignored) {
+            // already broken
+        }
     }
 
     private static WebSocketSession sendSession(WebSocketSession session) {
