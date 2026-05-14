@@ -4,6 +4,7 @@ This directory holds protocol contracts and examples for the motion-control stac
 
 ## Layout
 
+- `edge_c/`: DeviceServer ↔ U8（小智 WSS 文本 JSON）——`motion_task` / `motion_event`；见 `edge_c/README.md`。
 - `edge_d/examples/`: U8 -> U1 private protocol request and response examples.
 
 ## Current scope
