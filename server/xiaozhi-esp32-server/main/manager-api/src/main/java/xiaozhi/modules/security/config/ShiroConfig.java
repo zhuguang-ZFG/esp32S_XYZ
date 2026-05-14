@@ -82,6 +82,9 @@ public class ShiroConfig {
         filterMap.put("/user/captcha", "anon");
         filterMap.put("/user/smsVerification", "anon");
         filterMap.put("/user/login", "anon");
+        // /api/v1/login 是 v2 §11.1 的微信登录入口，登录前没有 JWT，必须 anon；
+        // 安全保障来自服务端 jscode2session 换取 unionid，禁止信任客户端字段。
+        filterMap.put("/api/v1/login", "anon");
         filterMap.put("/user/pub-config", "anon");
         filterMap.put("/user/register", "anon");
         filterMap.put("/user/retrieve-password", "anon");
