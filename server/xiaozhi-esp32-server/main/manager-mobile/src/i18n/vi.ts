@@ -231,6 +231,12 @@ export default {
     'device.bindNow': 'Liên kết ngay',
     'device.lastConnection': 'Kết nối cuối',
     'device.clickToBindFirstDevice': 'Nhấp vào nút + ở góc dưới bên phải để liên kết thiết bị đầu tiên của bạn',
+    'device.edgeDebugTitle': 'Luồng sự kiện Edge-A (gỡ lỗi)',
+    'device.edgeDebugPlaceholder': 'device_id, ví dụ dev_SN001',
+    'device.edgeDebugConnect': 'Kết nối & đăng ký',
+    'device.edgeDebugDisconnect': 'Ngắt',
+    'device.edgeDebugNeedLogin': 'Vui lòng đăng nhập trước',
+    'device.edgeDebugNeedDeviceId': 'Vui lòng nhập device_id',
 
     // Chung
     'common.success': 'Thành công',

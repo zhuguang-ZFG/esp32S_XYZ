@@ -98,6 +98,8 @@ public class ShiroConfig {
         filterMap.put("/voiceClone/play/**", "anon");
         // M2.6：xiaozhi-server 使用 Bearer internal-token 调用，不经 OAuth2
         filterMap.put("/internal/v1/motion_event", "anon");
+        // M2.7：Edge-A WSS 握手不经 OAuth2 Filter；首帧 JSON auth 校验 JWT（见 docs/schemas/edge_a）
+        filterMap.put("/ws/v1/client", "anon");
         filterMap.put("/**", "oauth2");
         shiroFilter.setFilterChainDefinitionMap(filterMap);
 

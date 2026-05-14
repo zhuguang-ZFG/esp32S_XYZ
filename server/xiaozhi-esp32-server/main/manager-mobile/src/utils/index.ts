@@ -167,6 +167,25 @@ export function getEnvBaseUrl() {
 }
 
 /**
+ * Edge-A（M2.7）：由 HTTP baseURL 推导 WSS `.../ws/v1/client`（与 manager-api `context-path` 一致）。
+ */
+export function buildEdgeAClientWsUrl(): string {
+  const base = getEnvBaseUrl().replace(/\/$/, '')
+  try {
+    const u = new URL(base)
+    u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:'
+    const path = u.pathname.replace(/\/$/, '')
+    u.pathname = `${path}/ws/v1/client`
+    return u.toString()
+  }
+  catch {
+    const proto = base.startsWith('https') ? 'wss' : 'ws'
+    const rest = base.replace(/^https?:\/\//, '')
+    return `${proto}://${rest}/ws/v1/client`
+  }
+}
+
+/**
  * 根据微信小程序当前环境，判断应该获取的 UPLOAD_BASEURL
  */
 export function getEnvBaseUploadUrl() {

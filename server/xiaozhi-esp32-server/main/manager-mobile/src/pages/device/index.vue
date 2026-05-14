@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import type { Device, FirmwareType } from '@/api/device'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useMessage } from 'wot-design-uni'
 import { bindDevice, bindDeviceManual, getBindDevices, getFirmwareTypes, unbindDevice, updateDeviceAutoUpdate } from '@/api/device'
 import { t } from '@/i18n'
+import { buildEdgeAClientWsUrl } from '@/utils'
 import { toast } from '@/utils/toast'
 
 defineOptions({
@@ -371,6 +372,79 @@ onMounted(async () => {
   loadDeviceList()
 })
 
+const edgeDebugDeviceId = ref('')
+const edgeLog = ref<string[]>([])
+let edgeSocket: UniApp.SocketTask | null = null
+
+function pushEdgeLog(line: string) {
+  edgeLog.value = [...edgeLog.value.slice(-24), line]
+}
+
+function disconnectEdge() {
+  if (edgeSocket) {
+    try {
+      edgeSocket.close({})
+    }
+    catch {
+      // ignore
+    }
+    edgeSocket = null
+  }
+}
+
+function connectEdgeStream() {
+  disconnectEdge()
+  let token = ''
+  try {
+    const raw = uni.getStorageSync('token') as string
+    token = raw ? JSON.parse(raw).token : ''
+  }
+  catch {
+    token = ''
+  }
+  if (!token) {
+    toast.error(t('device.edgeDebugNeedLogin'))
+    return
+  }
+  const did = edgeDebugDeviceId.value.trim()
+  if (!did) {
+    toast.warning(t('device.edgeDebugNeedDeviceId'))
+    return
+  }
+  const url = buildEdgeAClientWsUrl()
+  pushEdgeLog(`connect ${url}`)
+  edgeSocket = uni.connectSocket({
+    url,
+    fail: (e) => {
+      pushEdgeLog(`connect_fail ${JSON.stringify(e)}`)
+    },
+  })
+  edgeSocket.onOpen(() => {
+    edgeSocket!.send({
+      data: JSON.stringify({ op: 'auth', token }),
+    })
+    edgeSocket!.send({
+      data: JSON.stringify({ op: 'subscribe_device', device_id: did }),
+    })
+    pushEdgeLog('sent auth + subscribe_device')
+  })
+  edgeSocket.onMessage((res) => {
+    const s = typeof res.data === 'string' ? res.data : JSON.stringify(res.data)
+    pushEdgeLog(s.length > 600 ? `${s.slice(0, 600)}…` : s)
+  })
+  edgeSocket.onError((e) => {
+    pushEdgeLog(`error ${JSON.stringify(e)}`)
+  })
+  edgeSocket.onClose(() => {
+    pushEdgeLog('closed')
+    edgeSocket = null
+  })
+}
+
+onUnmounted(() => {
+  disconnectEdge()
+})
+
 // 暴露方法给父组件
 defineExpose({
   refresh,
@@ -385,6 +459,31 @@ defineExpose({
       <text class="loading-text">
         {{ t('device.loading') }}
       </text>
+    </view>
+
+    <!-- Edge-A（M2.7）调试：订阅 device:{id} 后可见 motion_event 广播 -->
+    <view v-if="!loading" class="edge-a-debug">
+      <text class="edge-a-debug-title">
+        {{ t('device.edgeDebugTitle') }}
+      </text>
+      <wd-input
+        v-model="edgeDebugDeviceId"
+        :placeholder="t('device.edgeDebugPlaceholder')"
+        clearable
+      />
+      <view class="edge-a-debug-actions">
+        <wd-button size="small" type="primary" @click="connectEdgeStream">
+          {{ t('device.edgeDebugConnect') }}
+        </wd-button>
+        <wd-button size="small" plain @click="disconnectEdge">
+          {{ t('device.edgeDebugDisconnect') }}
+        </wd-button>
+      </view>
+      <scroll-view scroll-y class="edge-a-debug-log">
+        <text v-for="(line, i) in edgeLog" :key="i" class="edge-a-debug-line">
+          {{ line }}
+        </text>
+      </scroll-view>
     </view>
 
     <!-- 设备列表 -->
@@ -627,5 +726,45 @@ defineExpose({
 
 .dialog-footer {
   padding-top: 16rpx;
+}
+
+.edge-a-debug {
+  margin: 20rpx;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid #e0e6f0;
+  background: #ffffff;
+}
+
+.edge-a-debug-title {
+  display: block;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #232338;
+}
+
+.edge-a-debug-actions {
+  margin-top: 16rpx;
+  display: flex;
+  gap: 16rpx;
+}
+
+.edge-a-debug-log {
+  margin-top: 16rpx;
+  max-height: 280rpx;
+  padding: 12rpx;
+  border-radius: 8rpx;
+  background: #f8f9fc;
+}
+
+.edge-a-debug-line {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.45;
+  color: #555555;
+  word-break: break-all;
+  font-family: ui-monospace, monospace;
 }
 </style>

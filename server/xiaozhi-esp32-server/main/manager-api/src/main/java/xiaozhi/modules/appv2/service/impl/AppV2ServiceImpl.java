@@ -40,6 +40,7 @@ import xiaozhi.modules.appv2.service.AppV2Service;
 import xiaozhi.modules.appv2.service.DeviceServerMotionGateway;
 import xiaozhi.modules.appv2.service.WechatLoginGateway;
 import xiaozhi.modules.appv2.service.WechatLoginGateway.WechatSession;
+import xiaozhi.modules.appv2.ws.EdgeAClientHub;
 import xiaozhi.modules.security.service.SysUserTokenService;
 import xiaozhi.modules.security.user.SecurityUser;
 import xiaozhi.modules.sys.dto.SysUserDTO;
@@ -65,6 +66,7 @@ public class AppV2ServiceImpl implements AppV2Service {
     private final SysUserTokenService sysUserTokenService;
     private final WechatLoginGateway wechatLoginGateway;
     private final DeviceServerMotionGateway deviceServerMotionGateway;
+    private final EdgeAClientHub edgeAClientHub;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -208,6 +210,7 @@ public class AppV2ServiceImpl implements AppV2Service {
                 payload.get("phase"),
                 payload.get("device_id"),
                 payload.get("capability"));
+        edgeAClientHub.publishMotionEvent(payload);
     }
 
     private static String buildUsername(String unionid) {

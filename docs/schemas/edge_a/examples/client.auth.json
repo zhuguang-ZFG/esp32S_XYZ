@@ -1,0 +1,4 @@
+{
+  "op": "auth",
+  "token": "<jwt-same-as-http-bearer>"
+}

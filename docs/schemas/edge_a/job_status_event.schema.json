@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_a/job_status_event.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "event"
+  ],
+  "properties": {
+    "type": {
+      "const": "event"
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "event_type",
+        "device_id",
+        "task_id",
+        "ts",
+        "seq",
+        "payload"
+      ],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_type": {
+          "const": "job_status"
+        },
+        "device_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "phase",
+            "capability"
+          ],
+          "properties": {
+            "phase": {
+              "type": "string",
+              "enum": [
+                "accepted",
+                "running",
+                "done",
+                "failed",
+                "cancelled"
+              ]
+            },
+            "capability": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

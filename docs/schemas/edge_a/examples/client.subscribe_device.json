@@ -1,0 +1,6 @@
+{
+  "op": "subscribe_device",
+  "device_id": "dev_SN001",
+  "req_id": "550e8400-e29b-41d4-a716-446655440001",
+  "since_seq": 0
+}

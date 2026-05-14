@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_a/subscribe_device.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "op",
+    "device_id"
+  ],
+  "properties": {
+    "op": {
+      "const": "subscribe_device"
+    },
+    "device_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "req_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "since_seq": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

@@ -231,6 +231,12 @@ export default {
   'device.bindNow': 'Bind Now',
   'device.lastConnection': 'Last Connection',
   'device.clickToBindFirstDevice': 'Click the + button in the lower right corner to bind your first device',
+  'device.edgeDebugTitle': 'Edge-A event stream (debug)',
+  'device.edgeDebugPlaceholder': 'device_id, e.g. dev_SN001',
+  'device.edgeDebugConnect': 'Connect & subscribe',
+  'device.edgeDebugDisconnect': 'Disconnect',
+  'device.edgeDebugNeedLogin': 'Please log in first',
+  'device.edgeDebugNeedDeviceId': 'Please enter device_id',
 
   // Common
   'common.success': 'Success',

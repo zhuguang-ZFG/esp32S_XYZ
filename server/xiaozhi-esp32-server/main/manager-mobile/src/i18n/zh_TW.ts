@@ -252,6 +252,12 @@ export default {
   'device.bindNow': '立即綁定',
   'device.lastConnection': '最近對話',
   'device.clickToBindFirstDevice': '點擊右下角 + 號綁定您的第一個設備',
+  'device.edgeDebugTitle': 'Edge-A 事件流（調試）',
+  'device.edgeDebugPlaceholder': 'device_id，例如 dev_SN001',
+  'device.edgeDebugConnect': '連接並訂閱',
+  'device.edgeDebugDisconnect': '斷開',
+  'device.edgeDebugNeedLogin': '請先登錄',
+  'device.edgeDebugNeedDeviceId': '請填寫 device_id',
 
   // 通用
   'common.success': '成功',

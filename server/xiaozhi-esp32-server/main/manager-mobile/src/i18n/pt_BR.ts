@@ -231,6 +231,12 @@ export default {
   'device.bindNow': 'Vincular Agora',
   'device.lastConnection': 'Última Conexão',
   'device.clickToBindFirstDevice': 'Clique no botão + no canto inferior direito para vincular seu primeiro dispositivo',
+  'device.edgeDebugTitle': 'Fluxo de eventos Edge-A (debug)',
+  'device.edgeDebugPlaceholder': 'device_id, ex. dev_SN001',
+  'device.edgeDebugConnect': 'Conectar e inscrever',
+  'device.edgeDebugDisconnect': 'Desconectar',
+  'device.edgeDebugNeedLogin': 'Faça login primeiro',
+  'device.edgeDebugNeedDeviceId': 'Informe o device_id',
 
   // Common
   'common.success': 'Sucesso',

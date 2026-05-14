@@ -231,6 +231,12 @@ export default {
     'device.bindNow': 'Jetzt binden',
     'device.lastConnection': 'Letzte Verbindung',
     'device.clickToBindFirstDevice': 'Klicken Sie auf die + Schaltfläche unten rechts, um Ihr erstes Gerät zu binden',
+    'device.edgeDebugTitle': 'Edge-A Ereignisstrom (Debug)',
+    'device.edgeDebugPlaceholder': 'device_id, z. B. dev_SN001',
+    'device.edgeDebugConnect': 'Verbinden & abonnieren',
+    'device.edgeDebugDisconnect': 'Trennen',
+    'device.edgeDebugNeedLogin': 'Bitte zuerst anmelden',
+    'device.edgeDebugNeedDeviceId': 'Bitte device_id eingeben',
 
     // Allgemein
     'common.success': 'Erfolg',
