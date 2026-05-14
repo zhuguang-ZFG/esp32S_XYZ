@@ -2,7 +2,9 @@ package xiaozhi.modules.appv2.ws;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,12 +23,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class EdgeAClientHub {
+    private static final int MAX_BUFFERED_EVENTS_PER_TOPIC = 200;
 
     public static final String TOPIC_DEVICE_PREFIX = "device:";
     public static final String TOPIC_TASK_PREFIX = "task:";
 
     private final ConcurrentHashMap<String, Set<WebSocketSession>> topicToSessions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<WebSocketSession, Set<String>> rawSessionToTopics = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<WebSocketSession, ConcurrentHashMap<String, Long>> rawSessionAckSeq =
+            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, NavigableMap<Long, String>> topicEvents = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicLong> deviceSeq = new ConcurrentHashMap<>();
 
     public long nextSeq(String deviceId) {
@@ -36,6 +42,7 @@ public class EdgeAClientHub {
     public void subscribe(WebSocketSession rawSession, WebSocketSession sendSession, String topic) {
         topicToSessions.computeIfAbsent(topic, t -> ConcurrentHashMap.newKeySet()).add(sendSession);
         rawSessionToTopics.computeIfAbsent(rawSession, r -> ConcurrentHashMap.newKeySet()).add(topic);
+        rawSessionAckSeq.computeIfAbsent(rawSession, r -> new ConcurrentHashMap<>()).putIfAbsent(topic, 0L);
     }
 
     public void unsubscribe(WebSocketSession rawSession, WebSocketSession sendSession, String topic) {
@@ -47,10 +54,15 @@ public class EdgeAClientHub {
         if (topics != null) {
             topics.remove(topic);
         }
+        ConcurrentHashMap<String, Long> ackSeq = rawSessionAckSeq.get(rawSession);
+        if (ackSeq != null) {
+            ackSeq.remove(topic);
+        }
     }
 
     public void unsubscribeAll(WebSocketSession rawSession, WebSocketSession sendSession) {
         Set<String> topics = rawSessionToTopics.remove(rawSession);
+        ConcurrentHashMap<String, Long> ackSeq = rawSessionAckSeq.remove(rawSession);
         if (topics == null) {
             return;
         }
@@ -59,7 +71,56 @@ public class EdgeAClientHub {
             if (set != null) {
                 set.remove(sendSession);
             }
+            if (ackSeq != null) {
+                ackSeq.remove(topic);
+            }
         }
+    }
+
+    public boolean isSubscribed(WebSocketSession rawSession, String topic) {
+        Set<String> topics = rawSessionToTopics.get(rawSession);
+        return topics != null && topics.contains(topic);
+    }
+
+    public long ack(WebSocketSession rawSession, String topic, long seq) {
+        ConcurrentHashMap<String, Long> ackSeq = rawSessionAckSeq.get(rawSession);
+        if (ackSeq == null || !ackSeq.containsKey(topic)) {
+            throw new IllegalStateException("topic not subscribed");
+        }
+        ackSeq.compute(topic, (k, current) -> {
+            long existing = current == null ? 0L : current.longValue();
+            return Math.max(existing, seq);
+        });
+        return ackSeq.getOrDefault(topic, 0L);
+    }
+
+    public void replaySince(WebSocketSession sendSession, String topic, long sinceSeq) {
+        NavigableMap<Long, String> events = topicEvents.get(topic);
+        if (events == null || events.isEmpty()) {
+            return;
+        }
+        for (String json : events.tailMap(sinceSeq, false).values()) {
+            try {
+                synchronized (sendSession) {
+                    sendSession.sendMessage(new TextMessage(json));
+                }
+            }
+            catch (Exception e) {
+                log.debug("Edge-A replay skip session: {}", e.getMessage());
+                return;
+            }
+        }
+    }
+
+    private void remember(String topic, long seq, String json) {
+        topicEvents.compute(topic, (k, existing) -> {
+            NavigableMap<Long, String> events = existing == null ? new TreeMap<>() : existing;
+            events.put(seq, json);
+            while (events.size() > MAX_BUFFERED_EVENTS_PER_TOPIC) {
+                events.pollFirstEntry();
+            }
+            return events;
+        });
     }
 
     public void broadcast(String topic, String json) {
@@ -119,10 +180,13 @@ public class EdgeAClientHub {
         envelope.put("type", "event");
         envelope.put("event", inner);
         String json = JSONUtil.toJsonStr(envelope);
-
-        broadcast(TOPIC_DEVICE_PREFIX + deviceId, json);
+        String deviceTopic = TOPIC_DEVICE_PREFIX + deviceId;
+        remember(deviceTopic, seq, json);
+        broadcast(deviceTopic, json);
         if (taskId != null && StringUtils.isNotBlank(String.valueOf(taskId))) {
-            broadcast(TOPIC_TASK_PREFIX + String.valueOf(taskId).trim(), json);
+            String taskTopic = TOPIC_TASK_PREFIX + String.valueOf(taskId).trim();
+            remember(taskTopic, seq, json);
+            broadcast(taskTopic, json);
         }
     }
 }

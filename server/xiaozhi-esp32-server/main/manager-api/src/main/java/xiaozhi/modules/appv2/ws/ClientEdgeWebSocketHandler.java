@@ -28,7 +28,7 @@ import xiaozhi.modules.security.service.SysUserTokenService;
 import xiaozhi.modules.sys.dto.SysUserDTO;
 
 /**
- * Edge-A：{@code /ws/v1/client} 文本帧（§9.2 + 首帧 auth，见 {@code docs/schemas/edge_a}）。
+ * Edge-A websocket endpoint for client event subscriptions.
  */
 @Slf4j
 @Component
@@ -63,8 +63,7 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         final JSONObject root;
         try {
             root = JSONUtil.parseObj(text);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             sendError(sendSession, "E_BAD_REQUEST", "invalid json");
             return;
         }
@@ -87,7 +86,7 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
             case "subscribe_task" -> handleSubscribeTask(session, sendSession, userId, root);
             case "unsubscribe" -> handleUnsubscribe(session, sendSession, root);
             case "ping" -> sendSession.sendMessage(new TextMessage("{\"type\":\"pong\"}"));
-            case "ack" -> { /* M2.7 占位 */ }
+            case "ack" -> handleAck(session, sendSession, root);
             default -> sendError(sendSession, "E_BAD_REQUEST", "unknown op: " + op);
         }
     }
@@ -102,9 +101,12 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         try {
             SysUserDTO user = sysUserTokenService.getUserByToken(token.trim());
             raw.getAttributes().put(ATTR_USER_ID, user.getId());
+            Map<String, Object> ack = new LinkedHashMap<>();
+            ack.put("type", "authed");
+            ack.put("user_id", user.getId());
+            sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
             log.debug("Edge-A auth ok userId={}", user.getId());
-        }
-        catch (RenException e) {
+        } catch (RenException e) {
             sendError(sendSession, "E_AUTH", e.getMsg() != null ? e.getMsg() : "invalid token");
             raw.close(CloseStatus.POLICY_VIOLATION.withReason("E_AUTH"));
         }
@@ -134,6 +136,7 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         ack.put("topic", topic);
         ack.put("since_seq", since);
         sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
+        edgeAClientHub.replaySince(sendSession, topic, since);
     }
 
     private void handleSubscribeTask(WebSocketSession raw, WebSocketSession sendSession, Long userId, JSONObject root)
@@ -150,19 +153,51 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         }
         String topic = EdgeAClientHub.TOPIC_TASK_PREFIX + taskId.trim();
         edgeAClientHub.subscribe(raw, sendSession, topic);
+        long since = root.getLong("since_seq", 0L);
         Map<String, Object> ack = new LinkedHashMap<>();
         ack.put("type", "subscribed");
         ack.put("topic", topic);
-        ack.put("since_seq", 0L);
+        ack.put("since_seq", since);
+        sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
+        edgeAClientHub.replaySince(sendSession, topic, since);
+    }
+
+    private void handleUnsubscribe(WebSocketSession raw, WebSocketSession sendSession, JSONObject root) throws IOException {
+        String topic = root.getStr("topic");
+        if (StringUtils.isBlank(topic)) {
+            sendError(sendSession, "E_BAD_REQUEST", "missing topic");
+            return;
+        }
+        String normalizedTopic = topic.trim();
+        edgeAClientHub.unsubscribe(raw, sendSession, normalizedTopic);
+        Map<String, Object> ack = new LinkedHashMap<>();
+        ack.put("type", "unsubscribed");
+        ack.put("topic", normalizedTopic);
         sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
     }
 
-    private void handleUnsubscribe(WebSocketSession raw, WebSocketSession sendSession, JSONObject root) {
+    private void handleAck(WebSocketSession raw, WebSocketSession sendSession, JSONObject root) throws IOException {
         String topic = root.getStr("topic");
+        Long seq = root.getLong("seq");
         if (StringUtils.isBlank(topic)) {
+            sendError(sendSession, "E_BAD_REQUEST", "missing topic");
             return;
         }
-        edgeAClientHub.unsubscribe(raw, sendSession, topic.trim());
+        if (seq == null || seq.longValue() < 0L) {
+            sendError(sendSession, "E_BAD_REQUEST", "missing seq");
+            return;
+        }
+        String normalizedTopic = topic.trim();
+        if (!edgeAClientHub.isSubscribed(raw, normalizedTopic)) {
+            sendError(sendSession, "E_FORBIDDEN", "topic not subscribed");
+            return;
+        }
+        long ackedSeq = edgeAClientHub.ack(raw, normalizedTopic, seq.longValue());
+        Map<String, Object> ack = new LinkedHashMap<>();
+        ack.put("type", "acked");
+        ack.put("topic", normalizedTopic);
+        ack.put("seq", ackedSeq);
+        sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
     }
 
     @Override
@@ -181,8 +216,8 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
     }
 
     private static WebSocketSession sendSession(WebSocketSession session) {
-        Object w = session.getAttributes().get(ATTR_SEND_SESSION);
-        return w instanceof WebSocketSession ws ? ws : session;
+        Object wrapped = session.getAttributes().get(ATTR_SEND_SESSION);
+        return wrapped instanceof WebSocketSession ws ? ws : session;
     }
 
     private static void sendError(WebSocketSession sendSession, String code, String message) throws IOException {

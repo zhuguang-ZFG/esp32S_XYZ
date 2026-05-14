@@ -76,4 +76,41 @@ class EdgeAClientHubTest {
         assertEquals("done", eventPayload.get("phase"));
         assertEquals("move", eventPayload.get("capability"));
     }
+
+    @Test
+    void replaySinceReplaysBufferedEventsAfterSequence() throws Exception {
+        EdgeAClientHub hub = new EdgeAClientHub();
+        WebSocketSession rawSession = mock(WebSocketSession.class);
+        WebSocketSession liveSession = mock(WebSocketSession.class);
+        WebSocketSession replaySession = mock(WebSocketSession.class);
+        when(liveSession.isOpen()).thenReturn(true);
+        when(replaySession.isOpen()).thenReturn(true);
+
+        hub.subscribe(rawSession, liveSession, EdgeAClientHub.TOPIC_DEVICE_PREFIX + "dev-1");
+
+        Map<String, Object> first = new LinkedHashMap<>();
+        first.put("device_id", "dev-1");
+        first.put("task_id", "task-1");
+        first.put("phase", "running");
+        first.put("capability", "home");
+        hub.publishMotionEvent(first);
+
+        Map<String, Object> second = new LinkedHashMap<>();
+        second.put("device_id", "dev-1");
+        second.put("task_id", "task-2");
+        second.put("phase", "done");
+        second.put("capability", "home");
+        hub.publishMotionEvent(second);
+
+        hub.replaySince(replaySession, EdgeAClientHub.TOPIC_DEVICE_PREFIX + "dev-1", 1L);
+
+        org.mockito.ArgumentCaptor<TextMessage> captor = org.mockito.ArgumentCaptor.forClass(TextMessage.class);
+        verify(replaySession, times(1)).sendMessage(captor.capture());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> envelope = JSONUtil.toBean(captor.getValue().getPayload(), Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> event = (Map<String, Object>) envelope.get("event");
+        assertEquals("task-2", event.get("task_id"));
+        assertEquals(2L, ((Number) event.get("seq")).longValue());
+    }
 }
