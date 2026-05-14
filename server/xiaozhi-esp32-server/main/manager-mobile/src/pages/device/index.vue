@@ -461,32 +461,7 @@ defineExpose({
       </text>
     </view>
 
-    <!-- Edge-A（M2.7）调试：订阅 device:{id} 后可见 motion_event 广播 -->
-    <view v-if="!loading" class="edge-a-debug">
-      <text class="edge-a-debug-title">
-        {{ t('device.edgeDebugTitle') }}
-      </text>
-      <wd-input
-        v-model="edgeDebugDeviceId"
-        :placeholder="t('device.edgeDebugPlaceholder')"
-        clearable
-      />
-      <view class="edge-a-debug-actions">
-        <wd-button size="small" type="primary" @click="connectEdgeStream">
-          {{ t('device.edgeDebugConnect') }}
-        </wd-button>
-        <wd-button size="small" plain @click="disconnectEdge">
-          {{ t('device.edgeDebugDisconnect') }}
-        </wd-button>
-      </view>
-      <scroll-view scroll-y class="edge-a-debug-log">
-        <text v-for="(line, i) in edgeLog" :key="i" class="edge-a-debug-line">
-          {{ line }}
-        </text>
-      </scroll-view>
-    </view>
-
-    <!-- 设备列表 -->
+    <!-- 设备列表（须与 loading/empty 同属一条 v-if 链；Edge 调试区单独 v-if，避免挡住列表） -->
     <view v-else-if="deviceList.length > 0" class="device-list">
       <!-- 设备卡片列表 -->
       <view class="box-border flex flex-col gap-[24rpx] p-[20rpx]">
@@ -544,7 +519,7 @@ defineExpose({
     </view>
 
     <!-- 空状态 -->
-    <view v-else-if="!loading" class="empty-container">
+    <view v-else class="empty-container">
       <view class="flex flex-col items-center justify-center p-[100rpx_40rpx] text-center">
         <wd-icon name="phone" custom-class="text-[120rpx] text-[#d9d9d9] mb-[32rpx]" />
         <text class="mb-[16rpx] text-[32rpx] text-[#666666] font-medium">
@@ -554,6 +529,31 @@ defineExpose({
           {{ t('device.clickToBindFirstDevice') }}
         </text>
       </view>
+    </view>
+
+    <!-- Edge-A（M2.7）调试：与主列表/空态并行展示，不参与 v-else-if 链 -->
+    <view v-if="!loading" class="edge-a-debug">
+      <text class="edge-a-debug-title">
+        {{ t('device.edgeDebugTitle') }}
+      </text>
+      <wd-input
+        v-model="edgeDebugDeviceId"
+        :placeholder="t('device.edgeDebugPlaceholder')"
+        clearable
+      />
+      <view class="edge-a-debug-actions">
+        <wd-button size="small" type="primary" @click="connectEdgeStream">
+          {{ t('device.edgeDebugConnect') }}
+        </wd-button>
+        <wd-button size="small" plain @click="disconnectEdge">
+          {{ t('device.edgeDebugDisconnect') }}
+        </wd-button>
+      </view>
+      <scroll-view scroll-y class="edge-a-debug-log">
+        <text v-for="(line, i) in edgeLog" :key="i" class="edge-a-debug-line">
+          {{ line }}
+        </text>
+      </scroll-view>
     </view>
 
     <!-- FAB 绑定设备按钮 -->
