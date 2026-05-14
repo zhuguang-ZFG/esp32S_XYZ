@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  schema-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema
+      - name: Validate all schemas
+        run: |
+          python -c "
+          import json, sys
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, ValidationError
+
+          schemas_dir = Path('docs/schemas')
+          errors = []
+          for edge in ['edge_a','edge_b','edge_c','edge_d']:
+              edge_dir = schemas_dir / edge
+              if not edge_dir.exists():
+                  continue
+              for sf in sorted(edge_dir.glob('*.schema.json')):
+                  schema = json.loads(sf.read_text(encoding='utf-8'))
+                  Draft202012Validator.check_schema(schema)
+                  validator = Draft202012Validator(schema)
+                  examples_dir = edge_dir / 'examples'
+                  if examples_dir.exists():
+                      name_stem = sf.stem
+                      for ex in examples_dir.glob(f'*{name_stem}*.json'):
+                          instance = json.loads(ex.read_text(encoding='utf-8'))
+                          try:
+                              validator.validate(instance)
+                          except ValidationError as e:
+                              errors.append(f'{ex}: {e.message}')
+                  print(f'OK {sf}')
+          if errors:
+              for e in errors:
+                  print(f'FAIL {e}', file=sys.stderr)
+              sys.exit(1)
+          print(f'All schemas validated')
+          "
+
+  gpio-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run GPIO checker
+        run: python tools/check_gpio.py
+
+  python-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        run: python -m unittest discover -s tools -p 'test_*.py' -v
+
+  fake-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run fake U1 integration tests
+        run: |
+          python tools/fake_u1/app.py --port 17799 &
+          sleep 2
+          python -c "
+          import socket, json
+          s = socket.create_connection(('127.0.0.1', 17799))
+          s.sendall(b'@{\"msg_id\":\"1\",\"task_id\":\"\",\"cmd\":\"GET_STATUS\"}\n')
+          resp = s.recv(4096).decode()
+          data = json.loads(resp.strip())
+          assert data['type'] == 'status'
+          assert 'state' in data
+          s.close()
+          print('fake-integration: GET_STATUS OK')
+          "
+          kill %1 2>/dev/null || true
+
+  markdown-link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: "yes"
+          config-file: ".github/workflows/mlc_config.json"
