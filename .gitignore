@@ -22,3 +22,7 @@ firmware/u1-grbl/libraries/arduinoWebSockets-*-backup/
 .idea/
 sdkconfig.old
 sdkconfig.orig
+
+# Python 字节码缓存（fake_u1 等仿真器产生）
+__pycache__/
+*.pyc

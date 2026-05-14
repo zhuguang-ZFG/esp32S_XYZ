@@ -854,7 +854,9 @@ void report_private_status_json(uint8_t client, const char* msg_id, const char* 
     const char* state = private_protocol_state_text();
     ExecAlarm active_alarm = sys_rt_exec_alarm != ExecAlarm::None ? sys_rt_exec_alarm : sys.last_alarm;
     const char* alarm_code = sys.state == State::Alarm && active_alarm != ExecAlarm::None ? private_protocol_alarm_code(active_alarm) : "null";
-    const char* error_code = sys.state == State::Alarm ? "null" : "null";
+    // status 帧的 error_code 字段恒为 "null"：错误码走独立 error 帧（v2 §15.4 / Edge-D 协议），
+    // 不在 status 中重复表达。alarm_code 仅承载告警类原因。
+    const char* error_code = "null";
     const char* active_task = (sys.state == State::Cycle || sys.state == State::Jog || sys.state == State::Hold || sys.state == State::Homing) &&
                                           active_task_id != nullptr
                                   ? active_task_id
