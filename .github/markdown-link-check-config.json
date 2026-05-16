@@ -32,6 +32,9 @@
     },
     {
       "pattern": "029app\\.com"
+    },
+    {
+      "pattern": "github\\.com/rymcu"
     }
   ],
   "timeout": "20s",
