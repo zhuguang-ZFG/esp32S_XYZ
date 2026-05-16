@@ -4,9 +4,11 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(prefix = "v2.dashscope", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class LocalFakeDrawGeneratedSvgProvider implements DrawGeneratedSvgProvider {
     public static final String PROVIDER_NAME = "local_fake_ai";
     public static final String PROJECTION_NAME = "draw_generated_prompt_placeholder_v1";
