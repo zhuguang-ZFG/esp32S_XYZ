@@ -19,7 +19,7 @@ public class BitmapToSvgVectorizer {
     private static final int WORK_SIZE = 512;
     private static final double RDP_EPSILON = 0.5;
     private static final int MAX_POINTS = 800;
-    private static final int MERGE_DIST = 3;
+    private static final int MERGE_DIST = 8;
     private static final int VIEWBOX = 100;
 
     public String vectorize(byte[] imageBytes) throws Exception {
@@ -190,16 +190,39 @@ public class BitmapToSvgVectorizer {
         visited.add(key(sx, sy));
         int cx = sx, cy = sy;
         while (true) {
-            int[] nxt = bestNb8(skelSet, visited, cx, cy);
+            int[] nxt = directionAwareNb(skelSet, visited, junctions, path, cx, cy);
             if (nxt == null) break;
             long nk = key(nxt[0], nxt[1]);
-            if (junctions.contains(nk) && path.size() > 1) {
-                path.add(nxt); visited.add(nk); break;
-            }
             path.add(nxt); visited.add(nk);
             cx = nxt[0]; cy = nxt[1];
         }
         if (path.size() >= 2) paths.add(path);
+    }
+
+    private static int[] directionAwareNb(Set<Long> skel, Set<Long> visited,
+            Set<Long> junctions, List<int[]> path, int x, int y) {
+        List<int[]> candidates = new ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;
+                long k = key(x+dx, y+dy);
+                if (skel.contains(k) && !visited.contains(k))
+                    candidates.add(new int[]{x+dx, y+dy});
+            }
+        if (candidates.isEmpty()) return null;
+        if (candidates.size() == 1) return candidates.get(0);
+        // At junction: follow direction of travel
+        if (path.size() >= 2) {
+            int[] prev = path.get(path.size() - 2);
+            int dirX = x - prev[0], dirY = y - prev[1];
+            int[] best = null; double bestDot = -999;
+            for (int[] c : candidates) {
+                double dot = (c[0]-x)*dirX + (c[1]-y)*dirY;
+                if (dot > bestDot) { bestDot = dot; best = c; }
+            }
+            return best;
+        }
+        return candidates.get(0);
     }
 
     private static int[] bestNb8(Set<Long> skel, Set<Long> visited, int x, int y) {
@@ -232,7 +255,8 @@ public class BitmapToSvgVectorizer {
 
     private static void mergePaths(List<List<int[]>> paths, int dist) {
         boolean merged = true;
-        while (merged) {
+        int mergeCount = 0;
+        while (merged && mergeCount < 200) {
             merged = false;
             for (int i = 0; i < paths.size() && !merged; i++) {
                 for (int j = i + 1; j < paths.size() && !merged; j++) {
@@ -250,6 +274,7 @@ public class BitmapToSvgVectorizer {
                         else { combined.addAll(pj); combined.addAll(pi); }
                         paths.set(i, combined); paths.remove(j);
                         merged = true;
+                        mergeCount++;
                     }
                 }
             }

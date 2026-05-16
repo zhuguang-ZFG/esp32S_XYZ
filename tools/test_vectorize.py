@@ -109,7 +109,7 @@ def trace_skeleton(img_data, viewbox=100, max_points=800):
     paths = []
 
     def trace_from(start):
-        """Trace a path from start, stopping at junctions."""
+        """Trace a path from start, passing through junctions by following direction."""
         path = [start]
         visited.add(start)
         current = start
@@ -117,13 +117,21 @@ def trace_skeleton(img_data, viewbox=100, max_points=800):
             nbs = [n for n in nb8(*current) if n not in visited]
             if not nbs:
                 break
-            # At a junction, stop this segment (pen up)
-            nxt = min(nbs, key=lambda p: (p[0]-current[0])**2 + (p[1]-current[1])**2)
-            if nxt in junctions and len(path) > 1:
-                # Include the junction point but stop here
-                path.append(nxt)
-                visited.add(nxt)
-                break
+            nxt = None
+            if current in junctions and len(path) >= 2:
+                # At junction: continue in same direction (minimize angle change)
+                prev = path[-2]
+                dx, dy = current[0] - prev[0], current[1] - prev[1]
+                best_dot = -999
+                for nb in nbs:
+                    ndx, ndy = nb[0] - current[0], nb[1] - current[1]
+                    dot = dx * ndx + dy * ndy  # direction alignment
+                    if dot > best_dot:
+                        best_dot = dot
+                        nxt = nb
+            else:
+                nxt = min(nbs, key=lambda p: (p[0]-current[0])**2 + (p[1]-current[1])**2)
+
             path.append(nxt)
             visited.add(nxt)
             current = nxt
@@ -168,10 +176,12 @@ def trace_skeleton(img_data, viewbox=100, max_points=800):
 
     paths.sort(key=len, reverse=True)
 
-    # Merge paths whose endpoints are close (fix broken lines at junctions)
-    merge_dist = 3  # pixels - keep small to avoid merging separate features
+    # Merge paths whose endpoints are close (fix broken lines)
+    merge_dist = 8
     merged = True
-    while merged:
+    max_merges = 200
+    merge_count = 0
+    while merged and merge_count < max_merges:
         merged = False
         i = 0
         while i < len(paths):
@@ -201,13 +211,14 @@ def trace_skeleton(img_data, viewbox=100, max_points=800):
                         paths[i] = paths[j] + paths[i]
                     paths.pop(j)
                     merged = True
+                    merge_count += 1
                 else:
                     j += 1
             i += 1
 
     paths.sort(key=len, reverse=True)
 
-    # Build SVG: simplify each path with RDP, scale to viewbox
+    # Build SVG: fit Bezier curves for smoothness, then linearize for device
     scale_x = viewbox / new_w
     scale_y = viewbox / new_h
     svg_parts = []
@@ -216,27 +227,134 @@ def trace_skeleton(img_data, viewbox=100, max_points=800):
     for path in paths:
         if total_pts >= max_points:
             break
-        # Convert (row, col) to (x, y) = (col, row)
-        xy_path = [(c, r) for r, c in path]
-        simplified = rdp(xy_path, 0.5)
-        if len(simplified) < 2:
+        # Convert (row, col) to (x, y) = (col, row), scaled
+        xy_path = [(c * scale_x, r * scale_y) for r, c in path]
+
+        # Fit cubic Bezier curves through points, then subdivide
+        smoothed = fit_and_subdivide(xy_path, max_error=0.3)
+        if len(smoothed) < 2:
             continue
         budget = max_points - total_pts
-        if len(simplified) > budget:
-            simplified = simplified[:budget]
+        if len(smoothed) > budget:
+            smoothed = smoothed[:budget]
 
-        for i, (x, y) in enumerate(simplified):
-            sx = round(x * scale_x, 1)
-            sy = round(y * scale_y, 1)
+        for i, (x, y) in enumerate(smoothed):
+            sx = round(x, 1)
+            sy = round(y, 1)
             cmd = 'M' if i == 0 else 'L'
             svg_parts.append(f'{cmd}{sx} {sy}')
-        total_pts += len(simplified)
+        total_pts += len(smoothed)
 
     path_d = ' '.join(svg_parts)
     svg = (f'<svg viewBox="0 0 {viewbox} {viewbox}">'
            f'<path d="{path_d}" fill="none" stroke="black" stroke-width="0.8"/></svg>')
     vec_time = time.time() - t0
     return svg, total_pts, vec_time
+
+
+def fit_and_subdivide(points, max_error=0.3):
+    """Fit cubic Bezier curves to point sequence, then adaptively subdivide."""
+    if len(points) <= 2:
+        return points
+
+    # First: RDP to get key points (control polygon)
+    key_pts = rdp(points, 1.0)
+    if len(key_pts) <= 2:
+        return key_pts
+
+    # Fit Bezier segments between consecutive key points
+    result = [key_pts[0]]
+    for i in range(len(key_pts) - 1):
+        p0 = np.array(key_pts[i])
+        p3 = np.array(key_pts[i + 1])
+
+        # Find original points between these two key points
+        seg_pts = get_segment_points(points, key_pts[i], key_pts[i + 1])
+        if len(seg_pts) < 3:
+            result.append(key_pts[i + 1])
+            continue
+
+        # Estimate control points for cubic Bezier
+        p1, p2 = estimate_bezier_controls(seg_pts)
+
+        # Adaptive subdivision of the Bezier curve
+        subdivided = subdivide_bezier(p0, p1, p2, p3, max_error)
+        result.extend(subdivided[1:])  # skip first (already in result)
+
+    return result
+
+
+def get_segment_points(all_pts, start, end):
+    """Get points from all_pts between start and end."""
+    start_idx = None
+    end_idx = None
+    for i, p in enumerate(all_pts):
+        if start_idx is None and abs(p[0]-start[0]) < 0.01 and abs(p[1]-start[1]) < 0.01:
+            start_idx = i
+        if abs(p[0]-end[0]) < 0.01 and abs(p[1]-end[1]) < 0.01:
+            end_idx = i
+    if start_idx is None:
+        start_idx = 0
+    if end_idx is None:
+        end_idx = len(all_pts) - 1
+    if start_idx > end_idx:
+        start_idx, end_idx = end_idx, start_idx
+    return all_pts[start_idx:end_idx + 1]
+
+
+def estimate_bezier_controls(pts):
+    """Estimate cubic Bezier control points P1, P2 from a point sequence."""
+    pts = [np.array(p) for p in pts]
+    n = len(pts)
+    p0, p3 = pts[0], pts[-1]
+    # Use 1/3 and 2/3 points as initial estimates, adjusted by tangent
+    t1_idx = max(1, n // 3)
+    t2_idx = min(n - 2, 2 * n // 3)
+    # Tangent at start
+    tang_start = pts[min(2, n-1)] - pts[0]
+    tang_end = pts[-1] - pts[max(0, n-3)]
+    chord = np.linalg.norm(p3 - p0)
+    if chord < 1e-6:
+        return p0 + (pts[t1_idx] - p0) * 0.5, p3 + (pts[t2_idx] - p3) * 0.5
+    # P1 = P0 + tangent_start * chord/3
+    t_len = chord / 3.0
+    t_norm = np.linalg.norm(tang_start)
+    if t_norm > 1e-6:
+        p1 = p0 + tang_start / t_norm * t_len
+    else:
+        p1 = p0 + (pts[t1_idx] - p0) * 0.66
+    t_norm = np.linalg.norm(tang_end)
+    if t_norm > 1e-6:
+        p2 = p3 - tang_end / t_norm * t_len
+    else:
+        p2 = p3 + (pts[t2_idx] - p3) * 0.66
+    return p1, p2
+
+
+def subdivide_bezier(p0, p1, p2, p3, max_error, depth=0):
+    """Adaptively subdivide cubic Bezier into line segments."""
+    if depth > 8:
+        return [tuple(p0), tuple(p3)]
+    # Check if curve is flat enough (distance of control points from chord)
+    chord = p3 - p0
+    chord_len = np.linalg.norm(chord)
+    if chord_len < 1e-6:
+        return [tuple(p0), tuple(p3)]
+    # Max distance of P1, P2 from line P0-P3
+    d1 = np.abs(np.cross(chord, p1 - p0)) / chord_len
+    d2 = np.abs(np.cross(chord, p2 - p0)) / chord_len
+    if max(d1, d2) <= max_error:
+        return [tuple(p0), tuple(p3)]
+    # De Casteljau split at t=0.5
+    m01 = (p0 + p1) / 2
+    m12 = (p1 + p2) / 2
+    m23 = (p2 + p3) / 2
+    m012 = (m01 + m12) / 2
+    m123 = (m12 + m23) / 2
+    mid = (m012 + m123) / 2
+    left = subdivide_bezier(p0, m01, m012, mid, max_error, depth + 1)
+    right = subdivide_bezier(mid, m123, m23, p3, max_error, depth + 1)
+    return left + right[1:]
 
 
 if __name__ == '__main__':
