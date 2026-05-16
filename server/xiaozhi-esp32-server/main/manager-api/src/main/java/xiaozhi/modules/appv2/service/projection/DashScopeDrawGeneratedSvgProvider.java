@@ -25,6 +25,12 @@ public class DashScopeDrawGeneratedSvgProvider implements DrawGeneratedSvgProvid
     public static final String PROVIDER_NAME = "dashscope_qwen_image";
     public static final String PROJECTION_NAME = "draw_generated_image_vectorize_v1";
 
+    private static final String DRAWING_SUFFIX =
+            "，简笔画风格，黑色线条（粗细均匀约2-3px），纯白背景，"
+            + "线条清晰连续不交叉不粘连，线条间距适当，"
+            + "主体居中占画面70%，无灰度无阴影无渐变无填充无文字，"
+            + "轮廓优先内部从简，适合笔绘机单线绘制";
+
     private final V2DashScopeProperties properties;
     private final RestTemplate restTemplate;
     private final BitmapToSvgVectorizer vectorizer = new BitmapToSvgVectorizer();
@@ -56,7 +62,7 @@ public class DashScopeDrawGeneratedSvgProvider implements DrawGeneratedSvgProvid
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + properties.getApiKey());
 
-        String fullPrompt = prompt + "，简笔画，黑色线条，纯白背景，无阴影无填充无文字";
+        String fullPrompt = prompt + DRAWING_SUFFIX;
         Map<String, Object> body = Map.of(
                 "model", properties.getModel(),
                 "messages", List.of(Map.of("role", "user", "content",
