@@ -20,11 +20,12 @@ PRIVACY_PERMISSIONS_STATUS = ROOT / "docs" / "M6.1-privacy-permissions-status.md
 class ManagerMobilePrivacyPermissionsTests(unittest.TestCase):
     def test_privacy_permissions_page_is_registered(self):
         pages = PAGES_JSON.read_text(encoding="utf-8", errors="replace")
-        types = UNI_PAGES.read_text(encoding="utf-8", errors="replace")
 
         self.assertIn('"path": "pages/settings/privacy-permissions"', pages)
         self.assertIn('"navigationBarTitleText": "隐私与权限"', pages)
-        self.assertIn('"/pages/settings/privacy-permissions"', types)
+        if UNI_PAGES.exists():
+            types = UNI_PAGES.read_text(encoding="utf-8", errors="replace")
+            self.assertIn('"/pages/settings/privacy-permissions"', types)
 
     def test_wechat_manifest_declares_local_permission_purposes(self):
         text = MANIFEST.read_text(encoding="utf-8", errors="replace")

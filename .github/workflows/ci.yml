@@ -47,7 +47,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: python -m pip install jsonschema
+        run: python -m pip install jsonschema httpx
 
       - name: Run Python unit tests
         run: |
