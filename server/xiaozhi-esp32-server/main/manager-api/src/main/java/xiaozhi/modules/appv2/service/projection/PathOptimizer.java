@@ -34,8 +34,8 @@ public final class PathOptimizer {
                 PathPoint start = seg.get(0);
                 PathPoint end = seg.get(seg.size() - 1);
 
-                double dStart = dist(cx, cy, start.getX(), start.getY());
-                double dEnd = dist(cx, cy, end.getX(), end.getY());
+                double dStart = distSq(cx, cy, start.getX(), start.getY());
+                double dEnd = distSq(cx, cy, end.getX(), end.getY());
 
                 if (dStart < bestDist) {
                     bestDist = dStart;
@@ -103,7 +103,7 @@ public final class PathOptimizer {
         return result;
     }
 
-    private static double dist(double x1, double y1, double x2, double y2) {
+    private static double distSq(double x1, double y1, double x2, double y2) {
         double dx = x2 - x1, dy = y2 - y1;
         return dx * dx + dy * dy;
     }

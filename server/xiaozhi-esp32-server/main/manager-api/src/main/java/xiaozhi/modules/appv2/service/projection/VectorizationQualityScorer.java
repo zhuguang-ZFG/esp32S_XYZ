@@ -18,9 +18,21 @@ public final class VectorizationQualityScorer {
             return new Score(0, 0, 0, 0, false, "empty_path");
         }
 
-        int continuityScore = scoreContinuity(path);
-        int coverageScore = scoreCoverage(path, viewbox);
-        int complexityScore = scoreComplexity(path);
+        // Single-pass: collect all metrics at once
+        int strokes = 0, totalPts = path.size();
+        double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+        for (PathPoint pt : path) {
+            if ("M".equals(pt.getCmd())) strokes++;
+            minX = Math.min(minX, pt.getX());
+            maxX = Math.max(maxX, pt.getX());
+            minY = Math.min(minY, pt.getY());
+            maxY = Math.max(maxY, pt.getY());
+        }
+
+        int continuityScore = scoreContinuity(strokes, totalPts);
+        int coverageScore = scoreCoverage(minX, maxX, minY, maxY, viewbox);
+        int complexityScore = scoreComplexity(totalPts);
 
         int total = (continuityScore * 40 + coverageScore * 35 + complexityScore * 25) / 100;
         String issue = identifyIssue(continuityScore, coverageScore, complexityScore);
@@ -28,16 +40,7 @@ public final class VectorizationQualityScorer {
                 total >= MIN_ACCEPTABLE, issue);
     }
 
-    /**
-     * Continuity: fewer strokes (M commands) relative to total points = better.
-     * Ideal: 1-5 strokes for simple drawings, up to 15 for complex ones.
-     */
-    private static int scoreContinuity(List<PathPoint> path) {
-        int strokes = 0, totalPts = 0;
-        for (PathPoint pt : path) {
-            if ("M".equals(pt.getCmd())) strokes++;
-            totalPts++;
-        }
+    private static int scoreContinuity(int strokes, int totalPts) {
         if (strokes == 0) return 0;
         double ptsPerStroke = (double) totalPts / strokes;
         if (ptsPerStroke >= 15) return 100;
@@ -47,19 +50,8 @@ public final class VectorizationQualityScorer {
         return 20;
     }
 
-    /**
-     * Coverage: path bounding box should cover 40-90% of viewbox.
-     * Too small = drawing is tiny/empty. Too large = clipping issues.
-     */
-    private static int scoreCoverage(List<PathPoint> path, int viewbox) {
-        double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
-        double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
-        for (PathPoint pt : path) {
-            minX = Math.min(minX, pt.getX());
-            maxX = Math.max(maxX, pt.getX());
-            minY = Math.min(minY, pt.getY());
-            maxY = Math.max(maxY, pt.getY());
-        }
+    private static int scoreCoverage(double minX, double maxX,
+            double minY, double maxY, int viewbox) {
         double width = maxX - minX, height = maxY - minY;
         double coverageRatio = (width * height) / ((double) viewbox * viewbox);
         if (coverageRatio >= 0.3 && coverageRatio <= 0.9) return 100;
@@ -68,12 +60,7 @@ public final class VectorizationQualityScorer {
         return 10;
     }
 
-    /**
-     * Complexity: total point count should be reasonable.
-     * Too few = oversimplified. Too many = too complex for plotter.
-     */
-    private static int scoreComplexity(List<PathPoint> path) {
-        int pts = path.size();
+    private static int scoreComplexity(int pts) {
         if (pts >= 50 && pts <= 500) return 100;
         if (pts >= 20 && pts <= 800) return 75;
         if (pts >= 10 && pts <= 1000) return 50;

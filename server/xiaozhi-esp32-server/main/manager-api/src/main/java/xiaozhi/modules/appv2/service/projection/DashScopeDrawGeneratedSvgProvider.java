@@ -3,6 +3,8 @@ package xiaozhi.modules.appv2.service.projection;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import xiaozhi.modules.appv2.config.V2DashScopeProperties;
+import xiaozhi.modules.appv2.service.graphic.DrawingValidationException;
 
 @Service
 @ConditionalOnProperty(prefix = "v2.dashscope", name = "enabled", havingValue = "true")
@@ -36,6 +39,7 @@ public class DashScopeDrawGeneratedSvgProvider implements DrawGeneratedSvgProvid
             + "线条粗且清晰，不要细节，不要阴影，不要文字";
 
     private static final int MAX_RETRIES = 2;
+    private static final Pattern SVG_PATH_PATTERN = Pattern.compile("([ML])([\\d.]+)\\s+([\\d.]+)");
 
     private final V2DashScopeProperties properties;
     private final RestTemplate restTemplate;
@@ -73,20 +77,18 @@ public class DashScopeDrawGeneratedSvgProvider implements DrawGeneratedSvgProvid
             } catch (Exception e) {
                 if (attempt == MAX_RETRIES) {
                     log.warn("Image generation failed for prompt='{}': {}", prompt, e.getMessage());
-                    throw new xiaozhi.modules.appv2.service.graphic.DrawingValidationException(
-                            "ai_generation_failed");
+                    throw new DrawingValidationException("ai_generation_failed");
                 }
                 log.info("Attempt {} failed for '{}', retrying: {}", attempt + 1, prompt, e.getMessage());
                 suffix = RETRY_SUFFIX;
             }
         }
-        throw new xiaozhi.modules.appv2.service.graphic.DrawingValidationException("ai_generation_failed");
+        throw new DrawingValidationException("ai_generation_failed");
     }
 
     private static List<PathPoint> parseSvgPath(String svg) {
         List<PathPoint> points = new java.util.ArrayList<>();
-        java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("([ML])([\\d.]+)\\s+([\\d.]+)").matcher(svg);
+        Matcher m = SVG_PATH_PATTERN.matcher(svg);
         while (m.find()) {
             double x = Double.parseDouble(m.group(2));
             double y = Double.parseDouble(m.group(3));

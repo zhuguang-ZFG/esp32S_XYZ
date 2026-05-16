@@ -19,7 +19,7 @@ public class BitmapToSvgVectorizer {
     private static final int WORK_SIZE = 512;
     private static final double RDP_EPSILON = 0.5;
     private static final int MAX_POINTS = 800;
-    private static final int MERGE_DIST = 8;
+    private static final int MERGE_DIST_SQ = 64; // 8px squared
     private static final int VIEWBOX = 100;
 
     public String vectorize(byte[] imageBytes) throws Exception {
@@ -47,7 +47,7 @@ public class BitmapToSvgVectorizer {
         List<List<int[]>> paths = tracePaths(skeleton, nw, nh);
 
         // Merge nearby endpoints
-        mergePaths(paths, MERGE_DIST);
+        mergePaths(paths, MERGE_DIST_SQ);
 
         // Simplify and build SVG
         return buildSvg(paths, nw, nh);
@@ -91,8 +91,6 @@ public class BitmapToSvgVectorizer {
             }
         return r;
     }
-
-    // PLACEHOLDER_ZHANG_SUEN
 
     private static boolean[] zhangSuenThin(boolean[] img, int w, int h) {
         boolean[] result = img.clone();
@@ -149,8 +147,6 @@ public class BitmapToSvgVectorizer {
             if (p[i] == 0 && p[(i + 1) % 8] == 1) t++;
         return t;
     }
-
-    // PLACEHOLDER_TRACE
 
     private static List<List<int[]>> tracePaths(boolean[] skel, int w, int h) {
         Set<Long> skelSet = new HashSet<>();
@@ -225,20 +221,6 @@ public class BitmapToSvgVectorizer {
         return candidates.get(0);
     }
 
-    private static int[] bestNb8(Set<Long> skel, Set<Long> visited, int x, int y) {
-        int[] best = null; double bd = Double.MAX_VALUE;
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dy = -1; dy <= 1; dy++) {
-                if (dx == 0 && dy == 0) continue;
-                long k = key(x+dx, y+dy);
-                if (skel.contains(k) && !visited.contains(k)) {
-                    double d = dx*dx + dy*dy;
-                    if (d < bd) { bd = d; best = new int[]{x+dx, y+dy}; }
-                }
-            }
-        return best;
-    }
-
     private static int countNb8(Set<Long> s, int x, int y) {
         int c = 0;
         for (int dx = -1; dx <= 1; dx++)
@@ -250,8 +232,6 @@ public class BitmapToSvgVectorizer {
     private static long key(int x, int y) { return ((long)x << 32) | (y & 0xFFFFFFFFL); }
     private static int kx(long k) { return (int)(k >> 32); }
     private static int ky(long k) { return (int)k; }
-
-    // PLACEHOLDER_MERGE
 
     private static void mergePaths(List<List<int[]>> paths, int dist) {
         boolean merged = true;
@@ -282,7 +262,7 @@ public class BitmapToSvgVectorizer {
     }
 
     private static double pdist(int[] a, int[] b) {
-        return Math.sqrt((a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]));
+        return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]);
     }
 
     private String buildSvg(List<List<int[]>> paths, int imgW, int imgH) {
