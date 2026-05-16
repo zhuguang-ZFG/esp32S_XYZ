@@ -243,10 +243,10 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("handleRejectVoiceTask", text)
         self.assertIn("v2ApproveVoiceTask(taskId", text)
         self.assertIn("v2RejectVoiceTask(taskId", text)
-        self.assertIn("Pending voice approvals", text)
-        self.assertIn("No pending voice approvals", text)
-        self.assertIn("Approve", text)
-        self.assertIn("Reject", text)
+        self.assertIn("pendingVoiceApprovals", text)
+        self.assertIn("noPendingVoice", text)
+        self.assertIn("approve", text)
+        self.assertIn("reject", text)
 
     def test_device_detail_explains_voiceprint_approval_context(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
@@ -275,8 +275,8 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("v2ListPendingIncomingDeviceTransfers", text)
         self.assertIn("handleAcceptIncomingTransfer", text)
         self.assertIn("v2AcceptDeviceTransfer(transferId)", text)
-        self.assertIn("Pending transfers", text)
-        self.assertIn("Device transfers waiting for this account", text)
+        self.assertIn("pendingTransfers", text)
+        self.assertIn("transfersWaiting", text)
 
     def test_product_notification_runbook_covers_transfer_and_voice_approval_push_gap(self):
         text = PRODUCT_NOTIFICATIONS_RUNBOOK.read_text(encoding="utf-8", errors="replace")

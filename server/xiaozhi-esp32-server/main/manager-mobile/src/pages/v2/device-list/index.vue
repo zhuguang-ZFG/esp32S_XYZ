@@ -82,7 +82,7 @@ function openDevice(deviceId: string) {
   <wd-status-tip v-if="loading" image="loading" tip="" />
 
   <wd-cell-group v-if="pendingIncomingTransfers.length" border custom-class="!mt-[20rpx]">
-    <wd-cell title="Pending transfers" label="Device transfers waiting for this account">
+    <wd-cell :title="t('v2.deviceList.pendingTransfers')" :label="t('v2.deviceList.transfersWaiting')">
       <template #value>
         <wd-tag type="warning" size="mini">
           {{ pendingIncomingTransferBadgeText }}
@@ -103,7 +103,7 @@ function openDevice(deviceId: string) {
           :loading="transferLoading"
           @click="handleAcceptIncomingTransfer(transfer.transferId)"
         >
-          Accept
+          {{ t('v2.deviceList.accept') }}
         </wd-button>
       </template>
     </wd-cell>

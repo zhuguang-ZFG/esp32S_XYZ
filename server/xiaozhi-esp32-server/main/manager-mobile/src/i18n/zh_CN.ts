@@ -521,6 +521,15 @@ export default {
   'v2.deviceDetail.disconnected': 'WSS 未连接',
   'v2.deviceDetail.connected': 'WSS 已连接',
   'v2.deviceDetail.connectAndSubscribe': '连接并订阅',
+  'v2.deviceDetail.pendingVoiceApprovals': '待审批语音任务',
+  'v2.deviceDetail.voiceTasksWaiting': '{count} 条语音任务等待主控审批',
+  'v2.deviceDetail.noPendingVoice': '暂无待审批语音任务',
+  'v2.deviceDetail.approve': '批准',
+  'v2.deviceDetail.reject': '拒绝',
+  'v2.deviceDetail.refresh': '刷新',
+  'v2.deviceList.pendingTransfers': '待处理转赠',
+  'v2.deviceList.transfersWaiting': '有设备转赠等待接受',
+  'v2.deviceList.accept': '接受',
 
   // Voiceprint page
   'voiceprint.audioNotExist': '该音频不存在',

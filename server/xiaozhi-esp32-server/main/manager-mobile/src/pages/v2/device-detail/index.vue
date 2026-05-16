@@ -742,14 +742,14 @@ const transferStateLabel = computed(() => {
 
   <!-- Pending voice approvals -->
   <wd-cell-group border custom-class="!mt-[20rpx]">
-    <wd-cell title="Pending voice approvals" :label="`${pendingVoiceApprovalCount} voice task(s) waiting for primary approval`">
+    <wd-cell :title="t('v2.deviceDetail.pendingVoiceApprovals')" :label="`${pendingVoiceApprovalCount} 条语音任务等待主控审批`">
       <template #value>
         <view class="flex items-center gap-[12rpx]">
           <wd-tag v-if="pendingVoiceApprovalCount" type="warning" size="mini">
             {{ pendingVoiceApprovalBadgeText }}
           </wd-tag>
           <wd-button type="text" size="small" :loading="voiceApprovalLoading" @click="loadPendingVoiceTasks">
-            Refresh
+            {{ t('v2.deviceDetail.refresh') }}
           </wd-button>
         </view>
       </template>
@@ -779,16 +779,16 @@ const transferStateLabel = computed(() => {
         </view>
         <view class="mt-[16rpx] flex flex-wrap gap-[12rpx]">
           <wd-button type="success" round size="small" :loading="voiceApprovalLoading" @click="handleApproveVoiceTask(task.taskId)">
-            Approve
+            {{ t('v2.deviceDetail.approve') }}
           </wd-button>
           <wd-button type="danger" round size="small" :disabled="voiceApprovalLoading" @click="handleRejectVoiceTask(task.taskId)">
-            Reject
+            {{ t('v2.deviceDetail.reject') }}
           </wd-button>
         </view>
       </view>
     </template>
     <view v-else class="mx-[30rpx] mb-[24rpx] rounded-[8rpx] bg-[#f5f7fb] p-[20rpx]">
-      <wd-text text="No pending voice approvals" size="24rpx" color="#666" />
+      <wd-text :text="t('v2.deviceDetail.noPendingVoice')" size="24rpx" color="#666" />
     </view>
   </wd-cell-group>
 
