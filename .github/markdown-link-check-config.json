@@ -5,6 +5,21 @@
     },
     {
       "pattern": "^https://localhost"
+    },
+    {
+      "pattern": "^/C:"
+    },
+    {
+      "pattern": "bilibili\\.com"
+    },
+    {
+      "pattern": "feishu\\.cn"
+    },
+    {
+      "pattern": "paypal\\.com"
+    },
+    {
+      "pattern": "sourceforge\\.net"
     }
   ],
   "timeout": "20s",
