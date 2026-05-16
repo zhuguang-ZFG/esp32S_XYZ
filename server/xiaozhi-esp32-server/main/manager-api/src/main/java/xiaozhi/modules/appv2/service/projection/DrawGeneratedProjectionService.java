@@ -88,6 +88,7 @@ public class DrawGeneratedProjectionService {
         if (path.isEmpty()) {
             throw new DrawingValidationException("empty_path");
         }
+        path = PathOptimizer.optimize(path);
         path = layoutPath(path, params);
         int feedRate = feedRateParam(params);
         double totalLengthMm = totalLengthMm(path);
