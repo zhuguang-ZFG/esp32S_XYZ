@@ -69,6 +69,83 @@ def _business_result_error(payload: dict | None) -> str:
     return str(payload.get("msg") or payload.get("message") or "business result error")
 
 
+def _header_value(headers, names: Tuple[str, ...]) -> str:
+    for name in names:
+        if name in headers:
+            return str(headers.get(name, "") or "").strip()
+    return ""
+
+
+def _extract_device_model(headers, body: dict) -> str:
+    model = _header_value(headers, ("device-model", "device_model", "model"))
+    if model:
+        return model
+    board = body.get("board") if isinstance(body, dict) else None
+    if isinstance(board, dict):
+        model = str(board.get("type") or "").strip()
+    elif isinstance(body, dict):
+        model = str(body.get("model") or "").strip()
+    return model or "default"
+
+
+def _extract_device_version(headers, body: dict) -> str:
+    version = _header_value(
+        headers,
+        (
+            "device-version",
+            "device_version",
+            "firmware-version",
+            "app-version",
+            "application-version",
+        ),
+    )
+    if version:
+        return version
+    application = body.get("application") if isinstance(body, dict) else None
+    if isinstance(application, dict):
+        version = str(application.get("version") or "").strip()
+    return version or "0.0.0"
+
+
+def _extract_firmware_channel(headers, body: dict) -> str:
+    channel = _header_value(headers, ("firmware-channel", "ota-channel"))
+    if channel:
+        return channel
+    if isinstance(body, dict):
+        channel = str(body.get("firmware_channel") or body.get("channel") or "").strip()
+    return channel or "dev"
+
+
+def _base_ota_response(server_config: dict, device_version: str) -> dict:
+    return {
+        "server_time": {
+            "timestamp": int(round(time.time() * 1000)),
+            "timezone_offset": server_config.get("timezone_offset", 8) * 60,
+        },
+        "firmware": {
+            "version": device_version,
+            "url": "",
+        },
+    }
+
+
+def _select_local_firmware(
+    candidates: List[Tuple[str, str]],
+    device_version: str,
+    config: dict,
+) -> Tuple[str, str]:
+    for ver, fname in candidates:
+        if _is_higher_version(ver, device_version):
+            vision_url = get_vision_url(config)
+            return (
+                ver,
+                vision_url.replace(
+                    "/mcp/vision/explain", f"/xiaozhi/ota/download/{fname}"
+                ),
+            )
+    return device_version, ""
+
+
 class OTAHandler(BaseHandler):
     def __init__(self, config: dict):
         super().__init__(config)
@@ -359,65 +436,10 @@ class OTAHandler(BaseHandler):
             http_port = int(server_config.get("http_port", 8003))
             local_ip = get_local_ip()
 
-            # Determine device model (prefer headers)
-            device_model = ""
-            # header candidates
-            for h in ("device-model", "device_model", "model"):
-                if h in request.headers:
-                    device_model = request.headers.get(h, "").strip()
-                    break
-            # body fallback
-            if not device_model:
-                try:
-                    if "board" in data_json and isinstance(data_json["board"], dict):
-                        device_model = data_json["board"].get("type", "")
-                    elif "model" in data_json:
-                        device_model = data_json.get("model", "")
-                except Exception:
-                    device_model = ""
-            if not device_model:
-                device_model = "default"
-
-            # Determine device current version (prefer headers)
-            device_version = ""
-            for h in (
-                "device-version",
-                "device_version",
-                "firmware-version",
-                "app-version",
-                "application-version",
-            ):
-                if h in request.headers:
-                    device_version = request.headers.get(h, "").strip()
-                    break
-            if not device_version:
-                try:
-                    device_version = data_json.get("application", {}).get("version", "")
-                except Exception:
-                    device_version = ""
-            if not device_version:
-                device_version = "0.0.0"
-            try:
-                firmware_channel = (
-                    request.headers.get("firmware-channel", "")
-                    or request.headers.get("ota-channel", "")
-                    or data_json.get("firmware_channel", "")
-                    or data_json.get("channel", "")
-                    or "dev"
-                ).strip()
-            except Exception:
-                firmware_channel = "dev"
-
-            return_json = {
-                "server_time": {
-                    "timestamp": int(round(time.time() * 1000)),
-                    "timezone_offset": server_config.get("timezone_offset", 8) * 60,
-                },
-                "firmware": {
-                    "version": device_version,
-                    "url": "",
-                },
-            }
+            device_model = _extract_device_model(request.headers, data_json)
+            device_version = _extract_device_version(request.headers, data_json)
+            firmware_channel = _extract_firmware_channel(request.headers, data_json)
+            return_json = _base_ota_response(server_config, device_version)
 
             # existing mqtt/websocket logic (unchanged)
             mqtt_gateway_endpoint = server_config.get("mqtt_gateway")
@@ -513,21 +535,11 @@ class OTAHandler(BaseHandler):
                     f"查找型号 {device_model} 的固件，找到 {len(candidates)} 个候选"
                 )
 
-                chosen_url = ""
-                chosen_version = device_version
-
-                # candidates are sorted descending by version
-                for ver, fname in candidates:
-                    if _is_higher_version(ver, device_version):
-                        # build download url (only allow download via our download endpoint)
-                        chosen_version = ver
-                        # Use get_vision_url to get the base URL and replace the path
-                        vision_url = get_vision_url(self.config)
-                        # Replace the path from "/mcp/vision/explain" to "/xiaozhi/ota/download/{fname}"
-                        chosen_url = vision_url.replace(
-                            "/mcp/vision/explain", f"/xiaozhi/ota/download/{fname}"
-                        )
-                        break
+                chosen_version, chosen_url = _select_local_firmware(
+                    candidates,
+                    device_version,
+                    self.config,
+                )
 
                 if chosen_url:
                     return_json["firmware"]["version"] = chosen_version

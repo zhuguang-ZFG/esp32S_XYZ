@@ -44,7 +44,13 @@ util_module.get_local_ip = lambda: "127.0.0.1"
 util_module.get_vision_url = lambda config: "http://127.0.0.1:8003/mcp/vision/explain"
 sys.modules.setdefault("core.utils.util", util_module)
 
-from core.api.ota_handler import OTAHandler  # noqa: E402
+from core.api.ota_handler import (  # noqa: E402
+    OTAHandler,
+    _extract_device_model,
+    _extract_device_version,
+    _extract_firmware_channel,
+    _select_local_firmware,
+)
 
 
 class FakeResponse:
@@ -82,6 +88,58 @@ class FakeAsyncClient:
 
 
 class OTAReleasePlanTests(unittest.TestCase):
+    def test_extracts_device_metadata_with_header_precedence(self):
+        headers = {
+            "device-model": "header-model",
+            "device-version": "2.0.0",
+            "firmware-channel": "beta",
+        }
+        body = {
+            "board": {"type": "body-model"},
+            "application": {"version": "1.0.0"},
+            "channel": "dev",
+        }
+
+        self.assertEqual(_extract_device_model(headers, body), "header-model")
+        self.assertEqual(_extract_device_version(headers, body), "2.0.0")
+        self.assertEqual(_extract_firmware_channel(headers, body), "beta")
+
+    def test_extracts_device_metadata_body_fallbacks(self):
+        body = {
+            "board": {"type": "body-model"},
+            "application": {"version": "1.0.0"},
+            "channel": "dev",
+        }
+
+        self.assertEqual(_extract_device_model({}, body), "body-model")
+        self.assertEqual(_extract_device_version({}, body), "1.0.0")
+        self.assertEqual(_extract_firmware_channel({}, body), "dev")
+
+    def test_extracts_device_metadata_defaults(self):
+        self.assertEqual(_extract_device_model({}, {}), "default")
+        self.assertEqual(_extract_device_version({}, {}), "0.0.0")
+        self.assertEqual(_extract_firmware_channel({}, {}), "dev")
+
+    def test_selects_first_higher_local_firmware(self):
+        version, url = _select_local_firmware(
+            [("1.2.0", "model_1.2.0.bin"), ("1.1.0", "model_1.1.0.bin")],
+            "1.1.5",
+            {},
+        )
+
+        self.assertEqual(version, "1.2.0")
+        self.assertEqual(url, "http://127.0.0.1:8003/xiaozhi/ota/download/model_1.2.0.bin")
+
+    def test_keeps_current_version_when_no_local_firmware_is_newer(self):
+        version, url = _select_local_firmware(
+            [("1.0.0", "model_1.0.0.bin")],
+            "1.1.0",
+            {},
+        )
+
+        self.assertEqual(version, "1.1.0")
+        self.assertEqual(url, "")
+
     def test_fetches_signed_business_firmware_plan(self):
         import core.api.ota_handler as module
 
