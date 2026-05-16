@@ -31,6 +31,12 @@ public class DashScopeDrawGeneratedSvgProvider implements DrawGeneratedSvgProvid
             + "主体居中占画面70%，无灰度无阴影无渐变无填充无文字，"
             + "轮廓优先内部从简，适合笔绘机单线绘制";
 
+    private static final String RETRY_SUFFIX =
+            "，极简简笔画，只画轮廓，5-10条粗黑线，纯白背景，"
+            + "线条粗且清晰，不要细节，不要阴影，不要文字";
+
+    private static final int MAX_RETRIES = 2;
+
     private final V2DashScopeProperties properties;
     private final RestTemplate restTemplate;
     private final BitmapToSvgVectorizer vectorizer = new BitmapToSvgVectorizer();
@@ -44,25 +50,60 @@ public class DashScopeDrawGeneratedSvgProvider implements DrawGeneratedSvgProvid
 
     @Override
     public GeneratedSvg generate(String prompt, Map<String, Object> params) {
-        try {
-            String imageUrl = generateImage(prompt);
-            byte[] imageBytes = downloadImage(imageUrl);
-            String svg = vectorizer.vectorize(imageBytes);
-            return new GeneratedSvg(svg, PROJECTION_NAME, "prompt", PROVIDER_NAME);
-        } catch (Exception e) {
-            log.warn("Image generation failed for prompt='{}': {}", prompt, e.getMessage());
-            throw new xiaozhi.modules.appv2.service.graphic.DrawingValidationException("ai_generation_failed");
+        String suffix = DRAWING_SUFFIX;
+        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                String imageUrl = generateImage(prompt, suffix);
+                byte[] imageBytes = downloadImage(imageUrl);
+                String svg = vectorizer.vectorize(imageBytes);
+
+                List<PathPoint> path = parseSvgPath(svg);
+                var score = VectorizationQualityScorer.evaluate(path, 100);
+
+                if (score.acceptable() || attempt == MAX_RETRIES) {
+                    log.info("Generated SVG for '{}': score={} (cont={} cov={} comp={}) attempt={}",
+                            prompt, score.total(), score.continuity(),
+                            score.coverage(), score.complexity(), attempt + 1);
+                    return new GeneratedSvg(svg, PROJECTION_NAME, "prompt", PROVIDER_NAME);
+                }
+
+                log.info("Quality too low for '{}': score={} issue={}, retrying with simpler prompt",
+                        prompt, score.total(), score.issue());
+                suffix = RETRY_SUFFIX;
+            } catch (Exception e) {
+                if (attempt == MAX_RETRIES) {
+                    log.warn("Image generation failed for prompt='{}': {}", prompt, e.getMessage());
+                    throw new xiaozhi.modules.appv2.service.graphic.DrawingValidationException(
+                            "ai_generation_failed");
+                }
+                log.info("Attempt {} failed for '{}', retrying: {}", attempt + 1, prompt, e.getMessage());
+                suffix = RETRY_SUFFIX;
+            }
         }
+        throw new xiaozhi.modules.appv2.service.graphic.DrawingValidationException("ai_generation_failed");
+    }
+
+    private static List<PathPoint> parseSvgPath(String svg) {
+        List<PathPoint> points = new java.util.ArrayList<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("([ML])([\\d.]+)\\s+([\\d.]+)").matcher(svg);
+        while (m.find()) {
+            double x = Double.parseDouble(m.group(2));
+            double y = Double.parseDouble(m.group(3));
+            if ("M".equals(m.group(1))) points.add(PathPoint.move(x, y, 0));
+            else points.add(PathPoint.line(x, y, 0));
+        }
+        return points;
     }
 
     @SuppressWarnings("unchecked")
-    private String generateImage(String prompt) {
+    private String generateImage(String prompt, String suffix) {
         String url = properties.getBaseUrl() + "/chat/completions";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + properties.getApiKey());
 
-        String fullPrompt = prompt + DRAWING_SUFFIX;
+        String fullPrompt = prompt + suffix;
         Map<String, Object> body = Map.of(
                 "model", properties.getModel(),
                 "messages", List.of(Map.of("role", "user", "content",
