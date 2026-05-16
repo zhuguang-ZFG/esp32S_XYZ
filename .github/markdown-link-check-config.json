@@ -7,6 +7,9 @@
       "pattern": "^https://localhost"
     },
     {
+      "pattern": "^http://127\\.0\\.0\\.1"
+    },
+    {
       "pattern": "^/C:"
     },
     {
@@ -20,6 +23,15 @@
     },
     {
       "pattern": "sourceforge\\.net"
+    },
+    {
+      "pattern": "vicp\\.fun"
+    },
+    {
+      "pattern": "oceanbase\\.com"
+    },
+    {
+      "pattern": "029app\\.com"
     }
   ],
   "timeout": "20s",
