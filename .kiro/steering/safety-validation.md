@@ -94,6 +94,18 @@ U1 安全裁决必须：
 | STOP | 受控停止 | IDLE | cancelled + E007 | mc_reset / hard interrupt |
 | ESTOP | 紧急中断 | ESTOP | failed + E_ESTOP | 伪装成 STOP 成功 |
 
+### 4.1 协议层 vs 任务层语义分层
+
+上表描述的是**任务最终状态**（BusinessServer 层面）。U1 协议层的即时响应有所不同：
+
+- U1 收到 ESTOP 命令后返回 `ack`（type=ack, state="ESTOP", accepted=true），确认"命令已收到并执行"
+- 后续 U8 通过 status 帧读取 `alarm_code=E008`，上报 `motion_event phase=failed`
+- BusinessServer 收到 `phase=failed` 后将任务状态映射为 `failed + E_ESTOP`
+
+此设计决策记录于实施计划-v2 M1.5："ESTOP 命令立即返回 ack，不再直接返回 error E008"。
+
+**安全不变量**：无论协议层如何响应，U1 的 `mc_reset()` 调用是无条件的、不依赖网络的。
+
 ## §5 测试要求（spec 级别，实现时创建）
 
 ### 5.1 前置裁决单测（M3.5 实现时创建）
