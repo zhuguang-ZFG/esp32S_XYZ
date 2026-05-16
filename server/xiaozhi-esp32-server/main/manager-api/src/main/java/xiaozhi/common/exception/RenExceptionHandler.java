@@ -15,6 +15,9 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import xiaozhi.common.utils.MessageUtils;
 import xiaozhi.common.utils.Result;
+import xiaozhi.modules.appv2.service.PrimarySessionException;
+import xiaozhi.modules.appv2.service.resource.EntitlementValidationException;
+import xiaozhi.modules.appv2.service.safety.SafetyValidationException;
 
 /**
  * 异常处理器
@@ -51,6 +54,23 @@ public class RenExceptionHandler {
         result.error(ErrorCode.FORBIDDEN);
 
         return result;
+    }
+
+    @ExceptionHandler(SafetyValidationException.class)
+    public Result<Void> handleSafetyValidationException(SafetyValidationException ex) {
+        return new Result<Void>().error(ErrorCode.INTERNAL_SERVER_ERROR, ex.getErrorCode() + ": " + ex.getReason());
+    }
+
+    @ExceptionHandler(EntitlementValidationException.class)
+    public Result<Void> handleEntitlementValidationException(EntitlementValidationException ex) {
+        return new Result<Void>().error(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                ex.getErrorCode() + ": " + ex.getResourceType() + ":" + ex.getResourceId());
+    }
+
+    @ExceptionHandler(PrimarySessionException.class)
+    public Result<Void> handlePrimarySessionException(PrimarySessionException ex) {
+        return new Result<Void>().error(ErrorCode.FORBIDDEN, ex.getCode() + ": " + ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

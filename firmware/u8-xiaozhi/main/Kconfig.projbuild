@@ -6,6 +6,14 @@ config OTA_URL
     help
         The application will access this URL to check for new firmwares and server address.
 
+config OTA_VERIFY_PUBLIC_KEY_PEM
+    string "OTA release signature public key PEM"
+    default ""
+    help
+        PEM encoded public key used to verify firmware release metadata signatures.
+        Release metadata signature covers the downloaded image SHA-256 digest and is
+        expected to be base64 encoded.
+
 choice
     prompt "Flash Assets"
     default FLASH_DEFAULT_ASSETS if !USE_EMOTE_MESSAGE_STYLE

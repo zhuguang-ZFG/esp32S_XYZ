@@ -1,0 +1,14 @@
+{
+  "session_id": "<injected-by-protocol>",
+  "type": "motion_event",
+  "task_id": "550e8400-e29b-41d4-a716-446655440013",
+  "phase": "progress",
+  "device_id": "dev_SN001",
+  "capability": "run_path",
+  "source": "client",
+  "progress": {
+    "done_segments": 3,
+    "total_segments": 8,
+    "percent": 38
+  }
+}

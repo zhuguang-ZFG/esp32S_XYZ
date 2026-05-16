@@ -11,3 +11,5 @@ class TextMessageType(Enum):
     SERVER = "server"
     PING = "ping"
     MOTION_EVENT = "motion_event"
+    DEVICE_INFO = "device_info"
+    SELF_CHECK = "self_check"

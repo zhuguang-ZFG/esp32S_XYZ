@@ -9,6 +9,8 @@ from core.handle.textMessageHandler import TextMessageHandler
 from core.handle.textHandler.serverMessageHandler import ServerTextMessageHandler
 from core.handle.textHandler.pingMessageHandler import PingMessageHandler
 from core.handle.textHandler.motionEventMessageHandler import MotionEventTextMessageHandler
+from core.handle.textHandler.deviceInfoMessageHandler import DeviceInfoTextMessageHandler
+from core.handle.textHandler.selfCheckMessageHandler import SelfCheckTextMessageHandler
 
 TAG = __name__
 
@@ -31,6 +33,8 @@ class TextMessageHandlerRegistry:
             ServerTextMessageHandler(),
             PingMessageHandler(),
             MotionEventTextMessageHandler(),
+            DeviceInfoTextMessageHandler(),
+            SelfCheckTextMessageHandler(),
         ]
 
         for handler in handlers:

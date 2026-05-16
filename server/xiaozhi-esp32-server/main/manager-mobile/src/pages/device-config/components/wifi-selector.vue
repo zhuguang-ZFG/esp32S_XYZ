@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
+import { useToast } from 'wot-design-uni/components/wd-toast'
 import { t } from '@/i18n'
+import { provisioningContract, softApUrl } from '../provisioning-contract'
 
 // 类型定义
 interface WiFiNetwork {
@@ -50,7 +51,7 @@ async function checkESP32Connection() {
   checkingConnection.value = true
   try {
     const response = await uni.request({
-      url: 'http://192.168.4.1/scan',
+      url: softApUrl(provisioningContract.softApScanPath),
       method: 'GET',
       timeout: 3000,
     })
@@ -80,7 +81,7 @@ async function scanWifi() {
 
   try {
     const response = await uni.request({
-      url: 'http://192.168.4.1/scan',
+      url: softApUrl(provisioningContract.softApScanPath),
       method: 'GET',
       timeout: 10000,
     })

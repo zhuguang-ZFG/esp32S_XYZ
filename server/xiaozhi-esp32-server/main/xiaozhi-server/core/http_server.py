@@ -4,6 +4,7 @@ from config.logger import setup_logging
 from core.api.ota_handler import OTAHandler
 from core.api.vision_handler import VisionHandler
 from core.api.motion_task_handler import MotionTaskHandler
+from core.api.voiceprint_cache_handler import VoiceprintCacheHandler
 
 TAG = __name__
 
@@ -16,6 +17,7 @@ class SimpleHttpServer:
         self.ota_handler = OTAHandler(config)
         self.vision_handler = VisionHandler(config)
         self.motion_task_handler = MotionTaskHandler(config, websocket_server)
+        self.voiceprint_cache_handler = VoiceprintCacheHandler(config, websocket_server)
 
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
@@ -55,6 +57,14 @@ class SimpleHttpServer:
                                 "/xiaozhi/ota/", self.ota_handler.handle_options
                             ),
                             # 下载接口，仅提供 data/bin/*.bin 下载
+                            web.post(
+                                "/xiaozhi/ota/install-result",
+                                self.ota_handler.handle_install_result,
+                            ),
+                            web.options(
+                                "/xiaozhi/ota/install-result",
+                                self.ota_handler.handle_options,
+                            ),
                             web.get(
                                 "/xiaozhi/ota/download/{filename}",
                                 self.ota_handler.handle_download,
@@ -82,6 +92,14 @@ class SimpleHttpServer:
                         web.options(
                             "/internal/v1/motion_task",
                             self.motion_task_handler.handle_options,
+                        ),
+                        web.post(
+                            "/internal/v1/voiceprints/cache/clear",
+                            self.voiceprint_cache_handler.handle_clear,
+                        ),
+                        web.options(
+                            "/internal/v1/voiceprints/cache/clear",
+                            self.voiceprint_cache_handler.handle_options,
                         ),
                     ]
                 )

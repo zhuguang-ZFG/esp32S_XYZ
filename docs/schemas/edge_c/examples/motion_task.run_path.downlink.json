@@ -1,0 +1,21 @@
+{
+  "type": "motion_task",
+  "task_id": "550e8400-e29b-41d4-a716-446655440013",
+  "device_id": "dev_SN001",
+  "account_id": 42,
+  "capability": "run_path",
+  "source": "client",
+  "request_id": "req-path-001",
+  "trace_id": "trace-path-001",
+  "params": {
+    "feed": 900,
+    "path": [
+      { "cmd": "M", "x": 0, "y": 0, "z": 0 },
+      { "cmd": "L", "x": 10, "y": 0, "z": 0 },
+      { "cmd": "L", "x": 10, "y": 10, "z": 0 },
+      { "cmd": "L", "x": 0, "y": 10, "z": 0 },
+      { "cmd": "L", "x": 0, "y": 0, "z": 0 }
+    ]
+  },
+  "constraints": { "timeout_ms": 120000, "safety_level": "strict" }
+}

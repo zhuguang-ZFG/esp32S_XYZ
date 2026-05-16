@@ -89,8 +89,8 @@ grep 检查清单：
 
 审查命令：
 ```bash
-rg "STOP.*ESTOP|ESTOP.*STOP" firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp
-rg "mc_reset.*STOP|STOP.*mc_reset" firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp
+rtk rg "STOP.*ESTOP|ESTOP.*STOP" firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp
+rtk rg "mc_reset.*STOP|STOP.*mc_reset" firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp
 ```
 
 ## §4 协议合规审查
@@ -142,7 +142,7 @@ rg "mc_reset.*STOP|STOP.*mc_reset" firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp
 
 ```bash
 # 断言：同一 device_id 的 seq 严格递增
-rg "seq" server/xiaozhi-esp32-server/main/manager-api
+rtk rg "seq" server/xiaozhi-esp32-server/main/manager-api
 ```
 
 ## §6 代码质量审查
@@ -180,16 +180,16 @@ rg "seq" server/xiaozhi-esp32-server/main/manager-api
 ### 8.1 M0 门禁
 
 ```bash
-python tools/check_gpio.py                           # 0 错误 0 警告
-python -m unittest tools.fake_u1.tests.test_app -v   # 全绿
-python tools/validate_schemas.py                     # 全绿
+rtk python tools/check_gpio.py                           # 0 错误 0 警告
+rtk python -m unittest tools.fake_u1.tests.test_app -v   # 全绿
+rtk python tools/validate_schemas.py                     # 全绿
 ```
 
 ### 8.2 M1 门禁
 
 ```bash
 # 三条 capability 各 5 次通过（fake U1 环境）
-rg "GET_STATUS|HOME|MOVE" firmware/u8-xiaozhi firmware/u1-grbl/Grbl_Esp32/src
+rtk rg "GET_STATUS|HOME|MOVE" firmware/u8-xiaozhi firmware/u1-grbl/Grbl_Esp32/src
 ```
 
 ### 8.3 M2+ 门禁（参见 spc-planning.md §6）

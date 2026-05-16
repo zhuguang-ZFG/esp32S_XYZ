@@ -1,0 +1,15 @@
+{
+  "msg_id": "msg-device-info-001",
+  "type": "result",
+  "task_id": "device-info",
+  "result": "DONE",
+  "state": "IDLE",
+  "model": "DLC Motor Control P1 XYYZ",
+  "hw_rev": "DLC_Motor_Control_P1_V1.0_260513",
+  "fw_rev": "u1-grbl",
+  "workspace_mm": {
+    "x": 300.0,
+    "y": 300.0,
+    "z": 80.0
+  }
+}

@@ -1,20 +1,29 @@
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue'
-import { useMessage } from 'wot-design-uni'
+import { computed, onMounted, ref } from 'vue'
+import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import { t } from '@/i18n'
-import { v2BindDevice, v2GetDevices } from '@/api/v2'
-import type { V2DeviceInfo } from '@/api/v2/types'
+import { updateM6PendingTabBarBadge } from '@/utils'
+import { v2AcceptDeviceTransfer, v2BindDevice, v2GetDevices, v2ListPendingIncomingDeviceTransfers } from '@/api/v2'
+import type { V2DeviceInfo, V2DeviceTransferResponse } from '@/api/v2/types'
 
 defineOptions({ name: 'V2DeviceList' })
 const message = useMessage()
 const loading = ref(false)
 const devices = ref<V2DeviceInfo[]>([])
+const pendingIncomingTransfers = ref<V2DeviceTransferResponse[]>([])
 const showBind = ref(false)
 const bindSn = ref('')
 const bindCode = ref('')
 const bindLoading = ref(false)
+const transferLoading = ref(false)
+const pendingIncomingTransferCount = computed(() => pendingIncomingTransfers.value.length)
+const pendingIncomingTransferBadgeText = computed(() => String(pendingIncomingTransferCount.value))
 
-onMounted(() => { loadDevices() })
+onMounted(() => { loadPageData() })
+
+async function loadPageData() {
+  await Promise.all([loadDevices(), loadPendingIncomingTransfers()])
+}
 
 async function loadDevices() {
   loading.value = true
@@ -23,16 +32,46 @@ async function loadDevices() {
   finally { loading.value = false }
 }
 
+async function loadPendingIncomingTransfers() {
+  try {
+    pendingIncomingTransfers.value = await v2ListPendingIncomingDeviceTransfers()
+    updateM6PendingTabBarBadge('transfer', pendingIncomingTransfers.value.length)
+  }
+  catch (e) {
+    console.error(e)
+    pendingIncomingTransfers.value = []
+    updateM6PendingTabBarBadge('transfer', 0)
+  }
+}
+
 async function handleBind() {
   if (!bindSn.value.trim() || !bindCode.value.trim()) return
   bindLoading.value = true
   try {
     await v2BindDevice(bindSn.value.trim(), bindCode.value.trim())
     showBind.value = false
-    message.toast(t('v2.deviceList.confirm'))
+    showSubmitToast(t('v2.deviceList.confirm'))
     await loadDevices()
   } catch (e: any) { message.alert(e?.message || '绑定失败') }
   finally { bindLoading.value = false }
+}
+
+async function handleAcceptIncomingTransfer(transferId: number) {
+  transferLoading.value = true
+  try {
+    await v2AcceptDeviceTransfer(transferId)
+    showSubmitToast('Transfer accepted')
+    await loadPageData()
+  } catch (e: any) { message.alert(e?.message || 'Accept transfer failed') }
+  finally { transferLoading.value = false }
+}
+
+function showSubmitToast(title: string) {
+  uni.showToast({ title, icon: 'none' })
+}
+
+function openDevice(deviceId: string) {
+  uni.navigateTo({ url: `/pages/v2/device-detail/index?deviceId=${deviceId}` })
 }
 </script>
 
@@ -42,13 +81,41 @@ async function handleBind() {
 
   <wd-status-tip v-if="loading" image="loading" tip="" />
 
-  <wd-status-tip v-else-if="!devices.length" image="content" :tip="t('v2.deviceList.empty')" />
+  <wd-cell-group v-if="pendingIncomingTransfers.length" border custom-class="!mt-[20rpx]">
+    <wd-cell title="Pending transfers" label="Device transfers waiting for this account">
+      <template #value>
+        <wd-tag type="warning" size="mini">
+          {{ pendingIncomingTransferBadgeText }}
+        </wd-tag>
+      </template>
+    </wd-cell>
+    <wd-cell
+      v-for="transfer in pendingIncomingTransfers"
+      :key="transfer.transferId"
+      :title="transfer.deviceId"
+      :label="`#${transfer.transferId} from account ${transfer.sourceAccountId}`"
+    >
+      <template #value>
+        <wd-button
+          type="success"
+          round
+          size="small"
+          :loading="transferLoading"
+          @click="handleAcceptIncomingTransfer(transfer.transferId)"
+        >
+          Accept
+        </wd-button>
+      </template>
+    </wd-cell>
+  </wd-cell-group>
 
-  <wd-cell-group v-else border custom-class="!mt-[20rpx]">
+  <wd-status-tip v-if="!loading && !devices.length" image="content" :tip="t('v2.deviceList.empty')" />
+
+  <wd-cell-group v-if="!loading && devices.length" border custom-class="!mt-[20rpx]">
     <wd-cell
       v-for="d in devices" :key="d.deviceId" :title="d.model || d.deviceId"
       :label="d.deviceId" is-link clickable
-      @click="uni.navigateTo({ url: `/pages/v2/device-detail/index?deviceId=${d.deviceId}` })"
+      @click="openDevice(d.deviceId)"
     >
       <template #value>
         <wd-tag :type="d.status === 'online' ? 'success' : 'default'" size="mini">

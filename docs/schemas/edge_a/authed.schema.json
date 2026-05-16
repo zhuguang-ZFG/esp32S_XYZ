@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_a/authed.schema.json",
+  "title": "Edge-A auth 成功响应（BusinessServer→Client WSS）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "user_id"],
+  "properties": {
+    "type": { "const": "authed" },
+    "user_id": { "type": "integer", "minimum": 1 }
+  }
+}

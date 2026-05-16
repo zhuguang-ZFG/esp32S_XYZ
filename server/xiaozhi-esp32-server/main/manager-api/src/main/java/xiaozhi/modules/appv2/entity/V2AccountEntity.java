@@ -19,6 +19,9 @@ public class V2AccountEntity {
     private String displayName;
     private String status;
     private String primarySessionId;
+    private Date primarySessionClaimedAt;
+    private Date deletedAt;
+    private Date auditRetainUntil;
     @TableField("created_at")
     private Date createdAt;
     @TableField("updated_at")

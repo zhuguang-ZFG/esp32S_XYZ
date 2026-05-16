@@ -15,7 +15,9 @@ import xiaozhi.common.utils.Result;
 import xiaozhi.common.validator.ValidatorUtils;
 import xiaozhi.modules.config.dto.AgentModelsDTO;
 import xiaozhi.modules.config.dto.CorrectWordsDTO;
+import xiaozhi.modules.config.dto.DeviceRuntimeStatusDTO;
 import xiaozhi.modules.config.service.ConfigService;
+import xiaozhi.modules.config.vo.DeviceRuntimeStatusVO;
 
 /**
  * xiaozhi-server 配置获取
@@ -34,6 +36,13 @@ public class ConfigController {
     public Result<Object> getConfig() {
         Object config = configService.getConfig(true);
         return new Result<Object>().ok(config);
+    }
+
+    @PostMapping("device-runtime-status")
+    @Operation(summary = "Query device runtime admission status")
+    public Result<DeviceRuntimeStatusVO> getDeviceRuntimeStatus(@Valid @RequestBody DeviceRuntimeStatusDTO dto) {
+        ValidatorUtils.validateEntity(dto);
+        return new Result<DeviceRuntimeStatusVO>().ok(configService.getDeviceRuntimeStatus(dto.getDeviceId()));
     }
 
     @PostMapping("agent-models")

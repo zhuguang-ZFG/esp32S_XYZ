@@ -42,7 +42,7 @@ inclusion: auto
    → docs/schemas/README.md 和边缘 README
 
 6. 跑 schema 校验
-   → python tools/validate_schemas.py
+   → rtk python tools/validate_schemas.py
 
 7. 更新架构定稿-v2
    → 在对应小节追加字段说明
@@ -99,15 +99,15 @@ inclusion: auto
 
 ```bash
 # schema 校验
-python tools/validate_schemas.py
+rtk python tools/validate_schemas.py
 
 # 样例格式校验
 for f in docs/schemas/*/examples/*.json; do
-  python -m json.tool "$f" > /dev/null || echo "FAIL: $f"
+  rtk python -m json.tool "$f" > /dev/null || echo "FAIL: $f"
 done
 
 # 字段一致性检查
-rg "新增字段名" docs/schemas/ docs/架构定稿-v2.md
+rtk rg "新增字段名" docs/schemas/ docs/架构定稿-v2.md
 ```
 
 ## §7 修订记录

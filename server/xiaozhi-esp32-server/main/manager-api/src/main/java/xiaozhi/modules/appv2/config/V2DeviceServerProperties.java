@@ -6,22 +6,26 @@ import org.springframework.context.annotation.Configuration;
 import lombok.Data;
 
 /**
- * BusinessServer → DeviceServer（xiaozhi-server HTTP）内部调用配置（M2.3 Edge-B）。
+ * BusinessServer to DeviceServer (xiaozhi-server HTTP) internal call settings.
  * <p>
- * base-url 与 internal-token 均非空时，提交任务成功落库后会转发 {@code POST /internal/v1/motion_task}；
- * 同一份 {@code internal-token} 用于校验 DeviceServer 上行的 {@code POST /internal/v1/motion_event}（M2.6）。
- * 开发/CI 未接 DeviceServer 时可留空以跳过转发。
+ * When both base-url and internal-token are configured, submitted tasks can be
+ * forwarded to {@code POST /internal/v1/motion_task}. The same shared token is
+ * also used by xiaozhi-server when it calls Manager API internal endpoints such
+ * as {@code /internal/v1/motion_event}, {@code /internal/v1/device_info},
+ * {@code /internal/v1/self_check}, voice-task, voiceprint-cache, and firmware
+ * plan/result bridges. Local CI can leave it blank to skip DeviceServer
+ * forwarding.
  */
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "v2.device-server")
 public class V2DeviceServerProperties {
     /**
-     * DeviceServer 根地址，例如 http://127.0.0.1:8003（不含尾斜杠）。
+     * DeviceServer base URL, for example http://127.0.0.1:8003 without a trailing slash.
      */
     private String baseUrl = "";
     /**
-     * 与 xiaozhi-server {@code server.internal_motion_task_token} 一致的共享密钥。
+     * Shared secret matching xiaozhi-server {@code server.internal_motion_task_token}.
      */
     private String internalToken = "";
 }

@@ -16,6 +16,7 @@
 #include <driver/gpio.h>
 #include <arpa/inet.h>
 #include <font_awesome.h>
+#include <nvs.h>
 
 #define TAG "Application"
 
@@ -332,6 +333,7 @@ void Application::ActivationTask() {
 
     // Initialize the protocol
     InitializeProtocol();
+    RunStartupSelfCheck();
 
     // Signal completion to main loop
     xEventGroupSetBits(event_group_, MAIN_EVENT_ACTIVATION_DONE);
@@ -433,9 +435,15 @@ void Application::CheckNewVersion() {
         retry_delay = 10; // Reset retry delay
 
         if (ota_->HasNewVersion()) {
-            if (UpgradeFirmware(ota_->GetFirmwareUrl(), ota_->GetFirmwareVersion())) {
+            ota_->StorePendingInstallResult();
+            if (UpgradeFirmware(
+                    ota_->GetFirmwareUrl(),
+                    ota_->GetFirmwareVersion(),
+                    ota_->GetFirmwareSha256(),
+                    ota_->GetFirmwareSignature())) {
                 return; // This line will never be reached after reboot
             }
+            ota_->ReportInstallFailure("upgrade_failed");
             // If upgrade failed, continue to normal operation
         }
 
@@ -609,6 +617,56 @@ void Application::InitializeProtocol() {
     });
     
     protocol_->Start();
+}
+
+void Application::RunStartupSelfCheck() {
+    auto& board = Board::GetInstance();
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        return;
+    }
+    cJSON_AddStringToObject(root, "device_id", board.GetUuid().c_str());
+    cJSON_AddStringToObject(root, "check_id", "startup");
+    cJSON_AddStringToObject(root, "scope", "startup");
+    cJSON* checks = cJSON_AddObjectToObject(root, "checks");
+    bool overall_ok = checks != nullptr;
+
+    auto add_check = [&overall_ok, checks](const char* name, bool ok, const std::string& detail) {
+        if (checks == nullptr) {
+            overall_ok = false;
+            return;
+        }
+        cJSON* item = cJSON_AddObjectToObject(checks, name);
+        if (item == nullptr) {
+            overall_ok = false;
+            return;
+        }
+        cJSON_AddBoolToObject(item, "ok", ok);
+        if (!detail.empty()) {
+            cJSON_AddStringToObject(item, "detail", detail.c_str());
+        }
+        overall_ok = overall_ok && ok;
+    };
+
+    nvs_stats_t nvs_stats = {};
+    esp_err_t nvs_ret = nvs_get_stats(nullptr, &nvs_stats);
+    add_check("nvs", nvs_ret == ESP_OK, nvs_ret == ESP_OK ? "ready" : std::string("esp_err_") + std::to_string(nvs_ret));
+
+    add_check("wifi", board.GetNetwork() != nullptr, board.GetNetwork() != nullptr ? "network_ready" : "network_missing");
+
+    AudioCodec* codec = board.GetAudioCodec();
+    const bool audio_ok = codec != nullptr && codec->input_sample_rate() > 0 && codec->output_sample_rate() > 0;
+    std::string audio_detail = audio_ok
+            ? std::to_string(codec->input_sample_rate()) + "/" + std::to_string(codec->output_sample_rate())
+            : "codec_not_ready";
+    add_check("audio", audio_ok, audio_detail);
+
+    std::string u1_detail;
+    add_check("u1_uart", board.CheckU1Uart(u1_detail), u1_detail);
+
+    cJSON_AddStringToObject(root, "status", overall_ok ? "passed" : "failed");
+    SendSelfCheck(root);
+    cJSON_Delete(root);
 }
 
 void Application::ShowActivationCode(const std::string& code, const std::string& message) {
@@ -963,9 +1021,14 @@ void Application::Reboot() {
     esp_restart();
 }
 
-bool Application::UpgradeFirmware(const std::string& url, const std::string& version) {
+bool Application::UpgradeFirmware(const std::string& url, const std::string& version, const std::string& sha256, const std::string& signature) {
     auto& board = Board::GetInstance();
     auto display = board.GetDisplay();
+    auto state = GetDeviceState();
+    if (state != kDeviceStateIdle && state != kDeviceStateActivating) {
+        ESP_LOGW(TAG, "Rejecting firmware upgrade while state=%s", DeviceStateMachine::GetStateName(state));
+        return false;
+    }
 
     std::string upgrade_url = url;
     std::string version_info = version.empty() ? "(Manual upgrade)" : version;
@@ -989,7 +1052,7 @@ bool Application::UpgradeFirmware(const std::string& url, const std::string& ver
     audio_service_.Stop();
     vTaskDelay(pdMS_TO_TICKS(1000));
 
-    bool upgrade_success = Ota::Upgrade(upgrade_url, [this, display](int progress, size_t speed) {
+    bool upgrade_success = Ota::Upgrade(upgrade_url, sha256, signature, [this, display](int progress, size_t speed) {
         char buffer[32];
         snprintf(buffer, sizeof(buffer), "%d%% %uKB/s", progress, speed / 1024);
         Schedule([display, message = std::string(buffer)]() {
@@ -1085,6 +1148,38 @@ void Application::SendMotionEvent(cJSON* fields) {
     Schedule([this, copy]() {
         if (protocol_) {
             protocol_->SendMotionEvent(copy);
+        }
+        cJSON_Delete(copy);
+    });
+}
+
+void Application::SendDeviceInfo(cJSON* fields) {
+    if (fields == nullptr) {
+        return;
+    }
+    cJSON* copy = cJSON_Duplicate(fields, 1);
+    if (copy == nullptr) {
+        return;
+    }
+    Schedule([this, copy]() {
+        if (protocol_) {
+            protocol_->SendDeviceInfo(copy);
+        }
+        cJSON_Delete(copy);
+    });
+}
+
+void Application::SendSelfCheck(cJSON* fields) {
+    if (fields == nullptr) {
+        return;
+    }
+    cJSON* copy = cJSON_Duplicate(fields, 1);
+    if (copy == nullptr) {
+        return;
+    }
+    Schedule([this, copy]() {
+        if (protocol_) {
+            protocol_->SendSelfCheck(copy);
         }
         cJSON_Delete(copy);
     });

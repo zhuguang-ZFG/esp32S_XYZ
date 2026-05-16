@@ -10,4 +10,9 @@ import lombok.Data;
 public class V2SubmitTaskResponse {
     private String taskId;
     private String status;
+    private String approvalRequiredBy;
+
+    public V2SubmitTaskResponse(String taskId, String status) {
+        this(taskId, status, null);
+    }
 }

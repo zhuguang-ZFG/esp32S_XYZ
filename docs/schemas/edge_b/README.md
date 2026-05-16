@@ -21,6 +21,7 @@
 ## 完成度
 
 已落地 3 个 schema：`motion_task`, `motion_event`, `intent_submit`。
-`device_info` 上报 schema 延后到 M2.13。
+`motion_task` 示例覆盖 `home` 与 `run_path`；`motion_event` 示例覆盖 `running` 与 `progress`。
+`device_info` 上报走 Edge-C `device_info` WSS 帧与 BusinessServer `/internal/v1/device_info` 入口，当前不在 Edge-B schema 目录单独建模。
 
 示例见 `examples/` 目录。

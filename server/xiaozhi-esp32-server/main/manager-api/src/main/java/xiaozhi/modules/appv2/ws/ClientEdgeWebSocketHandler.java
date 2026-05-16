@@ -20,10 +20,14 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import xiaozhi.common.exception.RenException;
+import xiaozhi.modules.appv2.dao.V2AccountDao;
 import xiaozhi.modules.appv2.dao.V2DeviceBindingDao;
 import xiaozhi.modules.appv2.dao.V2TaskDao;
+import xiaozhi.modules.appv2.entity.V2AccountEntity;
 import xiaozhi.modules.appv2.entity.V2DeviceBindingEntity;
 import xiaozhi.modules.appv2.entity.V2TaskEntity;
+import xiaozhi.modules.appv2.service.PrimarySessionException;
+import xiaozhi.modules.appv2.service.PrimarySessionService;
 import xiaozhi.modules.security.service.SysUserTokenService;
 import xiaozhi.modules.sys.dto.SysUserDTO;
 
@@ -36,16 +40,20 @@ import xiaozhi.modules.sys.dto.SysUserDTO;
 public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
 
     private static final String ATTR_USER_ID = "edgeA.userId";
+    private static final String ATTR_SESSION_ID = "edgeA.sessionId";
     private static final String ATTR_SEND_SESSION = "edgeA.sendSession";
     private static final String BINDING_STATUS_ACTIVE = "active";
+    private static final String ACCOUNT_STATUS_DELETED = "deleted";
 
     private static final int SEND_BUFFER_LIMIT = 512 * 1024;
     private static final int SEND_TIME_LIMIT_MS = 60_000;
 
     private final EdgeAClientHub edgeAClientHub;
     private final SysUserTokenService sysUserTokenService;
+    private final V2AccountDao v2AccountDao;
     private final V2DeviceBindingDao v2DeviceBindingDao;
     private final V2TaskDao v2TaskDao;
+    private final PrimarySessionService primarySessionService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -78,16 +86,44 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
             session.close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
             return;
         }
+        if (!"auth".equals(op) && !revalidateAuthenticatedSession(session, userId)) {
+            return;
+        }
 
         switch (op) {
             case "auth" -> handleAuth(session, sendSession, root);
             case "subscribe_device" -> handleSubscribeDevice(session, sendSession, userId, root);
             case "subscribe_task" -> handleSubscribeTask(session, sendSession, userId, root);
             case "unsubscribe" -> handleUnsubscribe(session, sendSession, root);
+            case "claim_primary" -> handleClaimPrimary(session, sendSession, userId, root);
             case "ping" -> sendSession.sendMessage(new TextMessage("{\"type\":\"pong\"}"));
             case "ack" -> handleAck(session, sendSession, root);
             default -> sendError(sendSession, "E_BAD_REQUEST", "unknown op: " + op);
         }
+    }
+
+    private boolean revalidateAuthenticatedSession(WebSocketSession raw, Long userId) throws IOException {
+        String sessionId = (String) raw.getAttributes().get(ATTR_SESSION_ID);
+        if (StringUtils.isBlank(sessionId)) {
+            raw.close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
+            return false;
+        }
+        try {
+            SysUserDTO user = sysUserTokenService.getUserByToken(sessionId);
+            if (user == null || !Objects.equals(user.getId(), userId) || isDeletedAccount(userId)) {
+                raw.close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
+                return false;
+            }
+            return true;
+        } catch (RenException e) {
+            raw.close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
+            return false;
+        }
+    }
+
+    private boolean isDeletedAccount(Long userId) {
+        V2AccountEntity account = v2AccountDao.selectById(userId);
+        return account != null && ACCOUNT_STATUS_DELETED.equalsIgnoreCase(account.getStatus());
     }
 
     private void handleAuth(WebSocketSession raw, WebSocketSession sendSession, JSONObject root) throws IOException {
@@ -99,7 +135,12 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         }
         try {
             SysUserDTO user = sysUserTokenService.getUserByToken(token.trim());
+            if (isDeletedAccount(user.getId())) {
+                raw.close(new CloseStatus(CloseStatus.POLICY_VIOLATION.getCode(), "E_AUTH"));
+                return;
+            }
             raw.getAttributes().put(ATTR_USER_ID, user.getId());
+            raw.getAttributes().put(ATTR_SESSION_ID, token.trim());
             Map<String, Object> ack = new LinkedHashMap<>();
             ack.put("type", "authed");
             ack.put("user_id", user.getId());
@@ -121,6 +162,8 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
                 .eq(V2DeviceBindingEntity::getAccountId, userId)
                 .eq(V2DeviceBindingEntity::getDeviceId, deviceId.trim())
                 .eq(V2DeviceBindingEntity::getBindingStatus, BINDING_STATUS_ACTIVE)
+                .orderByDesc(V2DeviceBindingEntity::getUpdatedAt)
+                .orderByDesc(V2DeviceBindingEntity::getId)
                 .last("limit 1"));
         if (binding == null) {
             sendError(sendSession, "E_FORBIDDEN", "no active binding for device");
@@ -174,6 +217,30 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
     }
 
+    private void handleClaimPrimary(WebSocketSession raw, WebSocketSession sendSession, Long userId, JSONObject root)
+            throws IOException {
+        String deviceId = root.getStr("device_id");
+        if (StringUtils.isBlank(deviceId)) {
+            sendError(sendSession, "E_BAD_REQUEST", "missing device_id");
+            return;
+        }
+        String sessionId = (String) raw.getAttributes().get(ATTR_SESSION_ID);
+        try {
+            primarySessionService.claimPrimary(userId, deviceId.trim(), sessionId);
+        } catch (PrimarySessionException e) {
+            sendError(sendSession, e.getCode(), e.getMessage());
+            return;
+        } catch (RenException e) {
+            sendError(sendSession, "E_FORBIDDEN", e.getMsg());
+            return;
+        }
+        Map<String, Object> ack = new LinkedHashMap<>();
+        ack.put("type", "primary_claimed");
+        ack.put("device_id", deviceId.trim());
+        ack.put("role", "primary");
+        sendSession.sendMessage(new TextMessage(JSONUtil.toJsonStr(ack)));
+    }
+
     private void handleAck(WebSocketSession raw, WebSocketSession sendSession, JSONObject root) throws IOException {
         String topic = root.getStr("topic");
         Long seq = root.getLong("seq");
@@ -203,6 +270,7 @@ public class ClientEdgeWebSocketHandler extends TextWebSocketHandler {
         WebSocketSession sendSession = sendSession(session);
         edgeAClientHub.unsubscribeAll(session, sendSession);
         session.getAttributes().remove(ATTR_USER_ID);
+        session.getAttributes().remove(ATTR_SESSION_ID);
         session.getAttributes().remove(ATTR_SEND_SESSION);
     }
 

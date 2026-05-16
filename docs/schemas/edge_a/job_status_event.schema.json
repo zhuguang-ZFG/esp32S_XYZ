@@ -60,14 +60,80 @@
               "enum": [
                 "accepted",
                 "running",
+                "progress",
                 "done",
                 "failed",
-                "cancelled"
+                "cancelled",
+                "rejected"
               ]
             },
             "capability": {
               "type": "string",
               "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "client",
+                "voice"
+              ]
+            },
+            "progress": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "done_segments": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "total_segments": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "percent": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "tts_hint": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "tts_event"
+              ],
+              "properties": {
+                "tts_event": {
+                  "type": "string",
+                  "enum": [
+                    "task_started",
+                    "task_done",
+                    "task_failed",
+                    "task_rejected",
+                    "device_info_reply"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "task_id": {
+                  "type": "string"
+                },
+                "device_id": {
+                  "type": "string"
+                },
+                "capability": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "client",
+                    "voice"
+                  ]
+                }
+              }
             }
           }
         }

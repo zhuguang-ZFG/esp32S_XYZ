@@ -17,8 +17,9 @@ It checks:
 Run:
 
 ```bash
-python tools/check_gpio.py
-python tools/test_check_gpio.py -v
+rtk python tools/check_gpio.py
+rtk python tools/test_check_gpio.py -v
+rtk python -m unittest tools.tests.test_check_gpio -v
 ```
 
 Expected current result:
@@ -36,14 +37,42 @@ OK: GPIO check passed; no issues found
 Run:
 
 ```bash
-python tools/validate_schemas.py
+rtk python tools/validate_schemas.py
 ```
 
 Expected current result:
 
 ```text
-validated=41 passed=41 failed=0
+validated=62 passed=62 failed=0
 ```
+
+## M0c Fake Tools
+
+These fakes let M1-M4 software work run without real U1/U8 hardware or real AI providers.
+
+Run focused tests:
+
+```bash
+rtk python -m unittest tools.fake_u1.tests.test_app -v
+rtk python -m unittest tools.fake_device_server.tests.test_app -v
+rtk python -m unittest tools.fake_ai.tests.test_app -v
+```
+
+Useful CLI entry points:
+
+```bash
+rtk python tools/fake_u1/app.py --help
+rtk python tools/fake_device_server/app.py --help
+rtk python tools/fake_ai/app.py --help
+```
+
+Notes:
+
+- fake U1 `status`, `result`, and `error` responses are covered by Edge-D schema assertions.
+- Edge-D has dedicated `ack` and `device_info` schemas now; fake U1 validates both response shapes.
+- fake DeviceServer maps `get_device_info` motion tasks to fake U1 `GET_DEVICE_INFO` and returns a `device_info` report payload.
+- fake DeviceServer expands `run_path` motion tasks into `PATH_BEGIN` / `PATH_SEG` / `PATH_END` Edge-D command sequences.
+- fake AI emits Edge-B shaped `intent_submit` payloads for deterministic device-intent tests.
 
 ## CI Coverage
 
@@ -53,6 +82,7 @@ validated=41 passed=41 failed=0
 - GPIO static check;
 - Python unit tests;
 - fake U1 integration tests;
+- manager-api App V2 / Edge-A WSS Maven tests;
 - Markdown link check.
 
 ## References

@@ -1,0 +1,7 @@
+{
+  "msg_id": "msg-path-begin-001",
+  "type": "ack",
+  "task_id": "task-path-001",
+  "state": "RUNNING",
+  "accepted": true
+}

@@ -126,10 +126,10 @@ tools/fake_u1/tests/test_stop_vs_estop.py    # STOP ≠ ESTOP 语义验证
 # python -m pytest tests/test_safety_validator.py -v  [WAIT_ENV: 测试文件待 M3 创建]
 
 # U1 安全裁决验证
-rg "E005|E008|EmergencyStop|mc_reset" firmware/u1-grbl/Grbl_Esp32/src/
+rtk rg "E005|E008|EmergencyStop|mc_reset" firmware/u1-grbl/Grbl_Esp32/src/
 
 # STOP/ESTOP 语义检查
-rg "STOP.*ESTOP|ESTOP.*STOP|STOP.*mc_reset" firmware/
+rtk rg "STOP.*ESTOP|ESTOP.*STOP|STOP.*mc_reset" firmware/
 ```
 
 ## §7 修订记录

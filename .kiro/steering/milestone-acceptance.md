@@ -138,10 +138,10 @@ inclusion: auto
 
 ```bash
 # 全量回归
-python tools/check_gpio.py
-python tools/test_check_gpio.py -v
-python tools/validate_schemas.py
-python -m unittest tools.fake_u1.tests.test_app tests.ci.test_fake_integration -v
+rtk python tools/check_gpio.py
+rtk python tools/test_check_gpio.py -v
+rtk python tools/validate_schemas.py
+rtk python -m unittest tools.fake_u1.tests.test_app tests.ci.test_fake_integration -v
 
 # CI 状态检查（需 gh CLI）
 gh run list --workflow=ci.yml --branch main --limit 1

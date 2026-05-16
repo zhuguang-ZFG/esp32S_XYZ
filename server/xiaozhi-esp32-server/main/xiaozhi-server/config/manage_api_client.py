@@ -195,6 +195,15 @@ async def get_correct_words(mac_address: str) -> Optional[Dict]:
         return None
 
 
+async def get_device_runtime_status(device_id: str) -> Optional[Dict]:
+    """Query BusinessServer runtime admission status for a device."""
+    return await ManageApiClient._instance._execute_async_request(
+        "POST",
+        "/config/device-runtime-status",
+        json={"deviceId": device_id},
+    )
+
+
 async def generate_and_save_chat_summary(session_id: str) -> Optional[Dict]:
     """生成并保存聊天记录总结"""
     try:

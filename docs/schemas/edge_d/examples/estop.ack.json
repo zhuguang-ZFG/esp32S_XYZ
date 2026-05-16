@@ -1,0 +1,7 @@
+{
+  "msg_id": "msg-estop-001",
+  "type": "ack",
+  "task_id": "task-estop-001",
+  "state": "ESTOP",
+  "accepted": true
+}

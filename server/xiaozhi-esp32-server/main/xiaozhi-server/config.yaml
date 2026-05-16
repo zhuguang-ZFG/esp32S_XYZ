@@ -43,6 +43,10 @@ server:
   internal_motion_task_token: ""
   # M2.6：设备上行 motion_event 转发目标（manager-api 根 URL，无尾斜杠）。与 internal_motion_task_token 同时配置时生效。
   motion_event_business_base_url: ""
+  # M2.13：设备上行 device_info 转发目标；为空时复用 motion_event_business_base_url。
+  device_info_business_base_url: ""
+  # M5.5: BusinessServer root URL for signed OTA release plans; empty falls back to motion_event_business_base_url.
+  firmware_release_business_base_url: ""
   # UDP网关配置
   udp_gateway: null
 log:

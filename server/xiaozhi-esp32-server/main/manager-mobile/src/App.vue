@@ -5,6 +5,7 @@ import { usePageAuth } from '@/hooks/usePageAuth'
 import { useConfigStore } from '@/store'
 import { t } from '@/i18n'
 import { useLangStore } from '@/store/lang'
+import { applyM6PendingTabBarBadge } from '@/utils'
 import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only'
 
 usePageAuth()
@@ -24,6 +25,7 @@ onShow(() => {
   // 使用setTimeout延迟执行，确保tabBar已经初始化
   setTimeout(() => {
     updateTabBarText()
+    applyM6PendingTabBarBadge()
   }, 100)
 })
 
@@ -39,7 +41,7 @@ function updateTabBarText() {
         console.log('设置首页tabBar文本失败:', err)
       }
     })
-    
+
     // 设置配网tabBar文本
     uni.setTabBarItem({
       index: 1,
@@ -49,7 +51,7 @@ function updateTabBarText() {
         console.log('设置配网tabBar文本失败:', err)
       }
     })
-    
+
     // 设置系统tabBar文本
     uni.setTabBarItem({
       index: 2,

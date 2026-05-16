@@ -104,6 +104,56 @@ void Protocol::SendMotionEvent(cJSON* fields) {
     }
 }
 
+void Protocol::SendDeviceInfo(cJSON* fields) {
+    if (fields == nullptr) {
+        return;
+    }
+    cJSON* root = cJSON_Duplicate(fields, 1);
+    if (root == nullptr) {
+        return;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(root, "session_id");
+    cJSON_AddStringToObject(root, "session_id", session_id_.c_str());
+    cJSON_DeleteItemFromObjectCaseSensitive(root, "type");
+    cJSON_AddStringToObject(root, "type", "device_info");
+    char* serialized = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (serialized == nullptr) {
+        ESP_LOGE(TAG, "SendDeviceInfo: cJSON_Print failed");
+        return;
+    }
+    std::string message(serialized);
+    cJSON_free(serialized);
+    if (!SendText(message)) {
+        ESP_LOGW(TAG, "SendDeviceInfo failed (channel closed?)");
+    }
+}
+
+void Protocol::SendSelfCheck(cJSON* fields) {
+    if (fields == nullptr) {
+        return;
+    }
+    cJSON* root = cJSON_Duplicate(fields, 1);
+    if (root == nullptr) {
+        return;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(root, "session_id");
+    cJSON_AddStringToObject(root, "session_id", session_id_.c_str());
+    cJSON_DeleteItemFromObjectCaseSensitive(root, "type");
+    cJSON_AddStringToObject(root, "type", "self_check");
+    char* serialized = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (serialized == nullptr) {
+        ESP_LOGE(TAG, "SendSelfCheck: cJSON_Print failed");
+        return;
+    }
+    std::string message(serialized);
+    cJSON_free(serialized);
+    if (!SendText(message)) {
+        ESP_LOGW(TAG, "SendSelfCheck failed (channel closed?)");
+    }
+}
+
 bool Protocol::IsTimeout() const {
     const int kTimeoutSeconds = 120;
     auto now = std::chrono::steady_clock::now();

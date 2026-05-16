@@ -11,8 +11,9 @@
 <script lang="ts" setup>
 import type { Language } from '@/store/lang'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
+import { useToast } from 'wot-design-uni/components/wd-toast'
 import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
+import { v2DeleteAccount } from '@/api/v2'
 import { useConfigStore } from '@/store'
 import { clearServerBaseUrlOverride, getEnvBaseUrl, getServerBaseUrlOverride, setServerBaseUrlOverride } from '@/utils'
 import { isMp } from '@/utils/platform'
@@ -35,6 +36,7 @@ const configStore = useConfigStore()
 // 服务端地址设置
 const baseUrlInput = ref('')
 const urlError = ref('')
+const accountDeleteLoading = ref(false)
 
 // 系统信息（保留）
 const systemInfo = computed(() => {
@@ -272,6 +274,58 @@ function showAbout() {
   })
 }
 
+function openPrivacyPermissions() {
+  uni.navigateTo({ url: '/pages/settings/privacy-permissions' })
+}
+
+function handleAccountDeletion() {
+  if (accountDeleteLoading.value) {
+    return
+  }
+  uni.showModal({
+    title: 'Delete account',
+    content: 'This will soft-delete your account, unlink devices, delete members, and anonymize voiceprints. This action requires a second confirmation.',
+    confirmText: 'Continue',
+    cancelText: t('common.cancel'),
+    success: (first) => {
+      if (!first.confirm) {
+        return
+      }
+      uni.showModal({
+        title: 'Confirm deletion',
+        content: 'After deletion you will be signed out on this device.',
+        confirmText: 'Delete',
+        cancelText: t('common.cancel'),
+        success: async (second) => {
+          if (!second.confirm) {
+            return
+          }
+          await submitAccountDeletion()
+        },
+      })
+    },
+  })
+}
+
+async function submitAccountDeletion() {
+  accountDeleteLoading.value = true
+  try {
+    const response = await v2DeleteAccount()
+    clearAllCacheAfterUrlChange()
+    toast.success(`Account deleted, retained ${response.auditRetentionDays} days`)
+    setTimeout(() => {
+      uni.reLaunch({ url: '/pages/v2/login/index' })
+    }, 800)
+  }
+  catch (error) {
+    console.error('delete account failed:', error)
+    toast.error('Account deletion failed')
+  }
+  finally {
+    accountDeleteLoading.value = false
+  }
+}
+
 onMounted(async () => {
   // 仅在非小程序环境加载服务端地址设置
   if (!isMp) {
@@ -398,7 +452,68 @@ onMounted(async () => {
         </view>
       </view>
 
+      <!-- 隐私与权限 -->
+      <view class="mb-[32rpx]">
+        <view class="mb-[24rpx] flex items-center">
+          <text class="text-[32rpx] text-[#232338] font-bold">
+            隐私与权限
+          </text>
+        </view>
+
+        <view
+          class="border border-[#eeeeee] rounded-[24rpx] bg-[#fbfbfb] p-[32rpx]"
+          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+        >
+          <view
+            class="flex cursor-pointer items-center justify-between border border-[#eeeeee] rounded-[16rpx] bg-[#f5f7fb] p-[24rpx] transition-all active:bg-[#eef3ff]"
+            @click="openPrivacyPermissions"
+          >
+            <view>
+              <text class="text-[28rpx] text-[#232338] font-medium">
+                隐私协议与系统授权
+              </text>
+              <text class="mt-[4rpx] block text-[24rpx] text-[#9d9ea3]">
+                单独管理麦克风、蓝牙、Wi-Fi 权限
+              </text>
+            </view>
+            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#9d9ea3]" />
+          </view>
+        </view>
+      </view>
+
       <!-- 应用信息 -->
+      <view class="mb-[32rpx]">
+        <view class="mb-[24rpx] flex items-center">
+          <text class="text-[32rpx] text-[#232338] font-bold">
+            Account deletion
+          </text>
+        </view>
+
+        <view
+          class="border border-[#ffd6d6] rounded-[24rpx] bg-[#fffafa] p-[32rpx]"
+          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+        >
+          <view class="flex items-center justify-between gap-[24rpx]">
+            <view class="min-w-0 flex-1">
+              <text class="text-[28rpx] text-[#232338] font-medium">
+                Delete current account
+              </text>
+              <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a] leading-[34rpx]">
+                Soft-delete account data, unlink devices, and anonymize voiceprints.
+              </text>
+            </view>
+            <wd-button
+              type="error"
+              :loading="accountDeleteLoading"
+              custom-class="h-[72rpx] rounded-[16rpx] px-[28rpx] text-[24rpx] font-semibold"
+              @click="handleAccountDeletion"
+            >
+              Delete
+            </wd-button>
+          </view>
+        </view>
+      </view>
+
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
           <text class="text-[32rpx] text-[#232338] font-bold">

@@ -16,6 +16,9 @@
 #ifdef SOC_HMAC_SUPPORTED
 #include <esp_hmac.h>
 #endif
+#include <mbedtls/sha256.h>
+#include <mbedtls/base64.h>
+#include <mbedtls/pk.h>
 
 #include <cstring>
 #include <vector>
@@ -23,6 +26,98 @@
 #include <algorithm>
 
 #define TAG "Ota"
+
+static bool IsHttpsUrl(const std::string& url) {
+    return url.rfind("https://", 0) == 0;
+}
+
+static bool IsLowerHexSha256(const std::string& value) {
+    if (value.size() != 64) {
+        return false;
+    }
+    return std::all_of(value.begin(), value.end(), [](char ch) {
+        return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
+    });
+}
+
+static std::string Sha256ToHex(const unsigned char digest[32]) {
+    std::string hex;
+    hex.reserve(64);
+    for (size_t i = 0; i < 32; ++i) {
+        char buffer[3];
+        snprintf(buffer, sizeof(buffer), "%02x", digest[i]);
+        hex += buffer;
+    }
+    return hex;
+}
+
+static bool IsLikelyBase64(const std::string& value) {
+    if (value.empty()) {
+        return false;
+    }
+    return std::all_of(value.begin(), value.end(), [](char ch) {
+        return (ch >= 'A' && ch <= 'Z')
+            || (ch >= 'a' && ch <= 'z')
+            || (ch >= '0' && ch <= '9')
+            || ch == '+'
+            || ch == '/'
+            || ch == '=';
+    });
+}
+
+static bool DecodeBase64(const std::string& input, std::vector<unsigned char>& output) {
+    size_t olen = 0;
+    int ret = mbedtls_base64_decode(nullptr, 0, &olen,
+        reinterpret_cast<const unsigned char*>(input.data()), input.size());
+    if (ret != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL || olen == 0) {
+        return false;
+    }
+    output.resize(olen);
+    ret = mbedtls_base64_decode(output.data(), output.size(), &olen,
+        reinterpret_cast<const unsigned char*>(input.data()), input.size());
+    if (ret != 0) {
+        output.clear();
+        return false;
+    }
+    output.resize(olen);
+    return true;
+}
+
+static bool VerifyFirmwareSignature(const unsigned char digest[32], const std::string& signature_base64) {
+    if (!IsLikelyBase64(signature_base64)) {
+        ESP_LOGE(TAG, "Firmware signature must be base64");
+        return false;
+    }
+    const char* public_key_pem = CONFIG_OTA_VERIFY_PUBLIC_KEY_PEM;
+    if (public_key_pem == nullptr || public_key_pem[0] == '\0') {
+        ESP_LOGE(TAG, "OTA public key is not configured");
+        return false;
+    }
+
+    std::vector<unsigned char> signature;
+    if (!DecodeBase64(signature_base64, signature)) {
+        ESP_LOGE(TAG, "Failed to decode firmware signature");
+        return false;
+    }
+
+    mbedtls_pk_context pk;
+    mbedtls_pk_init(&pk);
+    int ret = mbedtls_pk_parse_public_key(&pk,
+        reinterpret_cast<const unsigned char*>(public_key_pem),
+        strlen(public_key_pem) + 1);
+    if (ret != 0) {
+        ESP_LOGE(TAG, "Failed to parse OTA public key: -0x%x", -ret);
+        mbedtls_pk_free(&pk);
+        return false;
+    }
+    ret = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, digest, 32, signature.data(), signature.size());
+    mbedtls_pk_free(&pk);
+    if (ret != 0) {
+        ESP_LOGE(TAG, "Firmware signature verification failed: -0x%x", -ret);
+        return false;
+    }
+    return true;
+}
 
 
 Ota::Ota() {
@@ -211,8 +306,18 @@ esp_err_t Ota::CheckVersion() {
     }
 
     has_new_version_ = false;
+    firmware_release_id_.clear();
+    firmware_sha256_.clear();
+    firmware_signature_.clear();
     cJSON *firmware = cJSON_GetObjectItem(root, "firmware");
     if (cJSON_IsObject(firmware)) {
+        cJSON *release_id = cJSON_GetObjectItem(firmware, "release_id");
+        if (!cJSON_IsString(release_id)) {
+            release_id = cJSON_GetObjectItem(firmware, "releaseId");
+        }
+        if (cJSON_IsString(release_id)) {
+            firmware_release_id_ = release_id->valuestring;
+        }
         cJSON *version = cJSON_GetObjectItem(firmware, "version");
         if (cJSON_IsString(version)) {
             firmware_version_ = version->valuestring;
@@ -220,6 +325,14 @@ esp_err_t Ota::CheckVersion() {
         cJSON *url = cJSON_GetObjectItem(firmware, "url");
         if (cJSON_IsString(url)) {
             firmware_url_ = url->valuestring;
+        }
+        cJSON *sha256 = cJSON_GetObjectItem(firmware, "sha256");
+        if (cJSON_IsString(sha256)) {
+            firmware_sha256_ = sha256->valuestring;
+        }
+        cJSON *signature = cJSON_GetObjectItem(firmware, "signature");
+        if (cJSON_IsString(signature)) {
+            firmware_signature_ = signature->valuestring;
         }
 
         if (cJSON_IsString(version) && cJSON_IsString(url)) {
@@ -234,6 +347,9 @@ esp_err_t Ota::CheckVersion() {
             cJSON *force = cJSON_GetObjectItem(firmware, "force");
             if (cJSON_IsNumber(force) && force->valueint == 1) {
                 has_new_version_ = true;
+            }
+            if (has_new_version_ && !HasValidFirmwareMetadata()) {
+                has_new_version_ = false;
             }
         }
     } else {
@@ -262,10 +378,44 @@ void Ota::MarkCurrentVersionValid() {
         ESP_LOGI(TAG, "Marking firmware as valid");
         esp_ota_mark_app_valid_cancel_rollback();
     }
+    ReportPendingInstallSuccess();
+}
+
+bool Ota::HasValidFirmwareMetadata() const {
+    if (!IsHttpsUrl(firmware_url_)) {
+        ESP_LOGE(TAG, "Firmware URL must use HTTPS");
+        return false;
+    }
+    if (!IsLowerHexSha256(firmware_sha256_)) {
+        ESP_LOGE(TAG, "Firmware metadata must include lowercase hex sha256");
+        return false;
+    }
+    if (!IsLikelyBase64(firmware_signature_)) {
+        ESP_LOGE(TAG, "Firmware metadata must include base64 signature");
+        return false;
+    }
+    return true;
 }
 
 bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progress, size_t speed)> callback) {
+    return Upgrade(firmware_url, "", callback);
+}
+
+bool Ota::Upgrade(const std::string& firmware_url, const std::string& expected_sha256, std::function<void(int progress, size_t speed)> callback) {
+    return Upgrade(firmware_url, expected_sha256, "", callback);
+}
+
+bool Ota::Upgrade(const std::string& firmware_url, const std::string& expected_sha256, const std::string& expected_signature, std::function<void(int progress, size_t speed)> callback) {
     ESP_LOGI(TAG, "Upgrading firmware from %s", firmware_url.c_str());
+    if (!IsHttpsUrl(firmware_url)) {
+        ESP_LOGE(TAG, "Refusing non-HTTPS firmware URL");
+        return false;
+    }
+    if (!expected_sha256.empty() && !IsLowerHexSha256(expected_sha256)) {
+        ESP_LOGE(TAG, "Invalid expected firmware sha256");
+        return false;
+    }
+
     esp_ota_handle_t update_handle = 0;
     auto update_partition = esp_ota_get_next_update_partition(NULL);
     if (update_partition == NULL) {
@@ -305,12 +455,20 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
     size_t buffer_offset = 0;  // Current data size in buffer
     size_t total_read = 0, recent_read = 0;
     auto last_calc_time = esp_timer_get_time();
+    mbedtls_sha256_context sha256_ctx;
+    mbedtls_sha256_init(&sha256_ctx);
+    mbedtls_sha256_starts(&sha256_ctx, 0);
     while (true) {
         int ret = http->Read(buffer + buffer_offset, PAGE_SIZE - buffer_offset);
         if (ret < 0) {
             ESP_LOGE(TAG, "Failed to read HTTP data: %s", esp_err_to_name(ret));
+            mbedtls_sha256_free(&sha256_ctx);
             heap_caps_free(buffer);
             return false;
+        }
+
+        if (ret > 0) {
+            mbedtls_sha256_update(&sha256_ctx, reinterpret_cast<const unsigned char*>(buffer + buffer_offset), ret);
         }
 
         // Calculate speed and progress every second
@@ -336,6 +494,7 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
                 if (esp_ota_begin(update_partition, OTA_WITH_SEQUENTIAL_WRITES, &update_handle)) {
                     esp_ota_abort(update_handle);
                     ESP_LOGE(TAG, "Failed to begin OTA");
+                    mbedtls_sha256_free(&sha256_ctx);
                     heap_caps_free(buffer);
                     return false;
                 }
@@ -352,6 +511,7 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to write OTA data: %s", esp_err_to_name(err));
                 esp_ota_abort(update_handle);
+                mbedtls_sha256_free(&sha256_ctx);
                 heap_caps_free(buffer);
                 return false;
             }
@@ -365,6 +525,24 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
     }
     http->Close();
     heap_caps_free(buffer);
+
+    unsigned char digest[32];
+    mbedtls_sha256_finish(&sha256_ctx, digest);
+    mbedtls_sha256_free(&sha256_ctx);
+    if (expected_sha256.empty()) {
+        ESP_LOGW(TAG, "Firmware sha256 not provided; debug upgrade path cannot verify release metadata");
+    } else {
+        std::string actual_sha256 = Sha256ToHex(digest);
+        if (actual_sha256 != expected_sha256) {
+            ESP_LOGE(TAG, "Firmware sha256 mismatch");
+            esp_ota_abort(update_handle);
+            return false;
+        }
+    }
+    if (!expected_signature.empty() && !VerifyFirmwareSignature(digest, expected_signature)) {
+        esp_ota_abort(update_handle);
+        return false;
+    }
 
     esp_err_t err = esp_ota_end(update_handle);
     if (err != ESP_OK) {
@@ -387,7 +565,86 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
 }
 
 bool Ota::StartUpgrade(std::function<void(int progress, size_t speed)> callback) {
-    return Upgrade(firmware_url_, callback);
+    return Upgrade(firmware_url_, firmware_sha256_, firmware_signature_, callback);
+}
+
+void Ota::StorePendingInstallResult() {
+    if (firmware_release_id_.empty()) {
+        return;
+    }
+    Settings settings("ota", true);
+    settings.SetString("pending_release_id", firmware_release_id_);
+    settings.SetString("pending_version", firmware_version_);
+}
+
+void Ota::ReportPendingInstallSuccess() {
+    Settings settings("ota", true);
+    std::string release_id = settings.GetString("pending_release_id");
+    if (release_id.empty()) {
+        return;
+    }
+    if (ReportInstallResult(release_id, true, "")) {
+        settings.EraseKey("pending_release_id");
+        settings.EraseKey("pending_version");
+    }
+}
+
+void Ota::ReportInstallFailure(const std::string& reason) {
+    if (firmware_release_id_.empty()) {
+        return;
+    }
+    ReportInstallResult(firmware_release_id_, false, reason);
+}
+
+std::string Ota::GetInstallResultUrl() {
+    std::string url = GetCheckVersionUrl();
+    const std::string suffix = "/install-result";
+    if (url.size() >= suffix.size() && url.compare(url.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        return url;
+    }
+    if (!url.empty() && url.back() == '/') {
+        return url + "install-result";
+    }
+    return url + "/install-result";
+}
+
+bool Ota::ReportInstallResult(const std::string& release_id, bool success, const std::string& reason) {
+    if (release_id.empty()) {
+        return false;
+    }
+    auto& board = Board::GetInstance();
+    auto network = board.GetNetwork();
+    if (network == nullptr) {
+        return false;
+    }
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "device_id", SystemInfo::GetMacAddress().c_str());
+    cJSON_AddStringToObject(root, "release_id", release_id.c_str());
+    cJSON_AddBoolToObject(root, "success", success);
+    if (!reason.empty()) {
+        cJSON_AddStringToObject(root, "reason", reason.c_str());
+    }
+    auto json_str = cJSON_PrintUnformatted(root);
+    std::string payload(json_str);
+    cJSON_free(json_str);
+    cJSON_Delete(root);
+
+    auto http = network->CreateHttp(0);
+    http->SetHeader("Device-Id", SystemInfo::GetMacAddress().c_str());
+    http->SetHeader("Client-Id", board.GetUuid());
+    http->SetHeader("Content-Type", "application/json");
+    http->SetContent(std::move(payload));
+    if (!http->Open("POST", GetInstallResultUrl())) {
+        ESP_LOGW(TAG, "Failed to report firmware install result");
+        return false;
+    }
+    int status_code = http->GetStatusCode();
+    http->Close();
+    if (status_code < 200 || status_code >= 300) {
+        ESP_LOGW(TAG, "Firmware install result report failed, status=%d", status_code);
+        return false;
+    }
+    return true;
 }
 
 

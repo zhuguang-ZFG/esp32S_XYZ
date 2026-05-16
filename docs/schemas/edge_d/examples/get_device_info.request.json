@@ -1,0 +1,4 @@
+{
+  "msg_id": "msg-device-info-001",
+  "cmd": "GET_DEVICE_INFO"
+}

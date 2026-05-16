@@ -3,6 +3,8 @@ package xiaozhi.modules.config.service;
 import java.util.List;
 import java.util.Map;
 
+import xiaozhi.modules.config.vo.DeviceRuntimeStatusVO;
+
 public interface ConfigService {
     /**
      * 获取服务器配置
@@ -28,4 +30,9 @@ public interface ConfigService {
      * @return 替换词列表，格式如 ["模板1|模板01", "模板2|模板02"]
      */
     List<String> getCorrectWords(String macAddress);
+
+    /**
+     * Query v2 runtime admission status for DeviceServer websocket auth.
+     */
+    DeviceRuntimeStatusVO getDeviceRuntimeStatus(String deviceId);
 }

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_c/device_info.schema.json",
+  "title": "Edge-C device_info 上行（U8→DeviceServer WSS）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["session_id", "type", "task_id", "device_id", "model", "hw_rev", "fw_rev", "workspace_mm"],
+  "properties": {
+    "session_id": { "type": "string", "minLength": 1 },
+    "type": { "const": "device_info" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "device_id": { "type": "string", "minLength": 1 },
+    "capability": { "type": "string" },
+    "model": { "type": "string", "minLength": 1 },
+    "hw_rev": { "type": "string", "minLength": 1 },
+    "fw_rev": { "type": "string", "minLength": 1 },
+    "workspace_mm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    }
+  }
+}

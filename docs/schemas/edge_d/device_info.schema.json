@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_d/device_info.schema.json",
+  "title": "Edge-D 设备信息结果帧（U1→U8）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["msg_id", "type", "task_id", "result", "state", "model", "hw_rev", "fw_rev", "workspace_mm"],
+  "properties": {
+    "msg_id": { "type": "string", "minLength": 1 },
+    "type": { "const": "result" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "result": { "const": "DONE" },
+    "state": {
+      "type": "string",
+      "enum": ["IDLE", "HOMING", "RUNNING", "PAUSED", "ALARM", "ERROR", "ESTOP"]
+    },
+    "model": { "type": "string", "minLength": 1 },
+    "hw_rev": { "type": "string", "minLength": 1 },
+    "fw_rev": { "type": "string", "minLength": 1 },
+    "workspace_mm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number", "exclusiveMinimum": 0 },
+        "y": { "type": "number", "exclusiveMinimum": 0 },
+        "z": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

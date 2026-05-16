@@ -132,6 +132,9 @@ export default defineManifestConfig({
     usingComponents: true,
     // __usePrivacyCheck__: true,
     permission: {
+      'scope.record': {
+        desc: '用于语音指令和声纹录入',
+      },
       'scope.userLocation': {
         desc: 'WiFi配网功能需要获取位置权限',
       },

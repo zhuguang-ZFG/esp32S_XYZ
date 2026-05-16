@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_d/ack.schema.json",
+  "title": "Edge-D 命令接收确认帧（U1→U8）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["msg_id", "type", "task_id", "state", "accepted"],
+  "properties": {
+    "msg_id": { "type": "string", "minLength": 1 },
+    "type": { "const": "ack" },
+    "task_id": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["IDLE", "HOMING", "RUNNING", "PAUSED", "ALARM", "ERROR", "ESTOP"]
+    },
+    "accepted": { "const": true }
+  }
+}

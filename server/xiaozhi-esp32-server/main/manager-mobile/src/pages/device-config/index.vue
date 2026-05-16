@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { t } from '@/i18n'
+import BlufiConfig from './components/blufi-config.vue'
 import UltrasonicConfig from './components/ultrasonic-config.vue'
 import WifiConfig from './components/wifi-config.vue'
 import WifiSelector from './components/wifi-selector.vue'
@@ -14,7 +15,7 @@ interface WiFiNetwork {
 }
 
 // 配网类型
-const configType = ref<'wifi' | 'ultrasonic'>('wifi')
+const configType = ref<'ble_blufi' | 'softap_http' | 'wifi' | 'ultrasonic'>('ble_blufi')
 
 // 配网模式选择器状态
 const configTypeSelectorShow = ref(false)
@@ -34,8 +35,12 @@ const selectedWifiInfo = ref<{
 // 配网模式选项
 const configTypeOptions = [
   {
-    name: t('deviceConfig.wifiConfig'),
-    value: 'wifi' as const,
+    name: 'BLE / BluFi',
+    value: 'ble_blufi' as const,
+  },
+  {
+    name: 'SoftAP HTTP',
+    value: 'softap_http' as const,
   },
   // {
   //   name: t('deviceConfig.ultrasonicConfig'),
@@ -49,7 +54,7 @@ function showConfigTypeSelector() {
 }
 
 // 配网模式选择器确认
-function onConfigTypeConfirm(item: { name: string, value: 'wifi' | 'ultrasonic' }) {
+function onConfigTypeConfirm(item: { name: string, value: 'ble_blufi' | 'softap_http' | 'wifi' | 'ultrasonic' }) {
   configType.value = item.value
   configTypeSelectorShow.value = false
 }
@@ -70,6 +75,10 @@ function onConnectionStatusChange(connected: boolean) {
 }
 
 // 在组件挂载后设置导航栏标题
+function openPrivacyPermissions() {
+  uni.navigateTo({ url: '/pages/settings/privacy-permissions' })
+}
+
 import { onMounted } from 'vue'
 onMounted(() => {
   uni.setNavigationBarTitle({
@@ -83,6 +92,21 @@ onMounted(() => {
     <wd-navbar :title="t('deviceConfig.pageTitle')" safe-area-inset-top />
 
     <view class="box-border px-[20rpx]">
+      <view class="mb-[24rpx] mt-[20rpx] border border-[#dce6ff] rounded-[16rpx] bg-[#eef4ff] p-[20rpx]">
+        <view class="flex items-center justify-between gap-[20rpx]">
+          <view class="flex-1">
+            <text class="block text-[26rpx] text-[#232338] font-medium">
+              配网需要蓝牙和 Wi-Fi 权限
+            </text>
+            <text class="mt-[6rpx] block text-[22rpx] text-[#65686f] leading-[1.5]">
+              未授权时可进入权限页查看兜底提示。
+            </text>
+          </view>
+          <wd-button type="text" size="small" @click="openPrivacyPermissions">
+            权限设置
+          </wd-button>
+        </view>
+      </view>
       <!-- 配网方式选择 -->
       <view class="pb-[20rpx] first:pt-[20rpx]">
         <text class="text-[32rpx] text-[#232338] font-bold">
@@ -96,7 +120,7 @@ onMounted(() => {
               {{ t('deviceConfig.configMethod') }}
             </text>
             <text class="mx-[16rpx] flex-1 text-right text-[26rpx] text-[#65686f]">
-              {{ configType === 'wifi' ? t('deviceConfig.wifiConfig') : t('deviceConfig.ultrasonicConfig') }}
+              {{ configType === 'ble_blufi' ? 'BLE / BluFi' : configType === 'softap_http' || configType === 'wifi' ? 'SoftAP HTTP' : t('deviceConfig.ultrasonicConfig') }}
             </text>
           <wd-icon name="arrow-right" custom-class="text-[20rpx] text-[#9d9ea3]" />
         </view>
@@ -118,10 +142,16 @@ onMounted(() => {
       </view>
 
       <!-- 配网操作 -->
-      <view v-if="selectedWifiInfo.network" class="flex-1">
+      <view v-if="configType === 'ble_blufi' || selectedWifiInfo.network" class="flex-1">
         <!-- WiFi配网组件 -->
+        <blufi-config
+          v-if="configType === 'ble_blufi'"
+          :selected-network="selectedWifiInfo.network"
+          :password="selectedWifiInfo.password"
+        />
+
         <wifi-config
-          v-if="configType === 'wifi'"
+          v-else-if="configType === 'softap_http' || configType === 'wifi'"
           :selected-network="selectedWifiInfo.network"
           :password="selectedWifiInfo.password"
         />

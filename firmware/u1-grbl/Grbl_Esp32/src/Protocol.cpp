@@ -39,6 +39,14 @@ static char    private_path_task_id[64] = {0};
 static char    private_active_task_id[64] = {0};
 static bool    private_stop_requested = false;
 
+#ifndef PRIVATE_PROTOCOL_FW_REV
+#    define PRIVATE_PROTOCOL_FW_REV "u1-grbl"
+#endif
+
+#ifndef PRIVATE_PROTOCOL_HW_REV
+#    define PRIVATE_PROTOCOL_HW_REV "DLC_Motor_Control_P1_V1.0_260513"
+#endif
+
 static bool json_extract_string_field(const char* json, const char* field, char* output, size_t output_size) {
     if (json == nullptr || field == nullptr || output == nullptr || output_size == 0) {
         return false;
@@ -166,10 +174,26 @@ static void send_private_protocol_ack(uint8_t client, const char* msg_id, const 
 
 static void send_private_protocol_ack_with_state(uint8_t client, const char* msg_id, const char* task_id, const char* state) {
     grbl_sendf(client,
-               "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"%s\"}\r\n",
+               "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"%s\",\"accepted\":true}\r\n",
                msg_id != nullptr ? msg_id : "",
                task_id != nullptr ? task_id : "",
                state != nullptr ? state : "ERROR");
+}
+
+static void send_private_protocol_device_info(uint8_t client, const char* msg_id, const char* task_id) {
+    grbl_sendf(client,
+               "{\"msg_id\":\"%s\",\"type\":\"result\",\"task_id\":\"%s\",\"result\":\"DONE\",\"state\":\"%s\","
+               "\"model\":\"%s\",\"hw_rev\":\"%s\",\"fw_rev\":\"%s\","
+               "\"workspace_mm\":{\"x\":%.3f,\"y\":%.3f,\"z\":%.3f}}\r\n",
+               msg_id != nullptr ? msg_id : "",
+               (task_id != nullptr && task_id[0] != '\0') ? task_id : "device-info",
+               report_state_text(),
+               MACHINE_NAME,
+               PRIVATE_PROTOCOL_HW_REV,
+               PRIVATE_PROTOCOL_FW_REV,
+               static_cast<double>(DEFAULT_X_MAX_TRAVEL),
+               static_cast<double>(DEFAULT_Y_MAX_TRAVEL),
+               static_cast<double>(DEFAULT_Z_MAX_TRAVEL));
 }
 
 static bool private_protocol_begin_controlled_stop() {
@@ -245,6 +269,11 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         return true;
     }
 
+    if (strcmp(cmd, "GET_DEVICE_INFO") == 0) {
+        send_private_protocol_device_info(client, msg_id, task_id);
+        return true;
+    }
+
     if (strcmp(cmd, "HOME") == 0) {
         char home_line[] = "$H";
         Error result = execute_line(home_line, client, WebUI::AuthenticationLevel::LEVEL_GUEST);
@@ -259,7 +288,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E010\",\"message\":\"home failed\"}\r\n",
+                       "\"error_code\":\"E009\",\"message\":\"home failed\"}\r\n",
                        msg_id,
                        task_id);
         }
@@ -306,7 +335,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E010\",\"message\":\"move failed\"}\r\n",
+                       "\"error_code\":\"E009\",\"message\":\"move failed\"}\r\n",
                        msg_id,
                        task_id);
         }
@@ -321,7 +350,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else if (sys.state == State::Hold || sys.state == State::SafetyDoor) {
             send_private_protocol_ack(client, msg_id, task_id);
         } else {
-            send_private_protocol_error(client, msg_id, task_id, "E010", "pause invalid in current state");
+            send_private_protocol_error(client, msg_id, task_id, "E009", "pause invalid in current state");
         }
         return true;
     }
@@ -332,7 +361,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
             sys_rt_exec_state.bit.cycleStart = true;
             send_private_protocol_ack(client, msg_id, task_id);
         } else {
-            send_private_protocol_error(client, msg_id, task_id, "E010", "resume invalid in current state");
+            send_private_protocol_error(client, msg_id, task_id, "E009", "resume invalid in current state");
         }
         return true;
     }
@@ -343,7 +372,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else if (sys.state == State::Idle) {
             send_private_protocol_ack(client, msg_id, task_id);
         } else {
-            send_private_protocol_error(client, msg_id, task_id, "E010", "stop invalid in current state");
+            send_private_protocol_error(client, msg_id, task_id, "E009", "stop invalid in current state");
         }
         return true;
     }
@@ -364,7 +393,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         if (!json_extract_int_field(json, "total_segments", &total_segments) || total_segments <= 0) {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E003\",\"message\":\"invalid total_segments\"}\r\n",
+                       "\"error_code\":\"E009\",\"message\":\"invalid total_segments\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -375,7 +404,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         strncpy(private_path_task_id, task_id, sizeof(private_path_task_id) - 1);
         private_path_gcode = "G90\n";
         grbl_sendf(client,
-                   "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"IDLE\"}\r\n",
+                   "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"IDLE\",\"accepted\":true}\r\n",
                    msg_id,
                    task_id);
         return true;
@@ -394,7 +423,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
             !json_extract_float_field(json, "y", &y)) {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E003\",\"message\":\"invalid path segment\"}\r\n",
+                       "\"error_code\":\"E009\",\"message\":\"invalid path segment\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -418,7 +447,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E003\",\"message\":\"unsupported segment cmd\"}\r\n",
+                       "\"error_code\":\"E009\",\"message\":\"unsupported segment cmd\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -427,7 +456,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         private_path_gcode += command;
         private_path_received_segments++;
         grbl_sendf(client,
-                   "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"IDLE\"}\r\n",
+                   "{\"msg_id\":\"%s\",\"type\":\"ack\",\"task_id\":\"%s\",\"state\":\"IDLE\",\"accepted\":true}\r\n",
                    msg_id,
                    task_id);
         return true;
@@ -457,7 +486,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
             private_active_task_reset();
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E010\",\"message\":\"path execution failed\"}\r\n",
+                       "\"error_code\":\"E009\",\"message\":\"path execution failed\"}\r\n",
                        msg_id,
                        task_id);
         }
@@ -467,7 +496,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
 
     grbl_sendf(client,
                "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-               "\"error_code\":\"E010\",\"message\":\"unsupported cmd\"}\r\n",
+               "\"error_code\":\"E009\",\"message\":\"unsupported cmd\"}\r\n",
                msg_id,
                task_id);
     return true;

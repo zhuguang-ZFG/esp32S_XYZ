@@ -86,6 +86,7 @@ public:
 
     /** M2.5：云端 WSS 下行 `type=motion_task` 时由 Application 转发；默认忽略。 */
     virtual void HandleMotionTaskJson(const cJSON* root);
+    virtual bool CheckU1Uart(std::string& detail);
 };
 
 #define DECLARE_BOARD(BOARD_CLASS_NAME) \

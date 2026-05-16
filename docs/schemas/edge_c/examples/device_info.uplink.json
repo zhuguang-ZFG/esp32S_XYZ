@@ -1,0 +1,15 @@
+{
+  "session_id": "<injected-by-protocol>",
+  "type": "device_info",
+  "task_id": "task-info",
+  "device_id": "dev_SN001",
+  "capability": "get_device_info",
+  "model": "DLC Motor Control P1 XYYZ",
+  "hw_rev": "DLC_Motor_Control_P1_V1.0_260513",
+  "fw_rev": "u1-grbl-unknown",
+  "workspace_mm": {
+    "x": 200.0,
+    "y": 150.0,
+    "z": 50.0
+  }
+}

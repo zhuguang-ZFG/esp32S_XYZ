@@ -104,8 +104,8 @@ Kiro 不能凭记忆或猜测写硬件、协议、接口结论。
 
 必须先找证据：
 
-- 文件路径：用 `rg --files` 或目录枚举确认存在。
-- 函数/类/宏：用 `rg` 或源码定位确认存在。
+- 文件路径：用 `rtk rg --files` 或目录枚举确认存在。
+- 函数/类/宏：用 `rtk rg` 或源码定位确认存在。
 - 协议字段：先查 `docs/schemas/`、`docs/架构定稿-v2.md`、`docs/实施计划-v2.md`。
 - 硬件参数：优先 PDF/TXT/SCH/PCB/BOM/坐标文件，其次 datasheet；交付图形不能替代 netlist 证据。
 - 第三方库/API：优先本仓库锁定版本、官方文档或源码。
@@ -177,12 +177,12 @@ rtk powershell -NoProfile -Command "& 'C:\Users\zhugu\.platformio\penv\Scripts\p
 
 验证原则：
 
-- 文档-only 变更至少跑 `git diff --check`，并检查引用路径存在。
-- schema 变更必须跑 `tools/validate_schemas.py`。
-- GPIO/硬件配置变更必须跑 `tools/check_gpio.py` 和对应单测。
+- 文档-only 变更至少跑 `rtk git diff --check`，并检查引用路径存在。
+- schema 变更必须跑 `rtk python tools/validate_schemas.py`。
+- GPIO/硬件配置变更必须跑 `rtk python tools/check_gpio.py` 和对应单测。
 - fake U1 变更必须跑 fake U1 单测和集成测试。
 - U1 固件变更必须跑 PlatformIO release 构建。
-- Java 服务变更优先跑对应 `mvn test`；环境缺失时标注 `[WAIT_ENV]` 并提供已做的静态证据。
+- Java 服务变更优先跑对应 `rtk mvn test`；环境缺失时标注 `[WAIT_ENV]` 并提供已做的静态证据。
 - U8 ESP-IDF 变更优先跑对应构建；环境缺失时标注 `[WAIT_ENV]`，不能声称编译通过。
 
 ## 9. 硬件核对专项规则
@@ -211,7 +211,7 @@ rtk powershell -NoProfile -Command "& 'C:\Users\zhugu\.platformio\penv\Scripts\p
 
 交付前必须确认：
 
-- `git status --short --branch` 只包含本任务文件。
+- `rtk git status --short --branch` 只包含本任务文件。
 - 暂存只包含本任务文件。
 - commit message 能说明真实变更。
 - push 后 `HEAD`、`origin/main` 对齐。

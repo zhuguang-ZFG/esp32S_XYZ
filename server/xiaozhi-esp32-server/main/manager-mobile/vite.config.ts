@@ -1,5 +1,6 @@
 import path from 'node:path'
 import process from 'node:process'
+import fs from 'node:fs'
 import Uni from '@dcloudio/vite-plugin-uni'
 import Components from '@uni-helper/vite-plugin-uni-components'
 // @see https://uni-helper.js.org/vite-plugin-uni-layouts
@@ -67,6 +68,24 @@ export default async ({ command, mode }) => {
       UniLayouts(),
       UniPlatform(),
       UniManifest(),
+      {
+        name: 'patch-mp-weixin-permissions',
+        closeBundle() {
+          if (process.env.UNI_PLATFORM !== 'mp-weixin')
+            return
+          const appJsonPath = path.join(process.cwd(), 'dist/build/mp-weixin/app.json')
+          if (!fs.existsSync(appJsonPath))
+            return
+          const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf-8'))
+          appJson.permission = {
+            ...(appJson.permission || {}),
+            'scope.record': {
+              desc: '用于语音指令和声纹录入',
+            },
+          }
+          fs.writeFileSync(appJsonPath, `${JSON.stringify(appJson, null, 2)}\n`, 'utf-8')
+        },
+      },
       // UniXXX 需要在 Uni 之前引入
       {
         // 临时解决 dcloudio 官方的 @dcloudio/uni-mp-compiler 出现的编译 BUG

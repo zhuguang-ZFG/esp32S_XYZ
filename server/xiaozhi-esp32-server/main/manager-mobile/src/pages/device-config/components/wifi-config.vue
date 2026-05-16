@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { t } from '@/i18n'
 import { toast } from '@/utils/toast'
+import { provisioningContract, softApUrl } from '../provisioning-contract'
 
 // 类型定义
 interface WiFiNetwork {
@@ -35,7 +36,7 @@ const canSubmit = computed(() => {
 async function checkESP32Connection() {
   try {
     const response = await uni.request({
-      url: 'http://192.168.4.1/scan',
+      url: softApUrl(provisioningContract.softApScanPath),
       method: 'GET',
       timeout: 3000,
     })
@@ -64,7 +65,7 @@ async function submitConfig() {
 
   try {
     const response = await uni.request({
-      url: 'http://192.168.4.1/submit',
+      url: softApUrl(provisioningContract.softApSubmitPath),
       method: 'POST',
       header: {
         'Content-Type': 'application/json',
@@ -83,7 +84,7 @@ async function submitConfig() {
       // 设备退出配网模式
       setTimeout(() => {
         uni.request({
-          url: 'http://192.168.4.1/exit',
+          url: softApUrl(provisioningContract.softApExitPath),
           method: 'POST',
           timeout: 15000,
         })

@@ -11,7 +11,7 @@ export interface LangStore {
 
 export const useLangStore = defineStore(
   'lang',
-  (): LangStore => {
+  () => {
     // 从本地存储获取语言设置，如果没有则使用默认值
     const savedLang = uni.getStorageSync('app_language') as Language | null
     const currentLang = ref<Language>(savedLang || 'zh_CN')

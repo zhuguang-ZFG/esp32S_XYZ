@@ -5,6 +5,7 @@
 #include "system_info.h"
 #include "settings.h"
 #include "assets/lang_config.h"
+#include "provisioning_contract.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -54,7 +55,7 @@ void WifiBoard::StartNetwork() {
 
     // Initialize WiFi manager
     WifiManagerConfig config;
-    config.ssid_prefix = "Xiaozhi";
+    config.ssid_prefix = ProvisioningContract::kSoftApSsidPrefix;
     config.language = Lang::CODE;
     wifi_manager.Initialize(config);
 
@@ -162,6 +163,12 @@ void WifiBoard::StartWifiConfigMode() {
     Application::GetInstance().SetDeviceState(kDeviceStateWifiConfiguring);
 #ifdef CONFIG_USE_HOTSPOT_WIFI_PROVISIONING
     auto& wifi_manager = WifiManager::GetInstance();
+
+#ifdef CONFIG_USE_ESP_BLUFI_WIFI_PROVISIONING
+    // M5.1 uses BLE provisioning as the primary path while keeping SoftAP HTTP
+    // available as the manual fallback required by M5.2.
+    Blufi::GetInstance().init();
+#endif
 
     wifi_manager.StartConfigAp();
 

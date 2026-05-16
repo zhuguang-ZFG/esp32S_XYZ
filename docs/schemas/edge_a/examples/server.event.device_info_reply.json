@@ -1,0 +1,21 @@
+{
+  "type": "event",
+  "event": {
+    "event_id": "550e8400-e29b-41d4-a716-446655440004",
+    "event_type": "device_info_reply",
+    "device_id": "dev_SN001",
+    "task_id": "task-info",
+    "ts": 1730000000000,
+    "seq": 2,
+    "payload": {
+      "model": "DLC Motor Control P1 XYYZ",
+      "hw_rev": "DLC_Motor_Control_P1_V1.0_260513",
+      "fw_rev": "u1-grbl-unknown",
+      "workspace_mm": {
+        "x": 200.0,
+        "y": 150.0,
+        "z": 50.0
+      }
+    }
+  }
+}

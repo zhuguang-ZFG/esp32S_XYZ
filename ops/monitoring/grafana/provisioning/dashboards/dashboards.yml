@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: manager-api
+    orgId: 1
+    folder: M6 Runtime
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json

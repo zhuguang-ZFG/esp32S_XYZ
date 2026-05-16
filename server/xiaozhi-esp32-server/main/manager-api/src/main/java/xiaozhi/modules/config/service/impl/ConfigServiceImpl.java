@@ -36,6 +36,9 @@ import xiaozhi.modules.correctword.service.CorrectWordFileService;
 import xiaozhi.modules.agent.vo.AgentVoicePrintVO;
 import xiaozhi.modules.correctword.vo.CorrectWordSimpleVO;
 import xiaozhi.modules.config.service.ConfigService;
+import xiaozhi.modules.config.vo.DeviceRuntimeStatusVO;
+import xiaozhi.modules.appv2.dao.V2DeviceDao;
+import xiaozhi.modules.appv2.entity.V2DeviceEntity;
 import xiaozhi.modules.device.entity.DeviceEntity;
 import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.model.entity.ModelConfigEntity;
@@ -63,6 +66,7 @@ public class ConfigServiceImpl implements ConfigService {
     private final VoiceCloneService cloneVoiceService;
     private final AgentVoicePrintDao agentVoicePrintDao;
     private final CorrectWordFileService correctWordFileService;
+    private final V2DeviceDao v2DeviceDao;
 
     @Override
     public Object getConfig(Boolean isCache) {
@@ -257,6 +261,25 @@ public class ConfigServiceImpl implements ConfigService {
         return items.stream()
                 .map(item -> item.getSourceWord() + "|" + item.getTargetWord())
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public DeviceRuntimeStatusVO getDeviceRuntimeStatus(String deviceId) {
+        String normalizedDeviceId = StringUtils.trimToNull(deviceId);
+        if (normalizedDeviceId == null) {
+            return new DeviceRuntimeStatusVO(null, null, false, false);
+        }
+        V2DeviceEntity device = v2DeviceDao.selectById(normalizedDeviceId);
+        if (device == null) {
+            device = v2DeviceDao.selectOne(new LambdaQueryWrapper<V2DeviceEntity>()
+                    .eq(V2DeviceEntity::getDeviceSn, normalizedDeviceId)
+                    .last("LIMIT 1"));
+        }
+        if (device == null) {
+            return new DeviceRuntimeStatusVO(normalizedDeviceId, null, false, false);
+        }
+        String status = StringUtils.trimToNull(device.getStatus());
+        return new DeviceRuntimeStatusVO(normalizedDeviceId, status, true, "disposed".equals(status));
     }
 
     /**

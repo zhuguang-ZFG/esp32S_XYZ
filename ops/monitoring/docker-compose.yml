@@ -1,0 +1,46 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./rules:/etc/prometheus/rules:ro
+      - ${MANAGER_API_SECRET_FILE:-./secrets/manager-api.secret}:/etc/prometheus/secrets/manager-api.secret:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    depends_on:
+      - alertmanager
+    networks:
+      - m6-monitoring
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    ports:
+      - "9093:9093"
+    environment:
+      DINGTALK_WEBHOOK_URL: ${DINGTALK_WEBHOOK_URL:-http://127.0.0.1:9/dingtalk-placeholder}
+      WECHAT_WEBHOOK_URL: ${WECHAT_WEBHOOK_URL:-http://127.0.0.1:9/wechat-placeholder}
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--config.expand-env"
+    networks:
+      - m6-monitoring
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - m6-monitoring
+
+networks:
+  m6-monitoring:
+    name: m6-monitoring

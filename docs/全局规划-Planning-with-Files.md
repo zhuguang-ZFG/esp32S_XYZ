@@ -1,544 +1,537 @@
-# 全局规划 - Planning with Files
+﻿# 鍏ㄥ眬瑙勫垝 - Planning with Files
 
-**版本**：v1.0  
-**创建日期**：2026-05-14  
-**状态**：执行中  
-**依据文档**：架构定稿 v2, 实施计划 v2, Superpowers 原则
+**鐗堟湰**锛歷1.0
+**鍒涘缓鏃ユ湡**锛?026-05-14
+**鐘舵€?*锛氭墽琛屼腑
+**渚濇嵁鏂囨。**锛氭灦鏋勫畾绋?v2, 瀹炴柦璁″垝 v2, Superpowers 鍘熷垯
 
-## 目录
+## 鐩綍
 
-- [1. 项目总览](#1-项目总览)
-- [2. 里程碑路线图](#2-里程碑路线图)
-- [3. 文件组织结构](#3-文件组织结构)
-- [4. 当前进度](#4-当前进度)
-- [5. 下一步行动](#5-下一步行动)
-- [6. 依赖关系图](#6-依赖关系图)
-- [7. 风险与缓解](#7-风险与缓解)
+- [1. 椤圭洰鎬昏](#1-椤圭洰鎬昏)
+- [2. 閲岀▼纰戣矾绾垮浘](#2-閲岀▼纰戣矾绾垮浘)
+- [3. 鏂囦欢缁勭粐缁撴瀯](#3-鏂囦欢缁勭粐缁撴瀯)
+- [4. 褰撳墠杩涘害](#4-褰撳墠杩涘害)
+- [5. 涓嬩竴姝ヨ鍔╙(#5-涓嬩竴姝ヨ鍔?
+- [6. 渚濊禆鍏崇郴鍥綸(#6-渚濊禆鍏崇郴鍥?
+- [7. 椋庨櫓涓庣紦瑙(#7-椋庨櫓涓庣紦瑙?
 
 ---
 
-## 1. 项目总览
+## 1. 椤圭洰鎬昏
 
-### 1.1 项目定位
+### 1.1 椤圭洰瀹氫綅
 
-**esp32S_XYZ** - 儿童/家庭创意教育智能写字机/画图机
+**esp32S_XYZ** - 鍎跨/瀹跺涵鍒涙剰鏁欒偛鏅鸿兘鍐欏瓧鏈?鐢诲浘鏈?
 
-- **商业模式**：硬件买断 + AI 生成能力/字体订阅
-- **目标用户**：C 端家庭用户（家长给孩子、成人自购/送礼）
-- **客户端**：微信小程序优先
-- **核心能力**：写字、画图、语音交互、AI 生成
+- **鍟嗕笟妯″紡**锛氱‖浠朵拱鏂?+ AI 鐢熸垚鑳藉姏/瀛椾綋璁㈤槄
+- **鐩爣鐢ㄦ埛**锛欳 绔搴敤鎴凤紙瀹堕暱缁欏瀛愩€佹垚浜鸿嚜璐?閫佺ぜ锛?
+- **瀹㈡埛绔?*锛氬井淇″皬绋嬪簭浼樺厛
+- **鏍稿績鑳藉姏**锛氬啓瀛椼€佺敾鍥俱€佽闊充氦浜掋€丄I 鐢熸垚
 
-### 1.2 系统架构
+### 1.2 绯荤粺鏋舵瀯
 
 ```
-Client (小程序)
-    ↕ Edge-A (WSS/HTTPS)
+Client (灏忕▼搴?
+    鈫?Edge-A (WSS/HTTPS)
 BusinessServer (manager-api)
-    ↕ Edge-B (内部 HTTP)
+    鈫?Edge-B (鍐呴儴 HTTP)
 DeviceServer (xiaozhi-server)
-    ↕ Edge-C (WSS)
+    鈫?Edge-C (WSS)
 U8 (AI_MCU, ESP32-S3)
-    ↕ Edge-D (UART @{json}\n)
+    鈫?Edge-D (UART @{json}\n)
 U1 (MOTOR_MCU, ESP32-S3)
 ```
 
-### 1.3 核心原则
+### 1.3 鏍稿績鍘熷垯
 
-- **Superpowers 原则**：先验证后实现，尽早收敛不确定性
-- **文档先行**：架构定稿 v2 → 实施计划 v2 → 代码实现
-- **双重安全裁决**：BusinessServer 前置 + U1 最终裁决
-- **代码文档同步**：每次提交必须同时更新文档
+- **Superpowers 鍘熷垯**锛氬厛楠岃瘉鍚庡疄鐜帮紝灏芥棭鏀舵暃涓嶇‘瀹氭€?
+- **鏂囨。鍏堣**锛氭灦鏋勫畾绋?v2 鈫?瀹炴柦璁″垝 v2 鈫?浠ｇ爜瀹炵幇
+- **鍙岄噸瀹夊叏瑁佸喅**锛欱usinessServer 鍓嶇疆 + U1 鏈€缁堣鍐?
+- **浠ｇ爜鏂囨。鍚屾**锛氭瘡娆℃彁浜ゅ繀椤诲悓鏃舵洿鏂版枃妗?
 
 ---
 
-## 2. 里程碑路线图
+## 2. 閲岀▼纰戣矾绾垮浘
 
-### 2.1 总图
+### 2.1 鎬诲浘
 
 ```
-M0  设计期验证（无主板可做）           ← 当前位置
-    M0a ✅ 契约固化（JSON Schema）
-    M0b ✅ 静态检查（GPIO 冲突、strapping pin）
-    M0c ⏳ 仿真器（fake U1 ✅、fake DeviceServer、fake AI）
-    M0d ⏳ CI 与单元测试骨架
-    M0e ✅ 基准修复
-    M0f ⏸️ 实物上电抽测（等实物）
+M0  璁捐鏈熼獙璇侊紙鏃犱富鏉垮彲鍋氾級           鈫?褰撳墠浣嶇疆
+    M0a 鉁?濂戠害鍥哄寲锛圝SON Schema锛?
+    M0b 鉁?闈欐€佹鏌ワ紙GPIO 鍐茬獊銆乻trapping pin锛?
+    M0c 鈴?浠跨湡鍣紙fake U1 鉁呫€乫ake DeviceServer銆乫ake AI锛?
+    M0d 鈴?CI 涓庡崟鍏冩祴璇曢鏋?
+    M0e 鉁?鍩哄噯淇
+    M0f 鈴革笍 瀹炵墿涓婄數鎶芥祴锛堢瓑瀹炵墿锛?
 
-M1  设备协议端到端 (GET_STATUS/HOME/MOVE)
-M2  小程序订阅链路打通 (run_path 可见)
-M3  write_text/draw 投影端到端
-M4  语音触发 + 声纹
-M5  OTA / 配网 / 自检
-M6  上线合规与运营级功能
+M1  璁惧鍗忚绔埌绔?(GET_STATUS/HOME/MOVE)
+M2  灏忕▼搴忚闃呴摼璺墦閫?(run_path 鍙)
+M3  write_text/draw 鎶曞奖绔埌绔?
+M4  璇煶瑙﹀彂 + 澹扮汗
+M5  OTA / 閰嶇綉 / 鑷
+M6  涓婄嚎鍚堣涓庤繍钀ョ骇鍔熻兘
 ```
 
-### 2.2 里程碑详情
+### 2.2 閲岀▼纰戣鎯?
 
-| 里程碑 | 目标 | 前置条件 | 完成判定 | 预计工期 |
+| 閲岀▼纰?| 鐩爣 | 鍓嶇疆鏉′欢 | 瀹屾垚鍒ゅ畾 | 棰勮宸ユ湡 |
 |--------|------|----------|----------|----------|
-| **M0** | 设计期验证 | 无 | 所有 fake 环境可用，CI 全绿 | 2 周 |
-| **M1** | 设备协议端到端 | M0c.1 fake U1 | U8 ↔ U1 三条命令通 | 2 周 |
-| **M2** | 小程序订阅链路 | M1 + M0c.2 | 小程序看到设备状态变化 | 3 周 |
-| **M3** | 投影管线 | M2 | 写字/画图端到端 | 3 周 |
-| **M4** | 语音触发 | M3 + M0c.3 | 语音说话能写字画图 | 2 周 |
-| **M5** | OTA/配网/自检 | M4 | 设备可联网、可升级 | 2 周 |
-| **M6** | 上线合规 | M5 | 通过小程序审核 | 2 周 |
+| **M0** | 璁捐鏈熼獙璇?| 鏃?| 鎵€鏈?fake 鐜鍙敤锛孋I 鍏ㄧ豢 | 2 鍛?|
+| **M1** | 璁惧鍗忚绔埌绔?| M0c.1 fake U1 | U8 鈫?U1 涓夋潯鍛戒护閫?| 2 鍛?|
+| **M2** | 灏忕▼搴忚闃呴摼璺?| M1 + M0c.2 | 灏忕▼搴忕湅鍒拌澶囩姸鎬佸彉鍖?| 3 鍛?|
+| **M3** | 鎶曞奖绠＄嚎 | M2 | 鍐欏瓧/鐢诲浘绔埌绔?| 3 鍛?|
+| **M4** | 璇煶瑙﹀彂 | M3 + M0c.3 | 璇煶璇磋瘽鑳藉啓瀛楃敾鍥?| 2 鍛?|
+| **M5** | OTA/閰嶇綉/鑷 | M4 | 璁惧鍙仈缃戙€佸彲鍗囩骇 | 2 鍛?|
+| **M6** | 涓婄嚎鍚堣 | M5 | 閫氳繃灏忕▼搴忓鏍?| 2 鍛?|
 
 ---
 
-## 3. 文件组织结构
+## 3. 鏂囦欢缁勭粐缁撴瀯
 
-### 3.1 核心文档
+### 3.1 鏍稿績鏂囨。
 
 ```
 docs/
-├── 架构定稿-v2.md              # 架构规范（P0，所有决策的基准）
-├── 实施计划-v2.md              # 实施计划（P0，M0-M6 详细步骤）
-├── M0-进度报告.md              # M0 进度跟踪
-├── 全局规划-Planning-with-Files.md  # 本文件
-├── 编码任务索引-v2.md          # 任务索引
-├── ui-template.md              # 小程序 UI 模板选型
-├── 硬件连接与GPIO分配说明.md   # 硬件文档
-├── 硬件核对报告.md             # 硬件验证
-├── U1-Grbl适配说明.md          # U1 固件适配
-└── schemas/                    # JSON Schema（M0a）
-    ├── README.md
-    ├── edge_a/                 # Client ↔ BusinessServer
-    ├── edge_b/                 # BusinessServer ↔ DeviceServer
-    ├── edge_c/                 # DeviceServer ↔ U8
-    └── edge_d/                 # U8 ↔ U1
+鈹溾攢鈹€ 鏋舵瀯瀹氱-v2.md              # 鏋舵瀯瑙勮寖锛圥0锛屾墍鏈夊喅绛栫殑鍩哄噯锛?
+鈹溾攢鈹€ 瀹炴柦璁″垝-v2.md              # 瀹炴柦璁″垝锛圥0锛孧0-M6 璇︾粏姝ラ锛?
+鈹溾攢鈹€ M0-杩涘害鎶ュ憡.md              # M0 杩涘害璺熻釜
+鈹溾攢鈹€ 鍏ㄥ眬瑙勫垝-Planning-with-Files.md  # 鏈枃浠?
+鈹溾攢鈹€ 缂栫爜浠诲姟绱㈠紩-v2.md          # 浠诲姟绱㈠紩
+鈹溾攢鈹€ ui-template.md              # 灏忕▼搴?UI 妯℃澘閫夊瀷
+鈹溾攢鈹€ 纭欢杩炴帴涓嶨PIO鍒嗛厤璇存槑.md   # 纭欢鏂囨。
+鈹溾攢鈹€ 纭欢鏍稿鎶ュ憡.md             # 纭欢楠岃瘉
+鈹溾攢鈹€ U1-Grbl閫傞厤璇存槑.md          # U1 鍥轰欢閫傞厤
+鈹斺攢鈹€ schemas/                    # JSON Schema锛圡0a锛?
+    鈹溾攢鈹€ README.md
+    鈹溾攢鈹€ edge_a/                 # Client 鈫?BusinessServer
+    鈹溾攢鈹€ edge_b/                 # BusinessServer 鈫?DeviceServer
+    鈹溾攢鈹€ edge_c/                 # DeviceServer 鈫?U8
+    鈹斺攢鈹€ edge_d/                 # U8 鈫?U1
 ```
 
-### 3.2 Steering 规范
+### 3.2 Steering 瑙勮寖
 
 ```
 .kiro/steering/
-├── README.md                   # Steering 总览
-├── ui-ux-pro-max.md           # UI/UX 全局规范
-├── code-review.md             # 代码审查规范
-├── code-simplifier.md         # 代码简化规范
-├── code-doc-sync.md           # 代码文档同步规范
-├── skill-creator.md           # 技能创建规范
-├── protocol-design.md         # 协议设计 Skill
-├── safety-validation.md       # 安全裁决 Skill
-├── projection-pipeline.md     # 投影管线 Skill
-├── voice-intent.md            # 语音意图 Skill
-├── tdd.md                     # 测试驱动开发 Skill
-├── fake-environment.md        # fake 环境 Skill
-└── milestone-acceptance.md    # 里程碑验收 Skill
+鈹溾攢鈹€ README.md                   # Steering 鎬昏
+鈹溾攢鈹€ ui-ux-pro-max.md           # UI/UX 鍏ㄥ眬瑙勮寖
+鈹溾攢鈹€ code-review.md             # 浠ｇ爜瀹℃煡瑙勮寖
+鈹溾攢鈹€ code-simplifier.md         # 浠ｇ爜绠€鍖栬鑼?
+鈹溾攢鈹€ code-doc-sync.md           # 浠ｇ爜鏂囨。鍚屾瑙勮寖
+鈹溾攢鈹€ skill-creator.md           # 鎶€鑳藉垱寤鸿鑼?
+鈹溾攢鈹€ protocol-design.md         # 鍗忚璁捐 Skill
+鈹溾攢鈹€ safety-validation.md       # 瀹夊叏瑁佸喅 Skill
+鈹溾攢鈹€ projection-pipeline.md     # 鎶曞奖绠＄嚎 Skill
+鈹溾攢鈹€ voice-intent.md            # 璇煶鎰忓浘 Skill
+鈹溾攢鈹€ tdd.md                     # 娴嬭瘯椹卞姩寮€鍙?Skill
+鈹溾攢鈹€ fake-environment.md        # fake 鐜 Skill
+鈹斺攢鈹€ milestone-acceptance.md    # 閲岀▼纰戦獙鏀?Skill
 ```
 
-### 3.3 工具与测试
+### 3.3 宸ュ叿涓庢祴璇?
 
 ```
 tools/
-├── check_gpio.py              # GPIO 静态检查（M0b ✅）
-├── test_check_gpio.py         # GPIO 检查单元测试
-├── README.md                  # 工具使用文档
-└── fake_u1/                   # fake U1 仿真器（M0c.1 ✅）
-    ├── fake_u1.py             # 仿真器主程序
-    ├── test_fake_u1.py        # 单元测试（13/13 通过）
-    └── README.md              # 使用文档
+鈹溾攢鈹€ check_gpio.py              # GPIO 闈欐€佹鏌ワ紙M0b 鉁咃級
+鈹溾攢鈹€ test_check_gpio.py         # GPIO 妫€鏌ュ崟鍏冩祴璇?
+鈹溾攢鈹€ README.md                  # 宸ュ叿浣跨敤鏂囨。
+鈹斺攢鈹€ fake_u1/                   # fake U1 浠跨湡鍣紙M0c.1 鉁咃級
+    鈹溾攢鈹€ fake_u1.py             # 浠跨湡鍣ㄤ富绋嬪簭
+    鈹溾攢鈹€ test_fake_u1.py        # 鍗曞厓娴嬭瘯锛?3/13 閫氳繃锛?
+    鈹斺攢鈹€ README.md              # 浣跨敤鏂囨。
 ```
 
-### 3.4 固件代码
+### 3.4 鍥轰欢浠ｇ爜
 
 ```
 firmware/
-├── u1-grbl/                   # U1 固件（Grbl_Esp32）
-│   └── Grbl_Esp32/src/
-│       ├── Machines/dlc_motor_control_p1.h  # U1 GPIO 配置
-│       ├── Report.cpp         # 状态上报（M1.2, M1.3）
-│       └── Protocol.cpp       # 私有协议处理（M1.5）
-└── u8-xiaozhi/                # U8 固件
-    └── main/boards/zhuguang/dlc-motor-control-p1-ai/
-        ├── config.h           # U8 GPIO 配置
-        └── dlc_motor_control_p1_ai_board.cc  # 板级实现
+鈹溾攢鈹€ u1-grbl/                   # U1 鍥轰欢锛圙rbl_Esp32锛?
+鈹?  鈹斺攢鈹€ Grbl_Esp32/src/
+鈹?      鈹溾攢鈹€ Machines/dlc_motor_control_p1.h  # U1 GPIO 閰嶇疆
+鈹?      鈹溾攢鈹€ Report.cpp         # 鐘舵€佷笂鎶ワ紙M1.2, M1.3锛?
+鈹?      鈹斺攢鈹€ Protocol.cpp       # 绉佹湁鍗忚澶勭悊锛圡1.5锛?
+鈹斺攢鈹€ u8-xiaozhi/                # U8 鍥轰欢
+    鈹斺攢鈹€ main/boards/zhuguang/dlc-motor-control-p1-ai/
+        鈹溾攢鈹€ config.h           # U8 GPIO 閰嶇疆
+        鈹斺攢鈹€ dlc_motor_control_p1_ai_board.cc  # 鏉跨骇瀹炵幇
 ```
 
-### 3.5 服务端代码
+### 3.5 鏈嶅姟绔唬鐮?
 
 ```
 server/xiaozhi-esp32-server/main/
-├── manager-api/               # BusinessServer (Java/Spring)
-│   └── src/main/
-│       ├── resources/db/changelog/  # 数据库迁移（M2.1）
-│       └── java/.../
-│           ├── controller/    # REST API（M2.2）
-│           ├── service/       # 业务逻辑
-│           └── ws/            # WebSocket（M2.7）
-├── xiaozhi-server/            # DeviceServer (Python)
-│   └── core/
-│       ├── handle/            # 消息处理（M2.4）
-│       ├── api/               # HTTP API
-│       └── websocket_server.py  # WSS 服务器
-└── manager-mobile/            # 小程序 (uni-app)
-    └── src/
-        ├── pages/             # 页面（M2.8）
-        └── utils/             # 工具函数
+鈹溾攢鈹€ manager-api/               # BusinessServer (Java/Spring)
+鈹?  鈹斺攢鈹€ src/main/
+鈹?      鈹溾攢鈹€ resources/db/changelog/  # 鏁版嵁搴撹縼绉伙紙M2.1锛?
+鈹?      鈹斺攢鈹€ java/.../
+鈹?          鈹溾攢鈹€ controller/    # REST API锛圡2.2锛?
+鈹?          鈹溾攢鈹€ service/       # 涓氬姟閫昏緫
+鈹?          鈹斺攢鈹€ ws/            # WebSocket锛圡2.7锛?
+鈹溾攢鈹€ xiaozhi-server/            # DeviceServer (Python)
+鈹?  鈹斺攢鈹€ core/
+鈹?      鈹溾攢鈹€ handle/            # 娑堟伅澶勭悊锛圡2.4锛?
+鈹?      鈹溾攢鈹€ api/               # HTTP API
+鈹?      鈹斺攢鈹€ websocket_server.py  # WSS 鏈嶅姟鍣?
+鈹斺攢鈹€ manager-mobile/            # 灏忕▼搴?(uni-app)
+    鈹斺攢鈹€ src/
+        鈹溾攢鈹€ pages/             # 椤甸潰锛圡2.8锛?
+        鈹斺攢鈹€ utils/             # 宸ュ叿鍑芥暟
 ```
 
 ---
 
-## 4. 当前进度
+## 4. 褰撳墠杩涘害
 
-### 4.1 已完成（✅）
+### 4.1 宸插畬鎴愶紙鉁咃級
 
-#### M0a 契约固化
-- ✅ `docs/schemas/` 全部 schema 文件
-- ✅ Edge-A/B/C/D 四条边界的协议定义
-- ✅ 每条 capability、event、命令、响应都有 schema
+#### M0a 濂戠害鍥哄寲
+- 鉁?`docs/schemas/` 鍏ㄩ儴 schema 鏂囦欢
+- 鉁?Edge-A/B/C/D 鍥涙潯杈圭晫鐨勫崗璁畾涔?
+- 鉁?姣忔潯 capability銆乪vent銆佸懡浠ゃ€佸搷搴旈兘鏈?schema
 
-#### M0b 静态检查
-- ✅ `tools/check_gpio.py` - GPIO 静态检查工具
-- ✅ `tools/test_check_gpio.py` - 8/8 单元测试通过
-- ✅ 真实配置检查通过（0 错误，0 警告，0 信息）
-- ✅ GPIO38/39/40 已由 PADS `.txt` 源文件核到 U8.31/32/33，不再作为弱证
-- ✅ 改进 strapping pin 检查逻辑
+#### M0b 闈欐€佹鏌?
+- 鉁?`tools/check_gpio.py` - GPIO 闈欐€佹鏌ュ伐鍏?
+- 鉁?`tools/test_check_gpio.py` - 8/8 鍗曞厓娴嬭瘯閫氳繃
+- 鉁?鐪熷疄閰嶇疆妫€鏌ラ€氳繃锛? 閿欒锛? 璀﹀憡锛? 淇℃伅锛?- 鉁?GPIO38/39/40 宸茬敱 PADS `.txt` 婧愭枃浠舵牳鍒?U8.31/32/33锛屼笉鍐嶄綔涓哄急璇?- 鉁?鏀硅繘 strapping pin 妫€鏌ラ€昏緫
 
 #### M0c.1 fake U1
-- ✅ `tools/fake_u1/fake_u1.py` - 仿真器主程序
-- ✅ `tools/fake_u1/test_fake_u1.py` - 13/13 单元测试通过
-- ✅ 完整状态机（7 种状态）
-- ✅ 10 种命令支持
-- ✅ 4 种错误注入
+- 鉁?`tools/fake_u1/fake_u1.py` - 浠跨湡鍣ㄤ富绋嬪簭
+- 鉁?`tools/fake_u1/test_fake_u1.py` - 13/13 鍗曞厓娴嬭瘯閫氳繃
+- 鉁?瀹屾暣鐘舵€佹満锛? 绉嶇姸鎬侊級
+- 鉁?10 绉嶅懡浠ゆ敮鎸?
+- 鉁?4 绉嶉敊璇敞鍏?
 
-#### M0e 基准修复
-- ✅ U8 config.h TX/RX 修复
-- ✅ 硬件文档证据强度标注
-- ✅ v1 文档失效声明
+#### M0e 鍩哄噯淇
+- 鉁?U8 config.h TX/RX 淇
+- 鉁?纭欢鏂囨。璇佹嵁寮哄害鏍囨敞
+- 鉁?v1 鏂囨。澶辨晥澹版槑
 
-### 4.2 进行中（⏳）
+### 4.2 杩涜涓紙鈴筹級
 
 #### M0c.2 fake DeviceServer
-- ⏳ 待实现
-- 优先级：P2（BusinessServer 端开发依赖）
+- 鈴?寰呭疄鐜?
+- 浼樺厛绾э細P2锛圔usinessServer 绔紑鍙戜緷璧栵級
 
 #### M0c.3 fake AI provider
-- ⏳ 待实现
-- 优先级：P2（M3/M4 开发依赖）
+- 鈴?寰呭疄鐜?
+- 浼樺厛绾э細P2锛圡3/M4 寮€鍙戜緷璧栵級
 
-#### M0d CI 与单元测试骨架
-- ✅ `.github/workflows/ci.yml` - CI 配置骨架
-- ✅ `gpio-check` job - GPIO 静态检查
-- ✅ `python-unit` job - Python 单元测试
-- ✅ `schema-validate` job - JSON Schema 校验
-- ✅ `fake-integration` job - Fake 环境集成测试
-- ✅ `markdown-link-check` job - Markdown 链接检查
+#### M0d CI 涓庡崟鍏冩祴璇曢鏋?
+- 鉁?`.github/workflows/ci.yml` - CI 閰嶇疆楠ㄦ灦
+- 鉁?`gpio-check` job - GPIO 闈欐€佹鏌?
+- 鉁?`python-unit` job - Python 鍗曞厓娴嬭瘯
+- 鉁?`schema-validate` job - JSON Schema 鏍￠獙
+- 鉁?`fake-integration` job - Fake 鐜闆嗘垚娴嬭瘯
+- 鉁?`markdown-link-check` job - Markdown 閾炬帴妫€鏌?
+### 4.3 绛夊緟涓紙鈴革笍锛?
 
-### 4.3 等待中（⏸️）
-
-#### M0f 实物上电抽测
-- ⏸️ 等实物，不阻塞 M1~M3 软件设计
-- 作为 M1 进入"真实硬件联调"的强前置
-
----
-
-## 5. 下一步行动
-
-### 5.1 立即执行（P0）
-
-**无** - 当前所有 P0 任务已完成
-
-### 5.2 短期计划（P1）
-
-#### 1. 完善 M0d CI（预计 2 天）
-
-**目标**：让 GitHub Actions 24 小时守护代码质量
-
-**任务**：
-- [x] 实现 `schema-validate` job
-  - 文件：`.github/workflows/ci.yml`
-  - 工具：`jsonschema` 库
-  - 校验：`docs/schemas/` 全部样例
-  
-- [x] 实现 `fake-integration` job
-  - 用 fake U1 跑端到端集成测试
-  - 覆盖：GET_STATUS/HOME/MOVE/run_path 各 1 条 happy path
-  
-- [x] 实现 `markdown-link-check` job
-  - 保证 v2 文档内部锚点不腐坏
-  
-- [ ] 配置 GitHub required checks
-  - PR 必须 5 个 job 全绿才可合并
-
-**完成判定**：
-- ✅ 本地等价 CI 命令全绿
-- [ ] GitHub main 分支 CI 全绿
-- [ ] PR 有 required check 保护
-
-#### 2. 准备 M1 开发环境（预计 1 天）
-
-**目标**：为 M1 设备协议端到端做准备
-
-**任务**：
-- [ ] 验证 fake U1 与 U8 的连接
-  - 启动 fake U1 服务器
-  - 配置 U8 连接到 fake U1
-  - 发送测试命令
-  
-- [ ] 准备 M1.1 Edge-D 样例集
-  - 已有：`docs/schemas/edge_d/examples/` 7 个样例
-  - 验证：fake U1 与 U8 单测都引用同一批样例
-
-**完成判定**：
-- ✅ U8 能连接到 fake U1
-- ✅ 能发送 GET_STATUS 并收到响应
-
-### 5.3 中期计划（P2）
-
-#### 3. 实现 M0c.2 fake DeviceServer（预计 3 天）
-
-**目标**：让 BusinessServer 端开发不必等真 xiaozhi-server 改造
-
-**任务**：
-- [ ] 创建 `tools/fake_device_server/` 目录
-- [ ] 实现最小 WebSocket server
-- [ ] 实现 HTTP 接收 motion_task
-- [ ] 转发给 fake U1
-- [ ] 反向上报 motion_event
-
-**完成判定**：
-- ✅ BusinessServer 端单元测试用它做集成 fake
-- ✅ 不依赖真 Python 上游
-
-#### 4. 实现 M0c.3 fake AI provider（预计 2 天）
-
-**目标**：M3/M4 阶段不依赖真 LLM/ASR/TTS
-
-**任务**：
-- [ ] 创建 `tools/fake_ai/` 目录
-- [ ] 固定回包模拟 LLM
-- [ ] 固定文字模拟 ASR
-- [ ] 静默音频模拟 TTS
-
-**完成判定**：
-- ✅ DeviceServer 在 ai_plan = `plan_basic` 时调它而非真实 provider
+#### M0f 瀹炵墿涓婄數鎶芥祴
+- 鈴革笍 绛夊疄鐗╋紝涓嶉樆濉?M1~M3 杞欢璁捐
+- 浣滀负 M1 杩涘叆"鐪熷疄纭欢鑱旇皟"鐨勫己鍓嶇疆
 
 ---
 
-## 6. 依赖关系图
+## 5. 涓嬩竴姝ヨ鍔?
 
-### 6.1 里程碑依赖
+### 5.1 绔嬪嵆鎵ц锛圥0锛?
+
+**鏃?* - 褰撳墠鎵€鏈?P0 浠诲姟宸插畬鎴?
+
+### 5.2 鐭湡璁″垝锛圥1锛?
+
+#### 1. 瀹屽杽 M0d CI锛堥璁?2 澶╋級
+
+**鐩爣**锛氳 GitHub Actions 24 灏忔椂瀹堟姢浠ｇ爜璐ㄩ噺
+
+**浠诲姟**锛?
+- [x] 瀹炵幇 `schema-validate` job
+  - 鏂囦欢锛歚.github/workflows/ci.yml`
+  - 宸ュ叿锛歚jsonschema` 搴?
+  - 鏍￠獙锛歚docs/schemas/` 鍏ㄩ儴鏍蜂緥
+
+- [x] 瀹炵幇 `fake-integration` job
+  - 鐢?fake U1 璺戠鍒扮闆嗘垚娴嬭瘯
+  - 瑕嗙洊锛欸ET_STATUS/HOME/MOVE/run_path 鍚?1 鏉?happy path
+
+- [x] 瀹炵幇 `markdown-link-check` job
+  - 淇濊瘉 v2 鏂囨。鍐呴儴閿氱偣涓嶈厫鍧?
+
+- [ ] 閰嶇疆 GitHub required checks
+  - PR 蹇呴』 5 涓?job 鍏ㄧ豢鎵嶅彲鍚堝苟
+
+**瀹屾垚鍒ゅ畾**锛?- 鉁?鏈湴绛変环 CI 鍛戒护鍏ㄧ豢
+- [ ] GitHub main 鍒嗘敮 CI 鍏ㄧ豢
+- [ ] PR 鏈?required check 淇濇姢
+
+#### 2. 鍑嗗 M1 寮€鍙戠幆澧冿紙棰勮 1 澶╋級
+
+**鐩爣**锛氫负 M1 璁惧鍗忚绔埌绔仛鍑嗗
+
+**浠诲姟**锛?
+- [ ] 楠岃瘉 fake U1 涓?U8 鐨勮繛鎺?
+  - 鍚姩 fake U1 鏈嶅姟鍣?
+  - 閰嶇疆 U8 杩炴帴鍒?fake U1
+  - 鍙戦€佹祴璇曞懡浠?
+
+- [ ] 鍑嗗 M1.1 Edge-D 鏍蜂緥闆?
+  - 宸叉湁锛歚docs/schemas/edge_d/examples/` 7 涓牱渚?
+  - 楠岃瘉锛歠ake U1 涓?U8 鍗曟祴閮藉紩鐢ㄥ悓涓€鎵规牱渚?
+
+**瀹屾垚鍒ゅ畾**锛?
+- 鉁?U8 鑳借繛鎺ュ埌 fake U1
+- 鉁?鑳藉彂閫?GET_STATUS 骞舵敹鍒板搷搴?
+
+### 5.3 涓湡璁″垝锛圥2锛?
+
+#### 3. 瀹炵幇 M0c.2 fake DeviceServer锛堥璁?3 澶╋級
+
+**鐩爣**锛氳 BusinessServer 绔紑鍙戜笉蹇呯瓑鐪?xiaozhi-server 鏀归€?
+
+**浠诲姟**锛?
+- [ ] 鍒涘缓 `tools/fake_device_server/` 鐩綍
+- [ ] 瀹炵幇鏈€灏?WebSocket server
+- [ ] 瀹炵幇 HTTP 鎺ユ敹 motion_task
+- [ ] 杞彂缁?fake U1
+- [ ] 鍙嶅悜涓婃姤 motion_event
+
+**瀹屾垚鍒ゅ畾**锛?
+- 鉁?BusinessServer 绔崟鍏冩祴璇曠敤瀹冨仛闆嗘垚 fake
+- 鉁?涓嶄緷璧栫湡 Python 涓婃父
+
+#### 4. 瀹炵幇 M0c.3 fake AI provider锛堥璁?2 澶╋級
+
+**鐩爣**锛歁3/M4 闃舵涓嶄緷璧栫湡 LLM/ASR/TTS
+
+**浠诲姟**锛?
+- [ ] 鍒涘缓 `tools/fake_ai/` 鐩綍
+- [ ] 鍥哄畾鍥炲寘妯℃嫙 LLM
+- [ ] 鍥哄畾鏂囧瓧妯℃嫙 ASR
+- [ ] 闈欓粯闊抽妯℃嫙 TTS
+
+**瀹屾垚鍒ゅ畾**锛?
+- 鉁?DeviceServer 鍦?ai_plan = `plan_basic` 鏃惰皟瀹冭€岄潪鐪熷疄 provider
+
+---
+
+## 6. 渚濊禆鍏崇郴鍥?
+
+### 6.1 閲岀▼纰戜緷璧?
 
 ```mermaid
 graph TD
-    M0[M0 设计期验证] --> M1[M1 设备协议端到端]
-    M1 --> M2[M2 小程序订阅链路]
-    M2 --> M3[M3 投影管线]
-    M3 --> M4[M4 语音触发]
-    M4 --> M5[M5 OTA/配网/自检]
-    M5 --> M6[M6 上线合规]
-    
-    M0a[M0a 契约固化] --> M1
-    M0b[M0b 静态检查] --> M0f[M0f 实物上电]
+    M0[M0 璁捐鏈熼獙璇乚 --> M1[M1 璁惧鍗忚绔埌绔痌
+    M1 --> M2[M2 灏忕▼搴忚闃呴摼璺痌
+    M2 --> M3[M3 鎶曞奖绠＄嚎]
+    M3 --> M4[M4 璇煶瑙﹀彂]
+    M4 --> M5[M5 OTA/閰嶇綉/鑷]
+    M5 --> M6[M6 涓婄嚎鍚堣]
+
+    M0a[M0a 濂戠害鍥哄寲] --> M1
+    M0b[M0b 闈欐€佹鏌 --> M0f[M0f 瀹炵墿涓婄數]
     M0c1[M0c.1 fake U1] --> M1
     M0c2[M0c.2 fake DeviceServer] --> M2
     M0c3[M0c.3 fake AI] --> M3
-    M0d[M0d CI 骨架] --> M1
-    M0f --> M1_real[M1 真实硬件联调]
+    M0d[M0d CI 楠ㄦ灦] --> M1
+    M0f --> M1_real[M1 鐪熷疄纭欢鑱旇皟]
 ```
 
-### 6.2 文件依赖
+### 6.2 鏂囦欢渚濊禆
 
 ```mermaid
 graph LR
-    A[架构定稿 v2] --> B[实施计划 v2]
-    B --> C[M0-进度报告]
-    B --> D[编码任务索引 v2]
-    
+    A[鏋舵瀯瀹氱 v2] --> B[瀹炴柦璁″垝 v2]
+    B --> C[M0-杩涘害鎶ュ憡]
+    B --> D[缂栫爜浠诲姟绱㈠紩 v2]
+
     A --> E[JSON Schema]
     E --> F[fake U1]
     E --> G[fake DeviceServer]
-    
-    A --> H[Steering 规范]
-    H --> I[代码实现]
-    
-    B --> J[工具脚本]
-    J --> K[CI 配置]
+
+    A --> H[Steering 瑙勮寖]
+    H --> I[浠ｇ爜瀹炵幇]
+
+    B --> J[宸ュ叿鑴氭湰]
+    J --> K[CI 閰嶇疆]
 ```
 
-### 6.3 代码依赖
+### 6.3 浠ｇ爜渚濊禆
 
 ```mermaid
 graph TD
-    Client[小程序] -->|Edge-A| BS[BusinessServer]
+    Client[灏忕▼搴廬 -->|Edge-A| BS[BusinessServer]
     BS -->|Edge-B| DS[DeviceServer]
-    DS -->|Edge-C| U8[U8 固件]
-    U8 -->|Edge-D| U1[U1 固件]
-    
-    FU1[fake U1] -.替代.-> U1
-    FDS[fake DeviceServer] -.替代.-> DS
-    FAI[fake AI] -.替代.-> AI[AI Provider]
+    DS -->|Edge-C| U8[U8 鍥轰欢]
+    U8 -->|Edge-D| U1[U1 鍥轰欢]
+
+    FU1[fake U1] -.鏇夸唬.-> U1
+    FDS[fake DeviceServer] -.鏇夸唬.-> DS
+    FAI[fake AI] -.鏇夸唬.-> AI[AI Provider]
 ```
 
 ---
 
-## 7. 风险与缓解
+## 7. 椋庨櫓涓庣紦瑙?
 
-### 7.1 高风险（需立即关注）
+### 7.1 楂橀闄╋紙闇€绔嬪嵆鍏虫敞锛?
 
-| 风险 | 概率 | 影响 | 当前状态 | 缓解措施 |
+| 椋庨櫓 | 姒傜巼 | 褰卞搷 | 褰撳墠鐘舵€?| 缂撹В鎺柦 |
 |------|------|------|----------|----------|
-| 主板到货延迟压缩 M4~M6 时间 | 中 | 中 | ⚠️ 监控中 | ✅ M1~M3 全在仿真器上推进，避免软件轨被硬件阻塞 |
-| PADS 源文件与实物连通不一致 | 中 | 高 | ⚠️ 等 M0f | ✅ M0b 已用 PADS `.txt` 收敛配置；M0f 上板时抽测 UART、STEP/DIR、IO38/39/40 |
-| JSON Schema 与实现漂移 | 中 | 中 | ⚠️ 需 CI | ⏳ M0d CI 校验 schema；v2 §19.5 字段演进规则强制"先 schema 后代码" |
+| 涓绘澘鍒拌揣寤惰繜鍘嬬缉 M4~M6 鏃堕棿 | 涓?| 涓?| 鈿狅笍 鐩戞帶涓?| 鉁?M1~M3 鍏ㄥ湪浠跨湡鍣ㄤ笂鎺ㄨ繘锛岄伩鍏嶈蒋浠惰建琚‖浠堕樆濉?|
+| PADS 婧愭枃浠朵笌瀹炵墿杩為€氫笉涓€鑷?| 涓?| 楂?| 鈿狅笍 绛?M0f | 鉁?M0b 宸茬敤 PADS `.txt` 鏀舵暃閰嶇疆锛汳0f 涓婃澘鏃舵娊娴?UART銆丼TEP/DIR銆両O38/39/40 |
+| JSON Schema 涓庡疄鐜版紓绉?| 涓?| 涓?| 鈿狅笍 闇€ CI | 鈴?M0d CI 鏍￠獙 schema锛泇2 搂19.5 瀛楁婕旇繘瑙勫垯寮哄埗"鍏?schema 鍚庝唬鐮? |
 
-### 7.2 中风险（需定期检查）
+### 7.2 涓闄╋紙闇€瀹氭湡妫€鏌ワ級
 
-| 风险 | 概率 | 影响 | 当前状态 | 缓解措施 |
+| 椋庨櫓 | 姒傜巼 | 褰卞搷 | 褰撳墠鐘舵€?| 缂撹В鎺柦 |
 |------|------|------|----------|----------|
-| fake U1 与真实 U1 行为偏差 | 中 | 中 | ✅ 已记录 | M0c.1 fake 只保留协议行为，禁止仿真真实电机物理；M0f 上板当天列"首次实机清单"交叉验证 |
-| Grbl_Esp32 内部 API 与预期不符 | 中 | 中 | ⚠️ 待验证 | M1.1 时先写 dryrun 探测 |
-| 微信小程序审核被打回 | 中 | 高 | ⏸️ M6 | M6.1 提前一个月开始 |
+| fake U1 涓庣湡瀹?U1 琛屼负鍋忓樊 | 涓?| 涓?| 鉁?宸茶褰?| M0c.1 fake 鍙繚鐣欏崗璁涓猴紝绂佹浠跨湡鐪熷疄鐢垫満鐗╃悊锛汳0f 涓婃澘褰撳ぉ鍒?棣栨瀹炴満娓呭崟"浜ゅ弶楠岃瘉 |
+| Grbl_Esp32 鍐呴儴 API 涓庨鏈熶笉绗?| 涓?| 涓?| 鈿狅笍 寰呴獙璇?| M1.1 鏃跺厛鍐?dryrun 鎺㈡祴 |
+| 寰俊灏忕▼搴忓鏍歌鎵撳洖 | 涓?| 楂?| 鈴革笍 M6 | M6.1 鎻愬墠涓€涓湀寮€濮?|
 
-### 7.3 低风险（已缓解）
+### 7.3 浣庨闄╋紙宸茬紦瑙ｏ級
 
-| 风险 | 概率 | 影响 | 当前状态 | 缓解措施 |
+| 椋庨櫓 | 姒傜巼 | 褰卞搷 | 褰撳墠鐘舵€?| 缂撹В鎺柦 |
 |------|------|------|----------|----------|
-| GPIO 配置错误导致硬件损坏 | 低 | 高 | ✅ 已缓解 | M0b 工具已实现，可提前发现 |
-| 内容审核服务出问题 | 低 | 高 | ⏸️ M3 | 双层（本地关键词 + 云端语义） |
-| 声纹模型对儿童识别率低 | 高 | 中 | ⏸️ M4 | v2 §6ter.8 6 个月重录 + 失败降级 |
-| OTA 灰度遇大面积失败 | 中 | 极高 | ⏸️ M5 | 灰度上限 10% 起，监控见错就停 |
+| GPIO 閰嶇疆閿欒瀵艰嚧纭欢鎹熷潖 | 浣?| 楂?| 鉁?宸茬紦瑙?| M0b 宸ュ叿宸插疄鐜帮紝鍙彁鍓嶅彂鐜?|
+| 鍐呭瀹℃牳鏈嶅姟鍑洪棶棰?| 浣?| 楂?| 鈴革笍 M3 | 鍙屽眰锛堟湰鍦板叧閿瘝 + 浜戠璇箟锛?|
+| 澹扮汗妯″瀷瀵瑰効绔ヨ瘑鍒巼浣?| 楂?| 涓?| 鈴革笍 M4 | v2 搂6ter.8 6 涓湀閲嶅綍 + 澶辫触闄嶇骇 |
+| OTA 鐏板害閬囧ぇ闈㈢Н澶辫触 | 涓?| 鏋侀珮 | 鈴革笍 M5 | 鐏板害涓婇檺 10% 璧凤紝鐩戞帶瑙侀敊灏卞仠 |
 
 ---
 
-## 8. 关键指标
+## 8. 鍏抽敭鎸囨爣
 
-### 8.1 进度指标
+### 8.1 杩涘害鎸囨爣
 
-| 指标 | 当前值 | 目标值 | 状态 |
+| 鎸囨爣 | 褰撳墠鍊?| 鐩爣鍊?| 鐘舵€?|
 |------|--------|--------|------|
-| M0 完成度 | 70% | 100% | ⏳ 进行中 |
-| M0a 契约固化 | 100% | 100% | ✅ 完成 |
-| M0b 静态检查 | 100% | 100% | ✅ 完成 |
-| M0c 仿真器 | 33% | 100% | ⏳ 进行中 |
-| M0d CI 骨架 | 80% | 100% | ⏳ 等 GitHub required checks |
-| M0e 基准修复 | 100% | 100% | ✅ 完成 |
-| M0f 实物抽测 | 0% | 100% | ⏸️ 等实物 |
+| M0 瀹屾垚搴?| 70% | 100% | 鈴?杩涜涓?|
+| M0a 濂戠害鍥哄寲 | 100% | 100% | 鉁?瀹屾垚 |
+| M0b 闈欐€佹鏌?| 100% | 100% | 鉁?瀹屾垚 |
+| M0c 浠跨湡鍣?| 33% | 100% | 鈴?杩涜涓?|
+| M0d CI 楠ㄦ灦 | 80% | 100% | 鈴?绛?GitHub required checks |
+| M0e 鍩哄噯淇 | 100% | 100% | 鉁?瀹屾垚 |
+| M0f 瀹炵墿鎶芥祴 | 0% | 100% | 鈴革笍 绛夊疄鐗?|
 
-### 8.2 质量指标
+### 8.2 璐ㄩ噺鎸囨爣
 
-| 指标 | 当前值 | 目标值 | 状态 |
+| 鎸囨爣 | 褰撳墠鍊?| 鐩爣鍊?| 鐘舵€?|
 |------|--------|--------|------|
-| GPIO 检查通过率 | 100% | 100% | ✅ 达标 |
-| fake U1 测试通过率 | 100% (13/13) | 100% | ✅ 达标 |
-| CI 通过率 | 60% (3/5 jobs) | 100% | ⏳ 改进中 |
-| 文档同步率 | 100% | 100% | ✅ 达标 |
+| GPIO 妫€鏌ラ€氳繃鐜?| 100% | 100% | 鉁?杈炬爣 |
+| fake U1 娴嬭瘯閫氳繃鐜?| 100% (13/13) | 100% | 鉁?杈炬爣 |
+| CI 閫氳繃鐜?| 60% (3/5 jobs) | 100% | 鈴?鏀硅繘涓?|
+| 鏂囨。鍚屾鐜?| 100% | 100% | 鉁?杈炬爣 |
 
-### 8.3 效率指标
+### 8.3 鏁堢巼鎸囨爣
 
-| 指标 | 当前值 | 目标值 | 状态 |
+| 鎸囨爣 | 褰撳墠鍊?| 鐩爣鍊?| 鐘舵€?|
 |------|--------|--------|------|
-| 代码提交频率 | 每天 2-3 次 | 每天 2-3 次 | ✅ 达标 |
-| 文档更新延迟 | 0 天 | 0 天 | ✅ 达标 |
-| PR 合并时间 | N/A | < 1 天 | - |
-| CI 执行时间 | ~2 分钟 | < 5 分钟 | ✅ 达标 |
+| 浠ｇ爜鎻愪氦棰戠巼 | 姣忓ぉ 2-3 娆?| 姣忓ぉ 2-3 娆?| 鉁?杈炬爣 |
+| 鏂囨。鏇存柊寤惰繜 | 0 澶?| 0 澶?| 鉁?杈炬爣 |
+| PR 鍚堝苟鏃堕棿 | N/A | < 1 澶?| - |
+| CI 鎵ц鏃堕棿 | ~2 鍒嗛挓 | < 5 鍒嗛挓 | 鉁?杈炬爣 |
 
 ---
 
-## 9. 团队协作
+## 9. 鍥㈤槦鍗忎綔
 
-### 9.1 角色与职责
+### 9.1 瑙掕壊涓庤亴璐?
 
-| 角色 | 职责 | 当前状态 |
+| 瑙掕壊 | 鑱岃矗 | 褰撳墠鐘舵€?|
 |------|------|----------|
-| 架构师 | 维护架构定稿 v2，审查重大变更 | ✅ 活跃 |
-| 开发者 | 实现代码，遵循 Steering 规范 | ✅ 活跃 |
-| 测试者 | 编写单元测试，执行集成测试 | ✅ 活跃 |
-| 文档维护者 | 同步更新文档，保持文档新鲜 | ✅ 活跃 |
+| 鏋舵瀯甯?| 缁存姢鏋舵瀯瀹氱 v2锛屽鏌ラ噸澶у彉鏇?| 鉁?娲昏穬 |
+| 寮€鍙戣€?| 瀹炵幇浠ｇ爜锛岄伒寰?Steering 瑙勮寖 | 鉁?娲昏穬 |
+| 娴嬭瘯鑰?| 缂栧啓鍗曞厓娴嬭瘯锛屾墽琛岄泦鎴愭祴璇?| 鉁?娲昏穬 |
+| 鏂囨。缁存姢鑰?| 鍚屾鏇存柊鏂囨。锛屼繚鎸佹枃妗ｆ柊椴?| 鉁?娲昏穬 |
 
-### 9.2 沟通机制
+### 9.2 娌熼€氭満鍒?
 
-- **日常沟通**：通过 Git commit message 和 PR 描述
-- **重大决策**：更新架构定稿 v2，添加修订记录
-- **进度同步**：更新 M0-进度报告.md
-- **问题跟踪**：GitHub Issues（待建立）
+- **鏃ュ父娌熼€?*锛氶€氳繃 Git commit message 鍜?PR 鎻忚堪
+- **閲嶅ぇ鍐崇瓥**锛氭洿鏂版灦鏋勫畾绋?v2锛屾坊鍔犱慨璁㈣褰?
+- **杩涘害鍚屾**锛氭洿鏂?M0-杩涘害鎶ュ憡.md
+- **闂璺熻釜**锛欸itHub Issues锛堝緟寤虹珛锛?
 
-### 9.3 代码审查清单
+### 9.3 浠ｇ爜瀹℃煡娓呭崟
 
-参考 `.kiro/steering/code-review.md`：
+鍙傝€?`.kiro/steering/code-review.md`锛?
 
-- [ ] 角色职责正确（§2 五角色表）
-- [ ] 分层正确，无跨层直连（§3.2）
-- [ ] 双重安全裁决生效（§10bis）
-- [ ] 协议字段符合 schema
-- [ ] 文档已同步更新
-- [ ] 测试已通过
-
----
-
-## 10. 参考资料
-
-### 10.1 核心文档
-
-- **架构定稿 v2**：`docs/架构定稿-v2.md`
-- **实施计划 v2**：`docs/实施计划-v2.md`
-- **Superpowers 原则**：`.cursor/rules/superpowers-and-context.mdc`
-- **M0 进度报告**：`docs/M0-进度报告.md`
-
-### 10.2 Steering 规范
-
-- **UI/UX 规范**：`.kiro/steering/ui-ux-pro-max.md`
-- **代码审查规范**：`.kiro/steering/code-review.md`
-- **代码简化规范**：`.kiro/steering/code-simplifier.md`
-- **代码文档同步**：`.kiro/steering/code-doc-sync.md`
-
-### 10.3 技能库
-
-- **协议设计**：`.kiro/steering/protocol-design.md`
-- **安全裁决**：`.kiro/steering/safety-validation.md`
-- **投影管线**：`.kiro/steering/projection-pipeline.md`
-- **语音意图**：`.kiro/steering/voice-intent.md`
-- **TDD**：`.kiro/steering/tdd.md`
-- **fake 环境**：`.kiro/steering/fake-environment.md`
-- **里程碑验收**：`.kiro/steering/milestone-acceptance.md`
-
-### 10.4 工具文档
-
-- **GPIO 检查工具**：`tools/README.md`
-- **fake U1 使用**：`tools/fake_u1/README.md`
+- [ ] 瑙掕壊鑱岃矗姝ｇ‘锛埪? 浜旇鑹茶〃锛?
+- [ ] 鍒嗗眰姝ｇ‘锛屾棤璺ㄥ眰鐩磋繛锛埪?.2锛?
+- [ ] 鍙岄噸瀹夊叏瑁佸喅鐢熸晥锛埪?0bis锛?
+- [ ] 鍗忚瀛楁绗﹀悎 schema
+- [ ] 鏂囨。宸插悓姝ユ洿鏂?
+- [ ] 娴嬭瘯宸查€氳繃
 
 ---
 
-## 11. 修订记录
+## 10. 鍙傝€冭祫鏂?
 
-- 2026-05-14：初始版本，整合 M0 阶段所有文件与进度
-- 2026-05-14 (晚上)：添加 M0c.1 fake U1 完成状态
-- 2026-05-14 (晚上)：纳入 PADS `.txt` 硬件源文件，关闭 GPIO38/39/40 弱证状态
-- 2026-05-14 (晚上)：按 SCH PDF 第 4 页与 BOM 修订步进驱动实际型号为 `HR4988E`；旧 `TMC2208-*` 仅保留为 PADS 网络名
-- 2026-05-14 (晚上)：完成 M0g 轮 2 HR4988E datasheet 核对，新增 R-007/R-008 并给固件增加 `STEP_PULSE_DELAY=1 us`
+### 10.1 鏍稿績鏂囨。
+
+- **鏋舵瀯瀹氱 v2**锛歚docs/鏋舵瀯瀹氱-v2.md`
+- **瀹炴柦璁″垝 v2**锛歚docs/瀹炴柦璁″垝-v2.md`
+- **Superpowers 鍘熷垯**锛歚.cursor/rules/superpowers-and-context.mdc`
+- **M0 杩涘害鎶ュ憡**锛歚docs/M0-杩涘害鎶ュ憡.md`
+
+### 10.2 Steering 瑙勮寖
+
+- **UI/UX 瑙勮寖**锛歚.kiro/steering/ui-ux-pro-max.md`
+- **浠ｇ爜瀹℃煡瑙勮寖**锛歚.kiro/steering/code-review.md`
+- **浠ｇ爜绠€鍖栬鑼?*锛歚.kiro/steering/code-simplifier.md`
+- **浠ｇ爜鏂囨。鍚屾**锛歚.kiro/steering/code-doc-sync.md`
+
+### 10.3 鎶€鑳藉簱
+
+- **鍗忚璁捐**锛歚.kiro/steering/protocol-design.md`
+- **瀹夊叏瑁佸喅**锛歚.kiro/steering/safety-validation.md`
+- **鎶曞奖绠＄嚎**锛歚.kiro/steering/projection-pipeline.md`
+- **璇煶鎰忓浘**锛歚.kiro/steering/voice-intent.md`
+- **TDD**锛歚.kiro/steering/tdd.md`
+- **fake 鐜**锛歚.kiro/steering/fake-environment.md`
+- **閲岀▼纰戦獙鏀?*锛歚.kiro/steering/milestone-acceptance.md`
+
+### 10.4 宸ュ叿鏂囨。
+
+- **GPIO 妫€鏌ュ伐鍏?*锛歚tools/README.md`
+- **fake U1 浣跨敤**锛歚tools/fake_u1/README.md`
 
 ---
 
-## 附录 A：快速导航
+## 11. 淇璁板綍
 
-### A.1 我想...
+- 2026-05-14锛氬垵濮嬬増鏈紝鏁村悎 M0 闃舵鎵€鏈夋枃浠朵笌杩涘害
+- 2026-05-14 (鏅氫笂)锛氭坊鍔?M0c.1 fake U1 瀹屾垚鐘舵€?- 2026-05-14 (鏅氫笂)锛氱撼鍏?PADS `.txt` 纭欢婧愭枃浠讹紝鍏抽棴 GPIO38/39/40 寮辫瘉鐘舵€?- 2026-05-14 (鏅氫笂)锛氭寜 SCH PDF 绗?4 椤典笌 BOM 淇姝ヨ繘椹卞姩瀹為檯鍨嬪彿涓?`HR4988E`锛涙棫 `TMC2208-*` 浠呬繚鐣欎负 PADS 缃戠粶鍚?- 2026-05-14 (鏅氫笂)锛氬畬鎴?M0g 杞?2 HR4988E datasheet 鏍稿锛屾柊澧?R-007/R-008 骞剁粰鍥轰欢澧炲姞 `STEP_PULSE_DELAY=1 us`
 
-- **了解项目架构** → `docs/架构定稿-v2.md`
-- **查看实施计划** → `docs/实施计划-v2.md`
-- **查看当前进度** → `docs/M0-进度报告.md`
-- **查看全局规划** → `docs/全局规划-Planning-with-Files.md`（本文件）
-- **查看 JSON Schema** → `docs/schemas/README.md`
-- **使用 GPIO 检查工具** → `tools/README.md`
-- **使用 fake U1** → `tools/fake_u1/README.md`
-- **查看 Steering 规范** → `.kiro/steering/README.md`
+---
 
-### A.2 我要做...
+## 闄勫綍 A锛氬揩閫熷鑸?
 
-- **开始新功能开发** → 先读 `架构定稿 v2` 相关章节 → 再读 `实施计划 v2` 对应 M.x → 再查 `Steering 规范`
-- **修复 Bug** → 先读 `code-simplifier.md` → 再写测试 → 再修复 → 再更新文档
-- **提交代码** → 先跑测试 → 再更新文档 → 再提交（遵循 `code-doc-sync.md`）
-- **审查代码** → 使用 `code-review.md` 检查清单
-- **创建新 Skill** → 参考 `skill-creator.md`
+### A.1 鎴戞兂...
 
-### A.3 我遇到...
+- **浜嗚В椤圭洰鏋舵瀯** 鈫?`docs/鏋舵瀯瀹氱-v2.md`
+- **鏌ョ湅瀹炴柦璁″垝** 鈫?`docs/瀹炴柦璁″垝-v2.md`
+- **鏌ョ湅褰撳墠杩涘害** 鈫?`docs/M0-杩涘害鎶ュ憡.md`
+- **鏌ョ湅鍏ㄥ眬瑙勫垝** 鈫?`docs/鍏ㄥ眬瑙勫垝-Planning-with-Files.md`锛堟湰鏂囦欢锛?
+- **鏌ョ湅 JSON Schema** 鈫?`docs/schemas/README.md`
+- **浣跨敤 GPIO 妫€鏌ュ伐鍏?* 鈫?`tools/README.md`
+- **浣跨敤 fake U1** 鈫?`tools/fake_u1/README.md`
+- **鏌ョ湅 Steering 瑙勮寖** 鈫?`.kiro/steering/README.md`
 
-- **GPIO 配置问题** → 运行 `python tools/check_gpio.py`
-- **协议不确定** → 查看 `docs/schemas/` 对应边界
-- **需要测试环境** → 使用 `tools/fake_u1/`
-- **文档不同步** → 参考 `code-doc-sync.md` 修复
-- **不知道下一步** → 查看本文件 §5 下一步行动
+### A.2 鎴戣鍋?..
+
+- **寮€濮嬫柊鍔熻兘寮€鍙?* 鈫?鍏堣 `鏋舵瀯瀹氱 v2` 鐩稿叧绔犺妭 鈫?鍐嶈 `瀹炴柦璁″垝 v2` 瀵瑰簲 M.x 鈫?鍐嶆煡 `Steering 瑙勮寖`
+- **淇 Bug** 鈫?鍏堣 `code-simplifier.md` 鈫?鍐嶅啓娴嬭瘯 鈫?鍐嶄慨澶?鈫?鍐嶆洿鏂版枃妗?
+- **鎻愪氦浠ｇ爜** 鈫?鍏堣窇娴嬭瘯 鈫?鍐嶆洿鏂版枃妗?鈫?鍐嶆彁浜わ紙閬靛惊 `code-doc-sync.md`锛?
+- **瀹℃煡浠ｇ爜** 鈫?浣跨敤 `code-review.md` 妫€鏌ユ竻鍗?
+- **鍒涘缓鏂?Skill** 鈫?鍙傝€?`skill-creator.md`
+
+### A.3 鎴戦亣鍒?..
+
+- **GPIO 閰嶇疆闂** 鈫?杩愯 `rtk python tools/check_gpio.py`
+- **鍗忚涓嶇‘瀹?* 鈫?鏌ョ湅 `docs/schemas/` 瀵瑰簲杈圭晫
+- **闇€瑕佹祴璇曠幆澧?* 鈫?浣跨敤 `tools/fake_u1/`
+- **鏂囨。涓嶅悓姝?* 鈫?鍙傝€?`code-doc-sync.md` 淇
+- **涓嶇煡閬撲笅涓€姝?* 鈫?鏌ョ湅鏈枃浠?搂5 涓嬩竴姝ヨ鍔?
 
 ---
 

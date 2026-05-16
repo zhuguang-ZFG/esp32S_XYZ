@@ -71,6 +71,11 @@ void Board::HandleMotionTaskJson(const cJSON* root) {
     (void)root;
 }
 
+bool Board::CheckU1Uart(std::string& detail) {
+    detail = "not_supported";
+    return false;
+}
+
 std::string Board::GetSystemInfoJson() {
     /* 
         {

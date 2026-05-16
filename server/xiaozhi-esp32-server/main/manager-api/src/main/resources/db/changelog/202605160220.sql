@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `device_rma_events` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `device_id` VARCHAR(64) NOT NULL,
+    `device_sn` VARCHAR(128) DEFAULT NULL,
+    `operator_account_id` BIGINT NOT NULL,
+    `action` VARCHAR(32) NOT NULL,
+    `from_device_status` VARCHAR(32) DEFAULT NULL,
+    `to_device_status` VARCHAR(32) NOT NULL,
+    `from_binding_status` VARCHAR(32) DEFAULT NULL,
+    `to_binding_status` VARCHAR(32) DEFAULT NULL,
+    `factory_cleaned` TINYINT(1) DEFAULT NULL,
+    `evidence_ref` VARCHAR(256) DEFAULT NULL,
+    `ticket_ref` VARCHAR(128) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_device_rma_events_device_time` (`device_id`, `created_at`),
+    KEY `idx_device_rma_events_operator_time` (`operator_account_id`, `created_at`),
+    KEY `idx_device_rma_events_ticket_time` (`ticket_ref`, `created_at`),
+    KEY `idx_device_rma_events_action_time` (`action`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='v2 device RMA operator audit events';

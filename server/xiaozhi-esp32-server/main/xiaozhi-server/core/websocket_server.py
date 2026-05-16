@@ -33,7 +33,9 @@ _setup_websockets_logger()
 
 from core.connection import ConnectionHandler
 from config.config_loader import get_config_from_api_async
+from config.manage_api_client import ManageApiClient, get_device_runtime_status
 from core.auth import AuthManager, AuthenticationError
+from core.utils.voiceprint_cache import ActiveVoiceprintCache
 from core.utils.modules_initialize import initialize_modules
 from core.utils.util import check_vad_update, check_asr_update
 
@@ -71,6 +73,7 @@ class WebSocketServer:
         # M2.4：device-id -> 当前活跃设备 WebSocket（单连接覆盖重连）
         self._motion_lock = asyncio.Lock()
         self._motion_ws_by_device: dict[str, websockets.ServerConnection] = {}
+        self.voiceprint_cache = ActiveVoiceprintCache()
 
     async def start(self):
         server_config = self.config["server"]
@@ -208,10 +211,11 @@ class WebSocketServer:
             return False
 
     async def _handle_auth(self, websocket: websockets.ServerConnection):
+        headers = dict(websocket.request.headers)
         # 先认证，后建立连接
+        device_id = headers.get("device-id", None)
+        await self._reject_disposed_device_if_needed(device_id)
         if self.auth_enable:
-            headers = dict(websocket.request.headers)
-            device_id = headers.get("device-id", None)
             client_id = headers.get("client-id", None)
             if self.allowed_devices and device_id in self.allowed_devices:
                 # 如果属于白名单内的设备，不校验token，直接放行
@@ -229,6 +233,32 @@ class WebSocketServer:
                 )
                 if not auth_success:
                     raise AuthenticationError("Invalid token")
+
+    async def _reject_disposed_device_if_needed(self, device_id: str | None) -> None:
+        if not device_id or not self._manager_api_runtime_status_enabled():
+            return
+        try:
+            status = await get_device_runtime_status(device_id)
+        except Exception as e:
+            self.logger.bind(tag=TAG).warning(
+                "device runtime status check failed device_id={} err={}", device_id, e
+            )
+            raise AuthenticationError("E_RUNTIME_STATUS_UNAVAILABLE")
+        if isinstance(status, dict) and status.get("disposed") is True:
+            self.logger.bind(tag=TAG).warning(
+                "reject disposed device websocket auth device_id={}", device_id
+            )
+            raise AuthenticationError("E_DEVICE_DISPOSED")
+
+    def _manager_api_runtime_status_enabled(self) -> bool:
+        manager_api = self.config.get("manager-api") or {}
+        if not isinstance(manager_api, dict):
+            return False
+        return bool(
+            manager_api.get("url")
+            and manager_api.get("secret")
+            and ManageApiClient._instance is not None
+        )
 
     async def attach_motion_device(
         self, device_id: str, websocket: websockets.ServerConnection

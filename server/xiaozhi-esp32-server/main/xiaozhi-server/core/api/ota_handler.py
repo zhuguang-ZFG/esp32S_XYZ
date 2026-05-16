@@ -8,6 +8,7 @@ import re
 import glob
 from typing import Dict, List, Tuple
 from aiohttp import web
+import httpx
 
 from core.auth import AuthManager
 from core.utils.util import get_local_ip, get_vision_url
@@ -41,6 +42,31 @@ def _is_higher_version(a: str, b: str) -> bool:
         if ai < bi:
             return False
     return False
+
+
+def _is_https_url(url: str) -> bool:
+    return url.startswith("https://")
+
+
+def _is_lower_hex_sha256(value: str) -> bool:
+    return bool(re.fullmatch(r"[0-9a-f]{64}", value or ""))
+
+
+def _is_base64_signature(value: str) -> bool:
+    if not value:
+        return False
+    try:
+        return bool(base64.b64decode(value, validate=True))
+    except Exception:
+        return False
+
+
+def _business_result_error(payload: dict | None) -> str:
+    if not isinstance(payload, dict) or "code" not in payload:
+        return ""
+    if str(payload.get("code")) == "0":
+        return ""
+    return str(payload.get("msg") or payload.get("message") or "business result error")
 
 
 class OTAHandler(BaseHandler):
@@ -140,6 +166,158 @@ class OTAHandler(BaseHandler):
         else:
             return f"ws://{local_ip}:{port}/xiaozhi/v1/"
 
+    def _business_release_base_url(self) -> str:
+        server_config = self.config.get("server") or {}
+        if not isinstance(server_config, dict):
+            return ""
+        return (
+            server_config.get("firmware_release_business_base_url")
+            or server_config.get("motion_event_business_base_url")
+            or server_config.get("voice_task_business_base_url")
+            or ""
+        ).strip().rstrip("/")
+
+    def _internal_token(self) -> str:
+        server_config = self.config.get("server") or {}
+        if not isinstance(server_config, dict):
+            return ""
+        return (server_config.get("internal_motion_task_token") or "").strip()
+
+    async def _fetch_business_firmware_plan(
+        self,
+        device_id: str,
+        channel: str,
+        current_version: str,
+    ) -> dict | None:
+        base_url = self._business_release_base_url()
+        token = self._internal_token()
+        if not device_id or not base_url or not token:
+            return None
+
+        payload = {
+            "device_id": device_id,
+            "channel": channel or "dev",
+            "current_version": current_version or "",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(
+                    f"{base_url}/internal/v1/firmware/upgrade-plan",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+            if resp.status_code >= 400:
+                self.logger.bind(tag=TAG).warning(
+                    "Business firmware plan failed HTTP {} body={}",
+                    resp.status_code,
+                    resp.text[:500],
+                )
+                return None
+            response_payload = resp.json()
+        except (httpx.HTTPError, OSError, ValueError) as e:
+            self.logger.bind(tag=TAG).warning("Business firmware plan error: {}", e)
+            return None
+
+        if not isinstance(response_payload, dict):
+            return None
+        error = _business_result_error(response_payload)
+        if error:
+            self.logger.bind(tag=TAG).warning("Business firmware plan rejected: {}", error)
+            return None
+        plan = response_payload.get("data")
+        return plan if isinstance(plan, dict) else None
+
+    def _apply_business_firmware_plan(self, return_json: dict, plan: dict | None) -> bool:
+        if not plan:
+            return False
+        version = str(plan.get("version") or "").strip()
+        url = str(plan.get("url") or "").strip()
+        sha256 = str(plan.get("sha256") or "").strip()
+        signature = str(plan.get("signature") or "").strip()
+        release_id = str(plan.get("releaseId") or plan.get("release_id") or "").strip()
+        if not version or not url or not sha256 or not signature:
+            return False
+        if (
+            not _is_https_url(url)
+            or not _is_lower_hex_sha256(sha256)
+            or not _is_base64_signature(signature)
+        ):
+            return False
+        return_json["firmware"] = {
+            "version": version,
+            "url": url,
+            "sha256": sha256,
+            "signature": signature,
+        }
+        if release_id:
+            return_json["firmware"]["release_id"] = release_id
+        return True
+
+    async def _forward_business_install_result(self, payload: dict) -> bool:
+        base_url = self._business_release_base_url()
+        token = self._internal_token()
+        if not base_url or not token:
+            return False
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(
+                    f"{base_url}/internal/v1/firmware/install-result",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+            if resp.status_code >= 400:
+                self.logger.bind(tag=TAG).warning(
+                    "Business firmware install result failed HTTP {} body={}",
+                    resp.status_code,
+                    resp.text[:500],
+                )
+                return False
+            try:
+                response_payload = resp.json()
+            except ValueError:
+                response_payload = None
+            error = _business_result_error(response_payload)
+            if error:
+                self.logger.bind(tag=TAG).warning(
+                    "Business firmware install result rejected: {}",
+                    error,
+                )
+                return False
+            return True
+        except (httpx.HTTPError, OSError) as e:
+            self.logger.bind(tag=TAG).warning("Business firmware install result error: {}", e)
+            return False
+
+    async def handle_install_result(self, request):
+        try:
+            body = await request.json()
+        except Exception:
+            response = web.json_response({"ok": False, "error": "invalid json"}, status=400)
+            self._add_cors_headers(response)
+            return response
+
+        device_id = str(body.get("device_id") or request.headers.get("device-id") or "").strip()
+        release_id = str(body.get("release_id") or body.get("releaseId") or "").strip()
+        if not device_id or not release_id or "success" not in body:
+            response = web.json_response(
+                {"ok": False, "error": "device_id, release_id and success required"},
+                status=400,
+            )
+            self._add_cors_headers(response)
+            return response
+
+        payload = {
+            "device_id": device_id,
+            "release_id": release_id,
+            "success": bool(body.get("success")),
+        }
+        if body.get("reason"):
+            payload["reason"] = str(body.get("reason"))
+        forwarded = await self._forward_business_install_result(payload)
+        response = web.json_response({"ok": forwarded, "forwarded": forwarded}, status=200 if forwarded else 503)
+        self._add_cors_headers(response)
+        return response
+
     async def handle_post(self, request):
         """处理 OTA POST 请求
 
@@ -219,6 +397,16 @@ class OTAHandler(BaseHandler):
                     device_version = ""
             if not device_version:
                 device_version = "0.0.0"
+            try:
+                firmware_channel = (
+                    request.headers.get("firmware-channel", "")
+                    or request.headers.get("ota-channel", "")
+                    or data_json.get("firmware_channel", "")
+                    or data_json.get("channel", "")
+                    or "dev"
+                ).strip()
+            except Exception:
+                firmware_channel = "dev"
 
             return_json = {
                 "server_time": {
@@ -296,6 +484,24 @@ class OTAHandler(BaseHandler):
                 self.logger.bind(tag=TAG).info(
                     f"未配置MQTT网关，为设备 {device_id} 下发WebSocket配置"
                 )
+
+            try:
+                business_plan = await self._fetch_business_firmware_plan(
+                    device_id,
+                    firmware_channel,
+                    device_version,
+                )
+                if self._apply_business_firmware_plan(return_json, business_plan):
+                    self.logger.bind(tag=TAG).info(
+                        f"Business firmware plan selected for device {device_id}: {return_json['firmware']['version']}"
+                    )
+                    response = web.Response(
+                        text=json.dumps(return_json, separators=(",", ":")),
+                        content_type="application/json",
+                    )
+                    return response
+            except Exception as e:
+                self.logger.bind(tag=TAG).error(f"Business firmware plan apply error: {e}")
 
             # Now check firmware files for updates
             try:

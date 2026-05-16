@@ -188,6 +188,40 @@ export function buildEdgeAClientWsUrl(): string {
 /**
  * 根据微信小程序当前环境，判断应该获取的 UPLOAD_BASEURL
  */
+const M6_PENDING_TABBAR_INDEX = 0
+const M6_PENDING_TRANSFER_BADGE_KEY = 'm6_pending_transfer_count'
+const M6_PENDING_VOICE_APPROVAL_BADGE_KEY = 'm6_pending_voice_approval_count'
+
+type M6PendingBadgeKind = 'transfer' | 'voiceApproval'
+
+export function updateM6PendingTabBarBadge(kind: M6PendingBadgeKind, count: number) {
+  const key = kind === 'transfer' ? M6_PENDING_TRANSFER_BADGE_KEY : M6_PENDING_VOICE_APPROVAL_BADGE_KEY
+  uni.setStorageSync(key, String(Math.max(0, Number(count) || 0)))
+  applyM6PendingTabBarBadge()
+}
+
+export function applyM6PendingTabBarBadge() {
+  const total = readM6PendingBadgeCount(M6_PENDING_TRANSFER_BADGE_KEY)
+    + readM6PendingBadgeCount(M6_PENDING_VOICE_APPROVAL_BADGE_KEY)
+  if (total > 0) {
+    uni.setTabBarBadge({
+      index: M6_PENDING_TABBAR_INDEX,
+      text: total > 99 ? '99+' : String(total),
+      fail() {},
+    })
+    return
+  }
+  uni.removeTabBarBadge({
+    index: M6_PENDING_TABBAR_INDEX,
+    fail() {},
+  })
+}
+
+function readM6PendingBadgeCount(key: string) {
+  const value = Number(uni.getStorageSync(key) || 0)
+  return Number.isFinite(value) && value > 0 ? value : 0
+}
+
 export function getEnvBaseUploadUrl() {
   // 请求基准地址
   let baseUploadUrl = import.meta.env.VITE_UPLOAD_BASEURL

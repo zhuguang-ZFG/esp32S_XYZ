@@ -1,0 +1,5 @@
+{
+  "type": "acked",
+  "topic": "device:dev_SN001",
+  "seq": 5
+}

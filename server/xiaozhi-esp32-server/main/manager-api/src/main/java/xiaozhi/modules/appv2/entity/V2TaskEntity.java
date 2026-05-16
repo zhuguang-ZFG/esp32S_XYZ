@@ -21,6 +21,8 @@ public class V2TaskEntity {
     private String source;
     private String paramsJson;
     private String constraintsJson;
+    private String dispatchCapability;
+    private String dispatchParamsJson;
     private String status;
     private String errorCode;
     private String errorMessage;

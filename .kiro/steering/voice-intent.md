@@ -80,13 +80,13 @@ running / progress：默认不播报
 
 ```bash
 # 白名单完整性检查
-rg "intent_submit|device_intent|chat_intent" server/xiaozhi-esp32-server/main/xiaozhi-server
+rtk rg "intent_submit|device_intent|chat_intent" server/xiaozhi-esp32-server/main/xiaozhi-server
 
 # 声纹相关
-rg "voiceprint|voiceprint_off|loose|strict" server/xiaozhi-esp32-server/main
+rtk rg "voiceprint|voiceprint_off|loose|strict" server/xiaozhi-esp32-server/main
 
 # TTS hint
-rg "tts_hint|task_started|task_done|task_failed" server/xiaozhi-esp32-server/main
+rtk rg "tts_hint|task_started|task_done|task_failed" server/xiaozhi-esp32-server/main
 ```
 
 ## §6 修订记录

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.schemas/edge_a/device_info_reply_event.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "event"],
+  "properties": {
+    "type": { "const": "event" },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_type", "device_id", "task_id", "ts", "seq", "payload"],
+      "properties": {
+        "event_id": { "type": "string", "minLength": 1 },
+        "event_type": { "const": "device_info_reply" },
+        "device_id": { "type": "string", "minLength": 1 },
+        "task_id": { "type": "string", "minLength": 1 },
+        "ts": { "type": "integer", "minimum": 0 },
+        "seq": { "type": "integer", "minimum": 0 },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "hw_rev", "fw_rev", "workspace_mm"],
+          "properties": {
+            "model": { "type": "string", "minLength": 1 },
+            "hw_rev": { "type": "string", "minLength": 1 },
+            "fw_rev": { "type": "string", "minLength": 1 },
+            "workspace_mm": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["x", "y", "z"],
+              "properties": {
+                "x": { "type": "number" },
+                "y": { "type": "number" },
+                "z": { "type": "number" }
+              }
+            },
+            "tts_hint": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tts_event"],
+              "properties": {
+                "tts_event": {
+                  "type": "string",
+                  "enum": ["task_started", "task_done", "task_failed", "task_rejected", "device_info_reply"]
+                },
+                "text": { "type": "string" },
+                "task_id": { "type": "string" },
+                "device_id": { "type": "string" },
+                "source": { "type": "string", "enum": ["client", "voice"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

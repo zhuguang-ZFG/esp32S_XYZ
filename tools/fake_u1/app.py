@@ -2,14 +2,22 @@
 import argparse
 import json
 import socketserver
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque, Dict, List, Optional
 
 
+WORKSPACE_MM = {
+    "x": (0.0, 200.0),
+    "y": (0.0, 150.0),
+    "z": (0.0, 50.0),
+}
+
 INJECTABLE_ERRORS: Dict[str, Dict[str, Optional[str]]] = {
     "E001": {"state": "ERROR", "message": "home required", "alarm_code": None},
     "E005": {"state": "ALARM", "message": "limit triggered", "alarm_code": "E005"},
+    "E006": {"state": "ALARM", "message": "homing failed", "alarm_code": "E006"},
     "E008": {"state": "ESTOP", "message": "estop triggered", "alarm_code": "E008"},
 }
 
@@ -24,11 +32,13 @@ class FakeU1State:
     path_total_segments: int = 0
     path_received_segments: int = 0
     path_task_id: str = ""
+    path_last_position: Dict[str, float] = field(default_factory=dict)
 
 
 class FakeU1Simulator:
-    def __init__(self, inject_codes: Optional[List[str]] = None) -> None:
+    def __init__(self, inject_codes: Optional[List[str]] = None, latency_ms: int = 0) -> None:
         self.state = FakeU1State()
+        self.latency_ms = latency_ms
         self.inject_codes: Deque[str] = deque()
         if inject_codes:
             for code in inject_codes:
@@ -41,6 +51,9 @@ class FakeU1Simulator:
         self.inject_codes.append(normalized)
 
     def handle_line(self, line: str) -> str:
+        if self.latency_ms > 0:
+            time.sleep(self.latency_ms / 1000.0)
+
         text = line.strip()
         if not text:
             return ""
@@ -60,10 +73,18 @@ class FakeU1Simulator:
 
         if cmd == "GET_STATUS":
             return self._status(msg_id, task_id)
+        if cmd == "GET_DEVICE_INFO":
+            return self._device_info_result(msg_id, task_id)
         if cmd == "HOME":
             return self._home(msg_id, task_id)
         if cmd == "MOVE":
             return self._move(msg_id, task_id, payload)
+        if cmd == "PAUSE":
+            return self._pause(msg_id, task_id)
+        if cmd == "RESUME":
+            return self._resume(msg_id, task_id)
+        if cmd == "STOP":
+            return self._stop(msg_id, task_id)
         if cmd == "PATH_BEGIN":
             return self._path_begin(msg_id, task_id, payload)
         if cmd == "PATH_SEG":
@@ -76,7 +97,7 @@ class FakeU1Simulator:
             self.state.active_task_id = ""
             self.state.alarm_code = "E008"
             return self._ack(msg_id, task_id, state="ESTOP")
-        return self._error(msg_id, task_id, "E010", "unsupported cmd", state="ERROR")
+        return self._error(msg_id, task_id, "E009", "unsupported cmd", state="ERROR")
 
     def _consume_injected_error(self, msg_id: str, task_id: str) -> Optional[str]:
         if not self.inject_codes:
@@ -93,6 +114,8 @@ class FakeU1Simulator:
         injected = self._consume_injected_error(msg_id, task_id)
         if injected is not None:
             return injected
+        if self.state.state == "ESTOP":
+            return self._error(msg_id, task_id, "E008", "estop active", state="ESTOP", alarm_code="E008")
         self.state.homed = True
         self.state.state = "IDLE"
         self.state.position = {"x": 0.0, "y": 0.0, "z": 0.0}
@@ -110,40 +133,61 @@ class FakeU1Simulator:
         injected = self._consume_injected_error(msg_id, task_id)
         if injected is not None:
             return injected
+        next_position = dict(self.state.position)
         for axis in ("x", "y", "z"):
             if axis in payload:
-                self.state.position[axis] = float(payload[axis])
+                next_position[axis] = float(payload[axis])
+        if not self._is_in_workspace(next_position):
+            self.state.state = "ERROR"
+            return self._error(msg_id, task_id, "E002", "soft limit exceeded", state="ERROR")
+        self.state.position = next_position
         self.state.state = "IDLE"
         self.state.active_task_id = task_id
         self.state.alarm_code = None
         return self._result(msg_id, task_id, "DONE", state="IDLE")
 
     def _path_begin(self, msg_id: str, task_id: str, payload: Dict[str, object]) -> str:
+        if not self.state.homed:
+            self.state.state = "ERROR"
+            return self._error(msg_id, task_id, "E001", "home required", state="ERROR")
         total_segments = payload.get("total_segments")
         if not isinstance(total_segments, int) or total_segments <= 0:
-            return self._error(msg_id, task_id, "E003", "invalid total_segments", state="ERROR")
+            return self._error(msg_id, task_id, "E009", "invalid total_segments", state="ERROR")
         self.state.path_total_segments = total_segments
         self.state.path_received_segments = 0
         self.state.path_task_id = task_id
-        return self._ack(msg_id, task_id, state="IDLE")
+        self.state.path_last_position = dict(self.state.position)
+        self.state.state = "RUNNING"
+        self.state.active_task_id = task_id
+        return self._ack(msg_id, task_id, state="RUNNING")
 
     def _path_seg(self, msg_id: str, task_id: str, payload: Dict[str, object]) -> str:
         if self.state.path_total_segments <= 0:
-            return self._error(msg_id, task_id, "E003", "invalid path segment", state="ERROR")
+            return self._error(msg_id, task_id, "E009", "invalid path segment", state="ERROR")
         segment_index = payload.get("segment_index")
         segment_cmd = payload.get("segment_cmd")
         if not isinstance(segment_index, int) or segment_cmd not in ("M", "L"):
-            return self._error(msg_id, task_id, "E003", "invalid path segment", state="ERROR")
+            return self._error(msg_id, task_id, "E009", "invalid path segment", state="ERROR")
         if segment_index != self.state.path_received_segments:
             return self._error(msg_id, task_id, "E009", "unexpected segment index", state="ERROR")
+        next_position = dict(self.state.path_last_position or self.state.position)
+        for axis in ("x", "y", "z"):
+            if axis in payload:
+                next_position[axis] = float(payload[axis])
+        if not self._is_in_workspace(next_position):
+            return self._error(msg_id, task_id, "E002", "soft limit exceeded", state="ERROR")
+        self.state.path_last_position = next_position
         self.state.path_received_segments += 1
-        return self._ack(msg_id, task_id, state="IDLE")
+        return self._ack(msg_id, task_id, state="RUNNING")
 
     def _path_end(self, msg_id: str, task_id: str) -> str:
         if self.state.path_total_segments <= 0 or self.state.path_received_segments != self.state.path_total_segments:
             self._reset_path()
+            self.state.state = "ERROR"
             return self._error(msg_id, task_id, "E009", "incomplete path", state="ERROR")
         injected = self._consume_injected_error(msg_id, task_id)
+        if injected is None and self.state.path_last_position:
+            self.state.position = dict(self.state.path_last_position)
         self._reset_path()
         if injected is not None:
             return injected
@@ -152,10 +196,51 @@ class FakeU1Simulator:
         self.state.alarm_code = None
         return self._result(msg_id, task_id, "DONE", state="IDLE")
 
+    def _pause(self, msg_id: str, task_id: str) -> str:
+        if self.state.state != "RUNNING":
+            return self._error(msg_id, task_id, "E009", "invalid state for pause", state=self.state.state)
+        self.state.state = "PAUSED"
+        return self._ack(msg_id, task_id, state="PAUSED")
+
+    def _resume(self, msg_id: str, task_id: str) -> str:
+        if self.state.state != "PAUSED":
+            return self._error(msg_id, task_id, "E009", "invalid state for resume", state=self.state.state)
+        self.state.state = "RUNNING"
+        return self._ack(msg_id, task_id, state="RUNNING")
+
+    def _stop(self, msg_id: str, task_id: str) -> str:
+        if self.state.state not in ("HOMING", "RUNNING", "PAUSED"):
+            return self._error(msg_id, task_id, "E009", "invalid state for stop", state=self.state.state)
+        self.state.state = "IDLE"
+        self.state.active_task_id = ""
+        self._reset_path()
+        return self._result(msg_id, task_id, "CANCELLED", state="IDLE")
+
+    def _device_info_result(self, msg_id: str, task_id: str) -> str:
+        return json.dumps(
+            {
+                "msg_id": msg_id,
+                "type": "result",
+                "task_id": task_id or "device-info",
+                "result": "DONE",
+                "state": self.state.state,
+                "model": "DLC Motor Control P1 XYYZ",
+                "hw_rev": "DLC_Motor_Control_P1_V1.0_260513",
+                "fw_rev": "fake-u1",
+                "workspace_mm": {
+                    "x": WORKSPACE_MM["x"][1],
+                    "y": WORKSPACE_MM["y"][1],
+                    "z": WORKSPACE_MM["z"][1],
+                },
+            },
+            separators=(",", ":"),
+        )
+
     def _reset_path(self) -> None:
         self.state.path_total_segments = 0
         self.state.path_received_segments = 0
         self.state.path_task_id = ""
+        self.state.path_last_position = {}
 
     def _status(self, msg_id: str, task_id: str) -> str:
         body = {
@@ -174,7 +259,7 @@ class FakeU1Simulator:
     @staticmethod
     def _ack(msg_id: str, task_id: str, state: str = "IDLE") -> str:
         return json.dumps(
-            {"msg_id": msg_id, "type": "ack", "task_id": task_id, "state": state},
+            {"msg_id": msg_id, "type": "ack", "task_id": task_id, "state": state, "accepted": True},
             separators=(",", ":"),
         )
 
@@ -206,6 +291,10 @@ class FakeU1Simulator:
         if alarm_code is not None:
             body["alarm_code"] = alarm_code
         return json.dumps(body, separators=(",", ":"))
+
+    @staticmethod
+    def _is_in_workspace(position: Dict[str, float]) -> bool:
+        return all(WORKSPACE_MM[axis][0] <= position[axis] <= WORKSPACE_MM[axis][1] for axis in ("x", "y", "z"))
 
 
 class FakeU1RequestHandler(socketserver.StreamRequestHandler):
@@ -239,14 +328,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="CODE",
-        help="Queue an injected error for the next command. Supported: E001, E005, E008",
+        help="Queue an injected error for the next command. Supported: E001, E005, E006, E008",
     )
+    parser.add_argument("--latency-ms", default=0, type=int, help="Simulated per-frame latency in milliseconds")
     return parser
 
 
 def main() -> None:
     args = build_arg_parser().parse_args()
-    simulator = FakeU1Simulator(inject_codes=args.inject)
+    simulator = FakeU1Simulator(inject_codes=args.inject, latency_ms=args.latency_ms)
     with FakeU1TCPServer((args.host, args.port), simulator) as server:
         print(f"fake_u1 listening on {args.host}:{args.port}")
         server.serve_forever()

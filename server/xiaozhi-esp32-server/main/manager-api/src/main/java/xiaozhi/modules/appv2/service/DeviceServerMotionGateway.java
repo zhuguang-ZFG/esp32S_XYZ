@@ -9,4 +9,8 @@ import xiaozhi.modules.appv2.entity.V2TaskEntity;
 public interface DeviceServerMotionGateway {
 
     void forwardAcceptedTask(String deviceId, V2TaskEntity task, V2SubmitTaskRequest request);
+
+    void forwardRuntimeStatusRefresh(String deviceId, Long accountId, String reason, String traceId);
+
+    void clearVoiceprintCache(String deviceId, String reason);
 }

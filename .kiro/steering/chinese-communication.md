@@ -135,16 +135,16 @@ Git commit message **建议使用英文**，便于国际协作:
 
 ```bash
 # ✅ 推荐
-git commit -m "feat(auth): add JWT token validation"
+rtk git commit -m "feat(auth): add JWT token validation"
 
 # ✅ 可接受（如果团队全是中文用户）
-git commit -m "feat(auth): 添加 JWT token 验证"
+rtk git commit -m "feat(auth): 添加 JWT token 验证"
 ```
 
 但 commit body 可以使用中文详细说明:
 
 ```bash
-git commit -m "feat(auth): add JWT token validation
+rtk git commit -m "feat(auth): add JWT token validation
 
 添加了 JWT token 的验证逻辑:
 - 实现了 token 解析

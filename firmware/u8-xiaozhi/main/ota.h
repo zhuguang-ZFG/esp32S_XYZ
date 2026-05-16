@@ -22,14 +22,22 @@ public:
     bool HasServerTime() { return has_server_time_; }
     bool StartUpgrade(std::function<void(int progress, size_t speed)> callback);
     static bool Upgrade(const std::string& firmware_url, std::function<void(int progress, size_t speed)> callback);
+    static bool Upgrade(const std::string& firmware_url, const std::string& expected_sha256, std::function<void(int progress, size_t speed)> callback);
+    static bool Upgrade(const std::string& firmware_url, const std::string& expected_sha256, const std::string& expected_signature, std::function<void(int progress, size_t speed)> callback);
     void MarkCurrentVersionValid();
 
     const std::string& GetFirmwareVersion() const { return firmware_version_; }
     const std::string& GetCurrentVersion() const { return current_version_; }
     const std::string& GetFirmwareUrl() const { return firmware_url_; }
+    const std::string& GetFirmwareSha256() const { return firmware_sha256_; }
+    const std::string& GetFirmwareSignature() const { return firmware_signature_; }
+    const std::string& GetFirmwareReleaseId() const { return firmware_release_id_; }
     const std::string& GetActivationMessage() const { return activation_message_; }
     const std::string& GetActivationCode() const { return activation_code_; }
     std::string GetCheckVersionUrl();
+    void StorePendingInstallResult();
+    void ReportPendingInstallSuccess();
+    void ReportInstallFailure(const std::string& reason);
 
 private:
     std::string activation_message_;
@@ -44,6 +52,9 @@ private:
     std::string current_version_;
     std::string firmware_version_;
     std::string firmware_url_;
+    std::string firmware_sha256_;
+    std::string firmware_signature_;
+    std::string firmware_release_id_;
     std::string activation_challenge_;
     std::string serial_number_;
     int activation_timeout_ms_ = 30000;
@@ -51,6 +62,9 @@ private:
     std::function<void(int progress, size_t speed)> upgrade_callback_;
     std::vector<int> ParseVersion(const std::string& version);
     bool IsNewVersionAvailable(const std::string& currentVersion, const std::string& newVersion);
+    bool HasValidFirmwareMetadata() const;
+    bool ReportInstallResult(const std::string& release_id, bool success, const std::string& reason);
+    std::string GetInstallResultUrl();
     std::string GetActivationPayload();
     std::unique_ptr<Http> SetupHttp();
 };

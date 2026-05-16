@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { useMessage } from 'wot-design-uni'
+import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import { t } from '@/i18n'
 import { v2Login } from '@/api/v2'
 

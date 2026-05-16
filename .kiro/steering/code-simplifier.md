@@ -28,7 +28,7 @@ inclusion: auto
 **触发条件**：grep 全仓库未发现调用者。
 
 **步骤**：
-1. `rg "函数名"` 全仓库确认无引用
+1. `rtk rg "函数名"` 全仓库确认无引用
 2. 删除函数/方法
 3. 编译验证
 
@@ -40,7 +40,7 @@ inclusion: auto
 # 文件：firmware/u8-xiaozhi/main/boards/zhuguang/dlc-motor-control-p1-ai/dlc_motor_control_p1_ai_board.cc
 
 # 验收命令：
-rg "LoadJob|StartJob|\\$J=G91|M3 S|send_gcode" firmware/u8-xiaozhi
+rtk rg "LoadJob|StartJob|\\$J=G91|M3 S|send_gcode" firmware/u8-xiaozhi
 # 应仅在 Grbl 内部出现，不在 U8 板级文件中出现
 ```
 
@@ -90,9 +90,9 @@ rg "LoadJob|StartJob|\\$J=G91|M3 S|send_gcode" firmware/u8-xiaozhi
 
 | 禁止行为 | 原因 | 检测方式 |
 |----------|------|----------|
-| 跨里程碑重构 | 引入非计划变更 | `git diff` 与 spec 文件清单对比 |
+| 跨里程碑重构 | 引入非计划变更 | `rtk git diff` 与 spec 文件清单对比 |
 | 无测试覆盖的重构 | 破坏语义无感知 | 强制前置步骤 |
-| "顺手"改无关文件 | scope creep | `git diff --stat` 检查文件数 |
+| "顺手"改无关文件 | scope creep | `rtk git diff --stat` 检查文件数 |
 | 改变函数语义 | "简化"不应改行为 | 测试回归 |
 | 删除"看起来没用"的注释 | 注释可能负载隐式约束 | 确认来源后再删 |
 | 修改不在 spec 中的文件 | 违反 SPC 纪律 | 参见 spc-planning.md S4 |
@@ -130,19 +130,19 @@ rg "LoadJob|StartJob|\\$J=G91|M3 S|send_gcode" firmware/u8-xiaozhi
 
 ```bash
 # 死代码删除验证
-rg "被删除的函数名" 目标目录   # 应为 0 结果
+rtk rg "被删除的函数名" 目标目录   # 应为 0 结果
 
 # 编译验证（U1）
-& 'C:\Users\zhugu\.platformio\penv\Scripts\platformio.exe' run -e release_esp32s3
+rtk powershell.exe -NoProfile -Command "& 'C:\Users\zhugu\.platformio\penv\Scripts\platformio.exe' run -e release_esp32s3"
 
 # 编译验证（U8）
-idf.py build  # ESP-IDF 环境
+rtk idf.py build  # ESP-IDF 环境
 
 # Python 测试
-python -m unittest discover -s tests -p "test_*.py" -v
+rtk python -m unittest discover -s tests -p "test_*.py" -v
 
 # Java 测试
-# ./mvnw test  [WAIT_ENV: mvn 环境就绪后]
+# rtk mvn test  [WAIT_ENV: mvn 环境就绪后]
 ```
 
 ## §6 修订记录

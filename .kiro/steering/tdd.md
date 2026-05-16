@@ -69,14 +69,14 @@ test_path_segment_out_of_range_returns_e_out_of_range
 
 ```bash
 # Python 测试
-python -m pytest tests/ -v
-python -m unittest tools.fake_u1.tests.test_app -v
+rtk python -m pytest tests/ -v
+rtk python -m unittest tools.fake_u1.tests.test_app -v
 
 # CI 集成测试
-python -m unittest tools.fake_u1.tests.test_app tests.ci.test_fake_integration -v
+rtk python -m unittest tools.fake_u1.tests.test_app tests.ci.test_fake_integration -v
 
 # Schema 校验
-python tools/validate_schemas.py
+rtk python tools/validate_schemas.py
 ```
 
 ## §7 修订记录

@@ -1,0 +1,32 @@
+groups:
+  - name: manager-api-runtime
+    rules:
+      - alert: ManagerApiTaskFailureRateHigh
+        expr: biz_task_failure_ratio > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: manager-api
+        annotations:
+          summary: manager-api task failure rate is above 5%
+          description: biz_task_failure_ratio stayed above 5% for 5 minutes.
+
+      - alert: DeviceOfflineSpike
+        expr: dev_device_offline_total > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: device-fleet
+        annotations:
+          summary: bound devices are offline
+          description: dev_device_offline_total has been non-zero for 5 minutes.
+
+      - alert: OtaRolloutFailureRateHigh
+        expr: u8_ota_failure_ratio > 0.03
+        for: 2m
+        labels:
+          severity: critical
+          service: ota
+        annotations:
+          summary: OTA rollout failure rate is above 3%
+          description: u8_ota_failure_ratio exceeded the rollout stop threshold.

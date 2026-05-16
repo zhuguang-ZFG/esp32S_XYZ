@@ -11,7 +11,7 @@
     "account_id": { "type": "integer" },
     "capability": {
       "type": "string",
-      "enum": ["home", "get_status", "move_abs", "run_path", "get_device_info", "pause", "resume", "stop", "estop"]
+      "enum": ["home", "get_status", "move_abs", "move_rel", "run_path", "get_device_info", "pause", "resume", "stop", "estop"]
     },
     "source": { "type": "string", "enum": ["client", "voice"] },
     "request_id": { "type": "string" },

@@ -67,13 +67,13 @@ inclusion: auto
 
 ```bash
 # 检查是否有未同步的代码变更
-git diff --stat
+rtk git diff --stat
 
 # 检查实施计划状态是否与文档一致
-rg "状态.*已完成|⏳|⏸️" docs/M0-进度报告.md docs/实施计划-v2.md
+rtk rg "状态.*已完成|⏳|⏸️" docs/M0-进度报告.md docs/实施计划-v2.md
 
 # 检查 schema 与代码字段一致性
-python tools/validate_schemas.py
+rtk python tools/validate_schemas.py
 ```
 
 ## §6 修订记录

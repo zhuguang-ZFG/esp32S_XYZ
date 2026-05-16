@@ -52,6 +52,7 @@ jobs:
       - name: Run Python unit tests
         run: |
           python tools/test_check_gpio.py -v
+          python -m unittest tools.tests.test_check_gpio -v
           python -m unittest discover -s tests -p "test_*.py" -v
 
   fake-integration:
@@ -64,10 +65,63 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run fake U1 tests
+      - name: Install dependencies
+        run: python -m pip install jsonschema
+
+      - name: Run fake tool tests
         run: |
           python tools/fake_u1/test_fake_u1.py -v
-          python -m unittest tools.fake_u1.tests.test_app tests.ci.test_fake_integration -v
+          python -m unittest tools.fake_u1.tests.test_app -v
+          python -m unittest tools.fake_device_server.tests.test_app -v
+          python -m unittest tools.fake_ai.tests.test_app -v
+          python -m unittest tests.ci.test_fake_integration -v
+
+  manager-api-tests:
+    name: Manager API tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/xiaozhi-esp32-server/main/manager-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run App V2 tests
+        run: mvn "-Dtest=RenExceptionHandlerTest,SafetyValidatorTest,SafetyAuditServiceTest,ContentAuditServiceTest,ContentAuditLogServiceTest,SingleLineSvgValidatorTest,WriteTextProjectionServiceTest,DrawGeneratedProjectionServiceTest,FactoryEntitlementServiceTest,ResourceEntitlementServiceTest,FirmwareReleaseServiceTest,FirmwareReleaseControllerTest,MemberServiceImplTest,VoiceprintEnrollmentServiceImplTest,PrivacyDeletionServiceImplTest,DeviceSupplyServiceImplTest,PrimarySessionServiceImplTest,DeviceTransferServiceImplTest,DeviceRmaServiceImplTest,ProductNotificationOutboxServiceImplTest,MonitoringMetricsServiceImplTest,MonitoringMetricsControllerTest,AppV2ServiceImplTest,AppV2ControllerTest,InternalMotionEventControllerTest,ConfigControllerTest,DeviceServerMotionGatewayImplTest,EdgeAClientHubTest,ClientEdgeWebSocketHandlerTest" test
+
+  manager-mobile-tests:
+    name: Manager mobile tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/xiaozhi-esp32-server/main/manager-mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Type check
+        run: corepack pnpm run type-check
+
+      - name: Build WeChat mini program
+        run: corepack pnpm run build:mp-weixin
+
+      - name: Verify WeChat permission artifact
+        run: |
+          node -e "const fs = require('node:fs'); const app = JSON.parse(fs.readFileSync('dist/build/mp-weixin/app.json', 'utf8')); const permission = app.permission || {}; if (!permission['scope.record']) throw new Error('missing scope.record'); if (!permission['scope.userLocation']) throw new Error('missing scope.userLocation'); if (!(app.requiredPrivateInfos || []).includes('getLocation')) throw new Error('missing getLocation private info');"
 
   markdown-link-check:
     name: Markdown link check

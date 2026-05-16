@@ -105,10 +105,12 @@ public:
 
     void Reboot();
     void WakeWordInvoke(const std::string& wake_word);
-    bool UpgradeFirmware(const std::string& url, const std::string& version = "");
+    bool UpgradeFirmware(const std::string& url, const std::string& version = "", const std::string& sha256 = "", const std::string& signature = "");
     bool CanEnterSleepMode();
     void SendMcpMessage(const std::string& payload);
     void SendMotionEvent(cJSON* fields);
+    void SendDeviceInfo(cJSON* fields);
+    void SendSelfCheck(cJSON* fields);
     void SetAecMode(AecMode mode);
     AecMode GetAecMode() const { return aec_mode_; }
     void PlaySound(const std::string_view& sound);
@@ -164,6 +166,7 @@ private:
     void CheckAssetsVersion();
     void CheckNewVersion();
     void InitializeProtocol();
+    void RunStartupSelfCheck();
     void ShowActivationCode(const std::string& code, const std::string& message);
     void SetListeningMode(ListeningMode mode);
     ListeningMode GetDefaultListeningMode() const;

@@ -96,8 +96,16 @@ public class ShiroConfig {
         filterMap.put("/agent/chat-title/**", "server");
         filterMap.put("/agent/play/**", "anon");
         filterMap.put("/voiceClone/play/**", "anon");
-        // M2.6：xiaozhi-server 使用 Bearer internal-token 调用，不经 OAuth2
+        // Prometheus scrape uses the same internal server-secret contract as /config.
+        filterMap.put("/internal/v1/metrics", "server");
+        // M2.6 / M2.13：xiaozhi-server 使用 Bearer internal-token 调用，不经 OAuth2
         filterMap.put("/internal/v1/motion_event", "anon");
+        filterMap.put("/internal/v1/device_info", "anon");
+        filterMap.put("/internal/v1/self_check", "anon");
+        filterMap.put("/internal/v1/voice_task", "anon");
+        filterMap.put("/internal/v1/voiceprints/cache", "anon");
+        filterMap.put("/internal/v1/firmware/upgrade-plan", "anon");
+        filterMap.put("/internal/v1/firmware/install-result", "anon");
         // M2.7：Edge-A WSS 握手不经 OAuth2 Filter；首帧 JSON auth 校验 JWT（见 docs/schemas/edge_a）
         filterMap.put("/ws/v1/client", "anon");
         filterMap.put("/**", "oauth2");

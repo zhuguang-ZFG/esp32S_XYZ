@@ -35,23 +35,23 @@ fake 结论不能替代 M0f 实测。
 
 ```bash
 # 默认端口 7799
-python tools/fake_u1/app.py --port 7799
+rtk python tools/fake_u1/app.py --port 7799
 
 # 模拟 50ms 响应延迟
-python tools/fake_u1/app.py --latency-ms 50
+rtk python tools/fake_u1/app.py --latency-ms 50
 ```
 
 ### 3.2 错误注入
 
 ```bash
 # 注入未归零错误
-python tools/fake_u1/app.py --inject E001
+rtk python tools/fake_u1/app.py --inject E001
 
 # 注入硬限位
-python tools/fake_u1/app.py --inject E005
+rtk python tools/fake_u1/app.py --inject E005
 
 # 注入急停
-python tools/fake_u1/app.py --inject E008
+rtk python tools/fake_u1/app.py --inject E008
 ```
 
 ### 3.3 状态机
@@ -69,7 +69,7 @@ RUNNING → (PAUSE) → PAUSED → (RESUME) → RUNNING
 
 ```bash
 # 运行全部测试
-python -m unittest tools.fake_u1.tests.test_app -v
+rtk python -m unittest tools.fake_u1.tests.test_app -v
 
 # 13/13 通过为正常
 ```
@@ -116,9 +116,9 @@ DeviceServer 在 ai_plan=plan_basic 时调 fake 而非真实 provider
 
 ```bash
 # fake U1
-python tools/fake_u1/app.py --help
-python -m unittest tools.fake_u1.tests.test_app -v
-python -m unittest tests.ci.test_fake_integration -v
+rtk python tools/fake_u1/app.py --help
+rtk python -m unittest tools.fake_u1.tests.test_app -v
+rtk python -m unittest tests.ci.test_fake_integration -v
 
 # fake U1 协议格式验证
 echo '{"type":"command","command":"GET_STATUS"}' | nc localhost 7799

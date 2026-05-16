@@ -10,7 +10,7 @@
     "task_id": { "type": "string" },
     "cmd": {
       "type": "string",
-      "enum": ["GET_STATUS", "HOME", "MOVE", "PAUSE", "RESUME", "STOP", "ESTOP", "PATH_BEGIN", "PATH_SEG", "PATH_END"]
+      "enum": ["GET_STATUS", "GET_DEVICE_INFO", "HOME", "MOVE", "PAUSE", "RESUME", "STOP", "ESTOP", "PATH_BEGIN", "PATH_SEG", "PATH_END"]
     },
     "x": { "type": "number" },
     "y": { "type": "number" },

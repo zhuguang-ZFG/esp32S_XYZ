@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 39,
+  "title": "Manager API Runtime",
+  "tags": ["m6", "manager-api"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Task Failure Ratio",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "biz_task_failure_ratio"}]
+    },
+    {
+      "type": "stat",
+      "title": "Offline Devices",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "dev_device_offline_total"}]
+    },
+    {
+      "type": "stat",
+      "title": "OTA Failure Ratio",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "u8_ota_failure_ratio"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Device Lifecycle Counts",
+      "gridPos": {"x": 0, "y": 6, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "dev_device_bound_total", "legendFormat": "bound"},
+        {"expr": "dev_device_rma_in_progress_total", "legendFormat": "rma_in_progress"},
+        {"expr": "dev_device_returned_total", "legendFormat": "returned"},
+        {"expr": "dev_device_disposed_total", "legendFormat": "disposed"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Product Notification Outbox",
+      "gridPos": {"x": 0, "y": 14, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "product_notification_pending_total", "legendFormat": "pending"},
+        {"expr": "product_notification_failed_total", "legendFormat": "failed"}
+      ]
+    }
+  ],
+  "time": {"from": "now-6h", "to": "now"},
+  "refresh": "30s"
+}

@@ -20,6 +20,10 @@ public class V2DeviceEntity {
     private String fwRev;
     private String workspaceMm;
     private String status;
+    private String runtimeState;
+    private Boolean homed;
+    private String positionMm;
+    private Date runtimeSeenAt;
     private Date lastSeenAt;
     @TableField("created_at")
     private Date createdAt;

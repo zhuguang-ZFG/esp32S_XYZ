@@ -62,6 +62,17 @@ private:
         std::string error_code;
         std::string error_message;
         std::string raw_response;
+        std::string model;
+        std::string hw_rev;
+        std::string fw_rev;
+        bool has_workspace_mm = false;
+        double workspace_x = 0.0;
+        double workspace_y = 0.0;
+        double workspace_z = 0.0;
+        bool has_position = false;
+        double position_x = 0.0;
+        double position_y = 0.0;
+        double position_z = 0.0;
     };
 
     i2c_master_bus_handle_t i2c_bus_ = nullptr;
@@ -73,6 +84,7 @@ private:
     uint32_t protocol_msg_id_ = 0;
     std::string last_motion_device_id_;
     std::string last_motion_capability_raw_;
+    std::string last_motion_source_;
 
     static bool JsonNumberToString(cJSON* item, char* buffer, size_t buffer_size) {
         if (item == nullptr || buffer == nullptr || buffer_size == 0 || !cJSON_IsNumber(item)) {
@@ -198,6 +210,23 @@ private:
         return "";
     }
 
+    static bool GetJsonXyzObject(cJSON* root, const char* key, double& x_out, double& y_out, double& z_out) {
+        cJSON* object = cJSON_GetObjectItemCaseSensitive(root, key);
+        if (object == nullptr || !cJSON_IsObject(object)) {
+            return false;
+        }
+        cJSON* x = cJSON_GetObjectItemCaseSensitive(object, "x");
+        cJSON* y = cJSON_GetObjectItemCaseSensitive(object, "y");
+        cJSON* z = cJSON_GetObjectItemCaseSensitive(object, "z");
+        if (!cJSON_IsNumber(x) || !cJSON_IsNumber(y) || !cJSON_IsNumber(z)) {
+            return false;
+        }
+        x_out = x->valuedouble;
+        y_out = y->valuedouble;
+        z_out = z->valuedouble;
+        return true;
+    }
+
     static cJSON* BuildCapabilityResponseJson(const U1CapabilityResult& result) {
         cJSON* root = cJSON_CreateObject();
         cJSON_AddBoolToObject(root, "ok", result.ok);
@@ -214,6 +243,31 @@ private:
         }
         if (!result.error_message.empty()) {
             cJSON_AddStringToObject(root, "error_message", result.error_message.c_str());
+        }
+        if (!result.model.empty()) {
+            cJSON_AddStringToObject(root, "model", result.model.c_str());
+        }
+        if (!result.hw_rev.empty()) {
+            cJSON_AddStringToObject(root, "hw_rev", result.hw_rev.c_str());
+        }
+        if (!result.fw_rev.empty()) {
+            cJSON_AddStringToObject(root, "fw_rev", result.fw_rev.c_str());
+        }
+        if (result.has_workspace_mm) {
+            cJSON* workspace = cJSON_AddObjectToObject(root, "workspace_mm");
+            if (workspace != nullptr) {
+                cJSON_AddNumberToObject(workspace, "x", result.workspace_x);
+                cJSON_AddNumberToObject(workspace, "y", result.workspace_y);
+                cJSON_AddNumberToObject(workspace, "z", result.workspace_z);
+            }
+        }
+        if (result.has_position) {
+            cJSON* position = cJSON_AddObjectToObject(root, "position");
+            if (position != nullptr) {
+                cJSON_AddNumberToObject(position, "x", result.position_x);
+                cJSON_AddNumberToObject(position, "y", result.position_y);
+                cJSON_AddNumberToObject(position, "z", result.position_z);
+            }
         }
         return root;
     }
@@ -250,6 +304,15 @@ private:
         result.state = GetJsonStringValue(root, "state");
         result.error_code = GetJsonStringValue(root, "code");
         result.error_message = GetJsonStringValue(root, "message");
+        result.model = GetJsonStringValue(root, "model");
+        result.hw_rev = GetJsonStringValue(root, "hw_rev");
+        result.fw_rev = GetJsonStringValue(root, "fw_rev");
+        if (GetJsonXyzObject(root, "workspace_mm", result.workspace_x, result.workspace_y, result.workspace_z)) {
+            result.has_workspace_mm = true;
+        }
+        if (GetJsonXyzObject(root, "position", result.position_x, result.position_y, result.position_z)) {
+            result.has_position = true;
+        }
 
         bool parsed_msg_id = false;
         cJSON* msg_id_item = cJSON_GetObjectItemCaseSensitive(root, "msg_id");
@@ -319,7 +382,7 @@ private:
                                          const std::string& task_id,
                                          const std::string& cmd,
                                          const std::string& extra_fields = "") {
-        std::string line = "{\"msg_id\":\"" + std::to_string(msg_id) + "\",\"type\":\"cmd\",\"task_id\":\"" + task_id +
+        std::string line = "{\"msg_id\":\"" + std::to_string(msg_id) + "\",\"task_id\":\"" + task_id +
                            "\",\"cmd\":\"" + cmd + "\"";
         if (!extra_fields.empty()) {
             line += "," + extra_fields;
@@ -373,6 +436,18 @@ private:
         return static_cast<int>(it->valuedouble);
     }
 
+    static bool JsonValueIsOk(cJSON* root) {
+        if (root == nullptr) {
+            return false;
+        }
+        cJSON* ok = cJSON_GetObjectItemCaseSensitive(root, "ok");
+        return cJSON_IsBool(ok) && cJSON_IsTrue(ok);
+    }
+
+    static bool JsonValueHasXyz(cJSON* root, const char* key, double& x, double& y, double& z) {
+        return root != nullptr && GetJsonXyzObject(root, key, x, y, z);
+    }
+
     static void FreeReturnValueIfJson(ReturnValue& rv) {
         if (auto* p = std::get_if<cJSON*>(&rv)) {
             if (*p != nullptr) {
@@ -392,6 +467,16 @@ private:
         return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "GET_STATUS", 120), msg_id, task_id, "GET_STATUS");
     }
 
+    ReturnValue ExecuteGetDeviceInfoWithTaskId(const std::string& task_id) {
+        const uint32_t msg_id = NextProtocolMessageId();
+        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "GET_DEVICE_INFO", 120), msg_id, task_id, "GET_DEVICE_INFO");
+    }
+
+    ReturnValue ExecuteControlWithTaskId(const std::string& task_id, const char* cmd) {
+        const uint32_t msg_id = NextProtocolMessageId();
+        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, cmd, 120), msg_id, task_id, cmd);
+    }
+
     ReturnValue ExecuteMoveWithTaskId(const std::string& task_id, int x, int y, int z, int feed) {
         if (feed < 1 || feed > 20000) {
             return std::string("invalid move params: feed must be within [1, 20000]");
@@ -406,6 +491,62 @@ private:
         return ParseCapabilityResponse(response, msg_id, task_id, "MOVE");
     }
 
+    ReturnValue ExecuteMoveRelWithTaskId(const std::string& task_id, int dx, int dy, int dz, int feed) {
+        if (feed < 1 || feed > 20000) {
+            return std::string("relative move rejected: feed must be within [1, 20000]");
+        }
+        if (dx < -1 || dx > 1 || dy < -1 || dy > 1 || dz < -1 || dz > 1) {
+            return std::string("relative move rejected: each axis step must be within [-1, 1] mm");
+        }
+        if (dx == 0 && dy == 0 && dz == 0) {
+            return std::string("relative move rejected: at least one axis step is required");
+        }
+
+        ReturnValue status_rv = ExecuteGetStatusWithTaskId(task_id);
+        cJSON* status = nullptr;
+        if (auto* p = std::get_if<cJSON*>(&status_rv)) {
+            status = *p;
+        }
+
+        double current_x = 0.0;
+        double current_y = 0.0;
+        double current_z = 0.0;
+        if (!JsonValueIsOk(status) || !JsonValueHasXyz(status, "position", current_x, current_y, current_z)) {
+            FreeReturnValueIfJson(status_rv);
+            return std::string("relative move rejected: unable to read current position");
+        }
+        FreeReturnValueIfJson(status_rv);
+
+        ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
+        cJSON* info = nullptr;
+        if (auto* p = std::get_if<cJSON*>(&info_rv)) {
+            info = *p;
+        }
+
+        double workspace_x = 0.0;
+        double workspace_y = 0.0;
+        double workspace_z = 0.0;
+        if (!JsonValueIsOk(info) || !JsonValueHasXyz(info, "workspace_mm", workspace_x, workspace_y, workspace_z)) {
+            FreeReturnValueIfJson(info_rv);
+            return std::string("relative move rejected: unable to verify workspace");
+        }
+        FreeReturnValueIfJson(info_rv);
+
+        const double target_x = current_x + dx;
+        const double target_y = current_y + dy;
+        const double target_z = current_z + dz;
+        if (target_x < 0.0 || target_y < 0.0 || target_z < 0.0 ||
+            target_x > workspace_x || target_y > workspace_y || target_z > workspace_z) {
+            return std::string("relative move rejected: target outside workspace");
+        }
+
+        return ExecuteMoveWithTaskId(task_id,
+                                     static_cast<int>(target_x),
+                                     static_cast<int>(target_y),
+                                     static_cast<int>(target_z),
+                                     feed);
+    }
+
     ReturnValue ExecuteHomeCapability() {
         return ExecuteHomeWithTaskId(NextLocalTaskId("home"));
     }
@@ -414,8 +555,28 @@ private:
         return ExecuteGetStatusWithTaskId(NextLocalTaskId("status"));
     }
 
+    ReturnValue ExecuteGetDeviceInfoCapability() {
+        return ExecuteGetDeviceInfoWithTaskId(NextLocalTaskId("device_info"));
+    }
+
+    ReturnValue ExecutePauseCapability() {
+        return ExecuteControlWithTaskId(NextLocalTaskId("pause"), "PAUSE");
+    }
+
+    ReturnValue ExecuteResumeCapability() {
+        return ExecuteControlWithTaskId(NextLocalTaskId("resume"), "RESUME");
+    }
+
+    ReturnValue ExecuteStopCapability() {
+        return ExecuteControlWithTaskId(NextLocalTaskId("stop"), "STOP");
+    }
+
     ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed) {
         return ExecuteMoveWithTaskId(NextLocalTaskId("move"), x, y, z, feed);
+    }
+
+    ReturnValue ExecuteMoveRelCapability(int dx, int dy, int dz, int feed) {
+        return ExecuteMoveRelWithTaskId(NextLocalTaskId("move_rel"), dx, dy, dz, feed);
     }
 
     void InitializeWebSocketControlServer() {
@@ -426,7 +587,7 @@ private:
         }
     }
 
-    ReturnValue RunPathWithTaskId(const std::string& task_id, const std::string& path_json, int feed_rate) {
+    ReturnValue RunPathWithTaskId(const std::string& task_id, const std::string& path_json, int feed_rate, bool emit_progress = false) {
         cJSON* root = cJSON_Parse(path_json.c_str());
         if (root == nullptr || !cJSON_IsArray(root)) {
             if (root != nullptr) {
@@ -492,6 +653,9 @@ private:
                 return std::string("path segment failed: ") + (response.empty() ? "timeout" : response);
             }
             ++segment_index;
+            if (emit_progress) {
+                EmitMotionEventProgress(task_id, segment_index, total_segments);
+            }
         }
 
         cJSON_Delete(root);
@@ -523,6 +687,60 @@ private:
         if (!last_motion_capability_raw_.empty()) {
             cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
         }
+        if (!last_motion_source_.empty()) {
+            cJSON_AddStringToObject(o, "source", last_motion_source_.c_str());
+        }
+        Application::GetInstance().SendMotionEvent(o);
+        cJSON_Delete(o);
+    }
+
+    void EmitMotionEventError(const std::string& task_id, const char* phase, const char* error_code, const char* error_message) {
+        cJSON* o = cJSON_CreateObject();
+        if (o == nullptr) {
+            return;
+        }
+        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
+        cJSON_AddStringToObject(o, "phase", phase);
+        cJSON_AddStringToObject(o, "error_code", error_code);
+        cJSON_AddStringToObject(o, "error_message", error_message);
+        if (!last_motion_device_id_.empty()) {
+            cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
+        }
+        if (!last_motion_capability_raw_.empty()) {
+            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
+        }
+        if (!last_motion_source_.empty()) {
+            cJSON_AddStringToObject(o, "source", last_motion_source_.c_str());
+        }
+        Application::GetInstance().SendMotionEvent(o);
+        cJSON_Delete(o);
+    }
+
+    void EmitMotionEventProgress(const std::string& task_id, int done_segments, int total_segments) {
+        if (total_segments <= 0) {
+            return;
+        }
+        cJSON* o = cJSON_CreateObject();
+        if (o == nullptr) {
+            return;
+        }
+        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
+        cJSON_AddStringToObject(o, "phase", "progress");
+        if (!last_motion_device_id_.empty()) {
+            cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
+        }
+        if (!last_motion_capability_raw_.empty()) {
+            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
+        }
+        if (!last_motion_source_.empty()) {
+            cJSON_AddStringToObject(o, "source", last_motion_source_.c_str());
+        }
+        cJSON* progress = cJSON_AddObjectToObject(o, "progress");
+        if (progress != nullptr) {
+            cJSON_AddNumberToObject(progress, "done_segments", done_segments);
+            cJSON_AddNumberToObject(progress, "total_segments", total_segments);
+            cJSON_AddNumberToObject(progress, "percent", (done_segments * 100) / total_segments);
+        }
         Application::GetInstance().SendMotionEvent(o);
         cJSON_Delete(o);
     }
@@ -538,6 +756,50 @@ private:
 
     void EmitMotionEventDoneOrFailed(const ReturnValue& rv, const std::string& task_id) {
         EmitMotionEventPhase(task_id, ReturnValueU1Ok(rv) ? "done" : "failed");
+    }
+
+    void EmitDeviceInfoIfOk(const ReturnValue& rv, const std::string& task_id) {
+        const auto* pj = std::get_if<cJSON*>(&rv);
+        if (pj == nullptr || *pj == nullptr || !ReturnValueU1Ok(rv)) {
+            return;
+        }
+        if (last_motion_device_id_.empty()) {
+            return;
+        }
+        cJSON* workspace = cJSON_GetObjectItemCaseSensitive(*pj, "workspace_mm");
+        if (workspace == nullptr || !cJSON_IsObject(workspace)) {
+            return;
+        }
+
+        cJSON* o = cJSON_CreateObject();
+        if (o == nullptr) {
+            return;
+        }
+        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
+        cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
+        if (!last_motion_capability_raw_.empty()) {
+            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
+        }
+
+        const char* keys[] = {"model", "hw_rev", "fw_rev"};
+        for (const char* key : keys) {
+            cJSON* value = cJSON_GetObjectItemCaseSensitive(*pj, key);
+            if (!cJSON_IsString(value) || value->valuestring == nullptr || value->valuestring[0] == '\0') {
+                cJSON_Delete(o);
+                return;
+            }
+            cJSON_AddStringToObject(o, key, value->valuestring);
+        }
+
+        cJSON* workspace_copy = cJSON_Duplicate(workspace, 1);
+        if (workspace_copy == nullptr) {
+            cJSON_Delete(o);
+            return;
+        }
+        cJSON_AddItemToObject(o, "workspace_mm", workspace_copy);
+
+        Application::GetInstance().SendDeviceInfo(o);
+        cJSON_Delete(o);
     }
 
     void EmitRunPathOutcome(const ReturnValue& rv, const std::string& task_id) {
@@ -571,13 +833,24 @@ private:
 
         last_motion_capability_raw_ = cap_item->valuestring;
         last_motion_device_id_.clear();
+        last_motion_source_.clear();
         cJSON* dev_item = cJSON_GetObjectItemCaseSensitive(root, "device_id");
         if (cJSON_IsString(dev_item) && dev_item->valuestring != nullptr) {
             last_motion_device_id_ = dev_item->valuestring;
         }
+        cJSON* source_item = cJSON_GetObjectItemCaseSensitive(root, "source");
+        if (cJSON_IsString(source_item) && source_item->valuestring != nullptr) {
+            last_motion_source_ = source_item->valuestring;
+        }
 
         cJSON* params = cJSON_GetObjectItemCaseSensitive(root, "params");
         ESP_LOGI(TAG, "motion_task capability=%s task_id=%s", cap_norm.c_str(), task_id.c_str());
+
+        if (Application::GetInstance().GetDeviceState() == kDeviceStateUpgrading) {
+            ESP_LOGW(TAG, "motion_task rejected while firmware upgrade is active task_id=%s", task_id.c_str());
+            EmitMotionEventError(task_id, "failed", "E_DEVICE_UPDATING", "device is updating");
+            return;
+        }
 
         if (cap_norm == "home" || cap_norm == "motor.home") {
             EmitMotionEventPhase(task_id, "accepted");
@@ -591,6 +864,31 @@ private:
             ReturnValue rv = ExecuteGetStatusWithTaskId(task_id);
             EmitMotionEventDoneOrFailed(rv, task_id);
             FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "get_device_info" || cap_norm == "motor.get_device_info" || cap_norm == "device_info") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
+            ReturnValue rv = ExecuteGetDeviceInfoWithTaskId(task_id);
+            EmitDeviceInfoIfOk(rv, task_id);
+            EmitMotionEventDoneOrFailed(rv, task_id);
+            FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "pause" || cap_norm == "motor.pause") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
+            ReturnValue rv = ExecuteControlWithTaskId(task_id, "PAUSE");
+            EmitMotionEventDoneOrFailed(rv, task_id);
+            FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "resume" || cap_norm == "motor.resume") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
+            ReturnValue rv = ExecuteControlWithTaskId(task_id, "RESUME");
+            EmitMotionEventDoneOrFailed(rv, task_id);
+            FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "stop" || cap_norm == "motor.stop") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
+            ReturnValue rv = ExecuteControlWithTaskId(task_id, "STOP");
+            EmitMotionEventDoneOrFailed(rv, task_id);
+            FreeReturnValueIfJson(rv);
         } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" || cap_norm == "move" || cap_norm == "motor.move") {
             EmitMotionEventPhase(task_id, "accepted");
             EmitMotionEventPhase(task_id, "running");
@@ -599,6 +897,16 @@ private:
             const int z = MotionParamsGetInt(params, "z", 0);
             const int feed = MotionParamsGetInt(params, "feed", 1000);
             ReturnValue rv = ExecuteMoveWithTaskId(task_id, x, y, z, feed);
+            EmitMotionEventDoneOrFailed(rv, task_id);
+            FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "move_rel" || cap_norm == "motor.move_rel") {
+            EmitMotionEventPhase(task_id, "accepted");
+            EmitMotionEventPhase(task_id, "running");
+            const int dx = MotionParamsGetInt(params, "dx", 0);
+            const int dy = MotionParamsGetInt(params, "dy", 0);
+            const int dz = MotionParamsGetInt(params, "dz", 0);
+            const int feed = MotionParamsGetInt(params, "feed", 800);
+            ReturnValue rv = ExecuteMoveRelWithTaskId(task_id, dx, dy, dz, feed);
             EmitMotionEventDoneOrFailed(rv, task_id);
             FreeReturnValueIfJson(rv);
         } else if (cap_norm == "run_path" || cap_norm == "motor.run_path" || cap_norm == "path") {
@@ -628,7 +936,7 @@ private:
             }
             EmitMotionEventPhase(task_id, "accepted");
             EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = RunPathWithTaskId(task_id, path_json, feed_rate);
+            ReturnValue rv = RunPathWithTaskId(task_id, path_json, feed_rate, true);
             EmitRunPathOutcome(rv, task_id);
             if (const auto* msg = std::get_if<std::string>(&rv)) {
                 if (msg->find("failed") != std::string::npos || msg->find("invalid") != std::string::npos) {
@@ -659,6 +967,34 @@ private:
                                return ExecuteGetStatusCapability();
                            });
 
+        mcp_server.AddTool("self.motor.get_device_info",
+                           "Query U1 device information through the private protocol.",
+                           PropertyList(),
+                           [this](const PropertyList&) -> ReturnValue {
+                               return ExecuteGetDeviceInfoCapability();
+                           });
+
+        mcp_server.AddTool("self.motor.pause",
+                           "Send PAUSE through the private protocol.",
+                           PropertyList(),
+                           [this](const PropertyList&) -> ReturnValue {
+                               return ExecutePauseCapability();
+                           });
+
+        mcp_server.AddTool("self.motor.resume",
+                           "Send RESUME through the private protocol.",
+                           PropertyList(),
+                           [this](const PropertyList&) -> ReturnValue {
+                               return ExecuteResumeCapability();
+                           });
+
+        mcp_server.AddTool("self.motor.stop",
+                           "Send STOP through the private protocol.",
+                           PropertyList(),
+                           [this](const PropertyList&) -> ReturnValue {
+                               return ExecuteStopCapability();
+                           });
+
         mcp_server.AddTool("self.motor.move_abs",
                            "Send MOVE through the private protocol.",
                            PropertyList({
@@ -674,6 +1010,22 @@ private:
                                 int feed = properties["feed"].value<int>();
                                 return ExecuteMoveCapability(x, y, z, feed);
                             });
+
+        mcp_server.AddTool("self.motor.move_rel",
+                           "Move by a whitelisted relative step of at most 1 mm per axis.",
+                           PropertyList({
+                               Property("dx", kPropertyTypeInteger, 0, -1, 1),
+                               Property("dy", kPropertyTypeInteger, 0, -1, 1),
+                               Property("dz", kPropertyTypeInteger, 0, -1, 1),
+                               Property("feed", kPropertyTypeInteger, 800, 1, 20000)
+                           }),
+                           [this](const PropertyList& properties) -> ReturnValue {
+                               int dx = properties["dx"].value<int>();
+                               int dy = properties["dy"].value<int>();
+                               int dz = properties["dz"].value<int>();
+                               int feed = properties["feed"].value<int>();
+                               return ExecuteMoveRelCapability(dx, dy, dz, feed);
+                           });
 
         mcp_server.AddTool("self.motor.run_path",
                            "Run a path capability on U8 through the private protocol.",
@@ -710,6 +1062,14 @@ public:
 
     Camera* GetCamera() override {
         return camera_;
+    }
+
+    bool CheckU1Uart(std::string& detail) override {
+        ReturnValue rv = ExecuteGetStatusWithTaskId("self_check_u1");
+        const bool ok = ReturnValueU1Ok(rv);
+        detail = ok ? "GET_STATUS ok" : "GET_STATUS failed";
+        FreeReturnValueIfJson(rv);
+        return ok;
     }
 };
 

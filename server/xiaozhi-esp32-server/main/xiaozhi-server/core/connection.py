@@ -41,6 +41,7 @@ from config.logger import setup_logging, build_module_string, create_connection_
 from config.manage_api_client import DeviceNotFoundException, DeviceBindException, generate_and_save_chat_title
 from core.utils.prompt_manager import PromptManager
 from core.utils.voiceprint_provider import VoiceprintProvider
+from core.utils.voiceprint_cache import ActiveVoiceprintCache
 from core.utils.util import get_system_error_response
 from core.utils import textUtils
 
@@ -156,6 +157,11 @@ class ConnectionHandler:
         self.asr_audio = []
         self.asr_audio_queue = queue.Queue()
         self.current_speaker = None  # 存储当前说话人
+        self.current_speaker_ref = None
+        if server is not None and hasattr(server, "voiceprint_cache"):
+            self.voiceprint_cache = server.voiceprint_cache
+        else:
+            self.voiceprint_cache = ActiveVoiceprintCache()
 
         # llm相关变量
         self.dialogue = Dialogue()

@@ -183,8 +183,13 @@ class GPIOChecker:
         """根据信号名称推断引脚类型"""
         signal_upper = signal_name.upper()
         
-        # INPUT 信号（先检查，因为 SENSOR 可能包含其他关键词）
-        input_keywords = ['SENSOR', 'RXD', 'RX', 'MISO', 'DI', 'INPUT']
+        # BIDIRECTIONAL 信号先检查，避免 AUDIO/CODEC 等名称里的 "DI" 误伤 I2C_SDA/SCL。
+        bidir_keywords = ['SDA', 'SCL', 'DAT', 'CMD']
+        if any(kw in signal_upper for kw in bidir_keywords):
+            return PinType.BIDIRECTIONAL
+
+        # INPUT 信号
+        input_keywords = ['SENSOR', 'LIMIT', 'RXD', 'RX', 'MISO', 'DI', 'INPUT']
         if any(kw in signal_upper for kw in input_keywords):
             return PinType.INPUT
         
@@ -192,11 +197,6 @@ class GPIOChecker:
         output_keywords = ['STEP', 'DIR', 'EN', 'PWM', 'CONTROL', 'SCLK', 'TXD', 'TX', 'OUTPUT']
         if any(kw in signal_upper for kw in output_keywords):
             return PinType.OUTPUT
-        
-        # BIDIRECTIONAL 信号
-        bidir_keywords = ['SDA', 'SCL', 'DAT', 'CMD']
-        if any(kw in signal_upper for kw in bidir_keywords):
-            return PinType.BIDIRECTIONAL
         
         return PinType.UNKNOWN
     
@@ -297,8 +297,10 @@ class GPIOChecker:
                 elif 'U1' in signal_upper and 'RXD' in signal_upper:
                     u1_uart_rx = defn
         
-        # 验证交叉连接：U8 TXD = U1 RXD, U8 RXD = U1 TXD
-        if u8_uart_tx and u1_uart_rx:
+        # 验证交叉连接。硬件基准固定为：
+        # U8 GPIO11 = M_U1TXD -> U1 RXD, U8 GPIO10 = M_U1RXD <- U1 TXD.
+        # U1 固件侧可能不显式声明 UART1 pin，因此 U8 侧一旦出现就独立检查。
+        if u8_uart_tx:
             if u8_uart_tx.gpio != 11:  # 根据硬件文档，U8.IO11 = M_U1TXD
                 self.issues.append(Issue(
                     severity=Severity.ERROR,
@@ -309,7 +311,7 @@ class GPIOChecker:
                     mcu="U8"
                 ))
         
-        if u8_uart_rx and u1_uart_tx:
+        if u8_uart_rx:
             if u8_uart_rx.gpio != 10:  # 根据硬件文档，U8.IO10 = M_U1RXD
                 self.issues.append(Issue(
                     severity=Severity.ERROR,
