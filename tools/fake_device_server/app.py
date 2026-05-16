@@ -155,6 +155,19 @@ class FakeDeviceServerHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(body, separators=(",", ":")).encode("utf-8"))
 
+    def do_GET(self) -> None:
+        path = self.path.split("?")[0].rstrip("/")
+        if path == "/internal/v1/voiceprints/cache":
+            self._handle_voiceprint_cache_get()
+        else:
+            self._send_json(404, {"code": 404, "message": "not found"})
+
+    def _handle_voiceprint_cache_get(self) -> None:
+        if not self._check_auth():
+            self._send_json(401, {"code": 401, "message": "unauthorized"})
+            return
+        self._send_json(200, {"code": 0, "data": {"voiceprints": [], "mode": "voiceprint_off"}})
+
     def do_POST(self) -> None:
         path = self.path.rstrip("/")
         if path == "/internal/v1/motion_task":
@@ -163,6 +176,14 @@ class FakeDeviceServerHandler(BaseHTTPRequestHandler):
             self._handle_motion_event()
         elif path == "/internal/v1/device_info":
             self._handle_device_info()
+        elif path == "/internal/v1/self_check":
+            self._handle_self_check()
+        elif path == "/internal/v1/voiceprints/cache":
+            self._handle_voiceprint_cache()
+        elif path == "/internal/v1/firmware/plan":
+            self._handle_firmware_plan()
+        elif path == "/internal/v1/firmware/install_result":
+            self._handle_firmware_install_result()
         else:
             self._send_json(404, {"code": 404, "message": "not found"})
 
@@ -239,6 +260,63 @@ class FakeDeviceServerHandler(BaseHTTPRequestHandler):
             return
 
         print(f"  device_info report: device_id={body.get('device_id')} model={body.get('model')}")
+        self._send_json(200, {"code": 0})
+
+    def _handle_self_check(self) -> None:
+        if not self._check_auth():
+            self._send_json(401, {"code": 401, "message": "unauthorized"})
+            return
+
+        body = self._json_body()
+        if not body:
+            self._send_json(400, {"code": 400, "message": "empty body"})
+            return
+
+        print(f"  self_check ingest: device_id={body.get('device_id')} status={body.get('status')}")
+        self._send_json(200, {"code": 0})
+
+    def _handle_voiceprint_cache(self) -> None:
+        if not self._check_auth():
+            self._send_json(401, {"code": 401, "message": "unauthorized"})
+            return
+
+        body = self._json_body()
+        if not body:
+            self._send_json(400, {"code": 400, "message": "empty body"})
+            return
+
+        device_id = body.get("device_id", "")
+        print(f"  voiceprint_cache request: device_id={device_id}")
+        self._send_json(200, {"code": 0, "data": {"voiceprints": [], "mode": "voiceprint_off"}})
+
+    def _handle_firmware_plan(self) -> None:
+        if not self._check_auth():
+            self._send_json(401, {"code": 401, "message": "unauthorized"})
+            return
+
+        body = self._json_body()
+        if not body:
+            self._send_json(400, {"code": 400, "message": "empty body"})
+            return
+
+        device_id = body.get("device_id", "")
+        current_version = body.get("current_version", "")
+        print(f"  firmware_plan request: device_id={device_id} current={current_version}")
+        self._send_json(200, {"code": 0, "data": {"has_update": False}})
+
+    def _handle_firmware_install_result(self) -> None:
+        if not self._check_auth():
+            self._send_json(401, {"code": 401, "message": "unauthorized"})
+            return
+
+        body = self._json_body()
+        if not body:
+            self._send_json(400, {"code": 400, "message": "empty body"})
+            return
+
+        device_id = body.get("device_id", "")
+        success = body.get("success", False)
+        print(f"  firmware_install_result: device_id={device_id} success={success}")
         self._send_json(200, {"code": 0})
 
     def _forward_to_business(self, path: str, body: dict) -> None:

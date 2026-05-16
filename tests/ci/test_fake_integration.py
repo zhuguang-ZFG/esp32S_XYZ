@@ -207,6 +207,28 @@ class FakeU1SocketIntegrationTests(unittest.TestCase):
         self.assertEqual(status["position"], {"x": 10.0, "y": 10.0, "z": 0.0})
         self.assert_schema_valid(self.status_schema, status)
 
+    def test_m5_self_check_route(self) -> None:
+        response = self.post_device_server(
+            "/internal/v1/self_check",
+            {"device_id": "dev-ci", "check_id": "startup", "status": "passed", "results": {"nvs": "ok", "wifi": "ok"}},
+        )
+        self.assertEqual(response["code"], 0)
+
+    def test_m5_firmware_plan_route(self) -> None:
+        response = self.post_device_server(
+            "/internal/v1/firmware/plan",
+            {"device_id": "dev-ci", "current_version": "1.0.0", "chip": "esp32s3"},
+        )
+        self.assertEqual(response["code"], 0)
+        self.assertFalse(response["data"]["has_update"])
+
+    def test_m5_firmware_install_result_route(self) -> None:
+        response = self.post_device_server(
+            "/internal/v1/firmware/install_result",
+            {"device_id": "dev-ci", "success": True, "version": "1.1.0"},
+        )
+        self.assertEqual(response["code"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

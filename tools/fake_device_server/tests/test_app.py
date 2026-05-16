@@ -1,11 +1,16 @@
 """M0c.2 fake_device_server 单元测试。"""
 import json
+import threading
 import unittest
+import urllib.error
+import urllib.request
+from http.server import HTTPServer
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from fake_device_server.app import (
+    FakeDeviceServerHandler,
     build_arg_parser,
     device_info_report_from_u1_response,
     motion_task_to_u1_command,
@@ -119,3 +124,70 @@ class TestMotionTaskMapping(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestM5M6Routes(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        FakeDeviceServerHandler.business_base_url = ""
+        FakeDeviceServerHandler.internal_token = "test-token"
+        cls.server = HTTPServer(("127.0.0.1", 0), FakeDeviceServerHandler)
+        cls.host, cls.port = cls.server.server_address
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=5)
+
+    def _post(self, path, body, token="test-token"):
+        req = urllib.request.Request(
+            f"http://{self.host}:{self.port}{path}",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())
+
+    def _get(self, path, token="test-token"):
+        req = urllib.request.Request(
+            f"http://{self.host}:{self.port}{path}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())
+
+    def test_self_check_accepts_valid_payload(self):
+        result = self._post("/internal/v1/self_check", {"device_id": "dev-1", "status": "passed"})
+        self.assertEqual(result["code"], 0)
+
+    def test_voiceprint_cache_get_returns_empty(self):
+        result = self._get("/internal/v1/voiceprints/cache?device_id=dev-1")
+        self.assertEqual(result["code"], 0)
+        self.assertEqual(result["data"]["voiceprints"], [])
+        self.assertEqual(result["data"]["mode"], "voiceprint_off")
+
+    def test_firmware_plan_returns_no_update(self):
+        result = self._post("/internal/v1/firmware/plan", {"device_id": "dev-1", "current_version": "1.0.0"})
+        self.assertEqual(result["code"], 0)
+        self.assertFalse(result["data"]["has_update"])
+
+    def test_firmware_install_result_accepts(self):
+        result = self._post("/internal/v1/firmware/install_result", {"device_id": "dev-1", "success": True})
+        self.assertEqual(result["code"], 0)
+
+    def test_unauthorized_request_rejected(self):
+        req = urllib.request.Request(
+            f"http://{self.host}:{self.port}/internal/v1/self_check",
+            data=json.dumps({"device_id": "dev-1"}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": "Bearer wrong-token"},
+            method="POST",
+        )
+        try:
+            urllib.request.urlopen(req, timeout=5)
+            self.fail("Expected HTTP error")
+        except urllib.error.HTTPError as e:
+            self.assertEqual(e.code, 401)
