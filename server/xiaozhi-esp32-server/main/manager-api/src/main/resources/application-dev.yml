@@ -67,5 +67,5 @@ v2:
   dashscope:
     enabled: true
     api-key: ${DASHSCOPE_API_KEY:}
-    model: qwen-plus
-    timeout-seconds: 10
+    model: qwen-image-2.0
+    timeout-seconds: 15
