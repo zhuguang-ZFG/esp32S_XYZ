@@ -261,7 +261,7 @@ class GPIOChecker:
                                     "known risk" in next_line.lower() or
                                     "已知风险" in next_line):
                                     has_known_risk = True
-                    except:
+                    except (OSError, IndexError):
                         pass
                 
                 if not has_known_risk:

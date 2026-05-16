@@ -1,11 +1,16 @@
+import os
+import sys
 import httpx, json, time, base64
 from PIL import Image
 from io import BytesIO
 import numpy as np
 from skimage.morphology import skeletonize
 
-API_KEY = 'sk-sp-djI.pO4-by3NZh1AD6lxgsUZqcFjfGrg2wwbZOwfD9vDR0mMnSAlHi_b_pq9aM-CWV69RZCWwk0SFbmUAl6As84Guvmb6kwep7tqP7rXSt-w0QGaooimi0T6QWSkVtP_xTtR5kaUA8BliYNLkZuvPxO3GgAmHrEvRcFp7SItvt1wZ0sCTFWjhWg9SCMCe86MU_9e.MEYCIQDB2_A46Boq4Pl32PdQR2jOBEbRFL5suPHllq1HrToiDQIhAOq_SBm7Bn32LNkeMOMgFELobO8nYJE6vMt1z3jasZJT'
-URL = 'https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions'
+API_KEY = os.environ.get('QWEN_IMAGE_API_KEY', '')
+URL = os.environ.get('QWEN_IMAGE_API_URL', 'https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions')
+
+if not API_KEY:
+    sys.exit('ERROR: 环境变量 QWEN_IMAGE_API_KEY 未设置。请设置后重试。')
 
 
 def gen(prompt):

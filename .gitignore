@@ -26,3 +26,10 @@ sdkconfig.orig
 # Python 字节码缓存（fake_u1 等仿真器产生）
 __pycache__/
 *.pyc
+
+# 本地 PDF 处理依赖（PyMuPDF 等）
+.deps_pdf/
+
+# 敏感凭据 — 绝不提交
+.env
+*.env.local
