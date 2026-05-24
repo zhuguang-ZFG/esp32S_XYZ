@@ -64,6 +64,7 @@ Useful CLI entry points:
 rtk python tools/fake_u1/app.py --help
 rtk python tools/fake_device_server/app.py --help
 rtk python tools/fake_ai/app.py --help
+rtk python tools/fake_lima_u8/app.py --help
 ```
 
 Notes:
@@ -73,6 +74,10 @@ Notes:
 - fake DeviceServer maps `get_device_info` motion tasks to fake U1 `GET_DEVICE_INFO` and returns a `device_info` report payload.
 - fake DeviceServer expands `run_path` motion tasks into `PATH_BEGIN` / `PATH_SEG` / `PATH_END` Edge-D command sequences.
 - fake AI emits Edge-B shaped `intent_submit` payloads for deterministic device-intent tests.
+- fake LiMa U8 speaks LiMa `/device/v1/ws` in text mode: `hello`, `heartbeat`,
+  `transcript`, `motion_event`, and expected `motion_task` handling. Its unit
+  tests use an in-memory transport, while the CLI imports `websockets` only
+  when connecting to a real LiMa server.
 
 ## CI Coverage
 
