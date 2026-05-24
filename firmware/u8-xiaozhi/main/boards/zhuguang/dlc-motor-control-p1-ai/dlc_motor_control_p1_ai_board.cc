@@ -811,6 +811,8 @@ private:
         }
     }
 
+    bool SupportsMotionTask() override { return true; }
+
     void HandleMotionTaskJson(const cJSON* root) override {
         if (root == nullptr) {
             return;
@@ -818,6 +820,14 @@ private:
         cJSON* cap_item = cJSON_GetObjectItemCaseSensitive(root, "capability");
         if (!cJSON_IsString(cap_item) || cap_item->valuestring == nullptr) {
             ESP_LOGW(TAG, "motion_task: missing capability");
+            std::string fallback_id;
+            cJSON* task_item = cJSON_GetObjectItemCaseSensitive(root, "task_id");
+            if (cJSON_IsString(task_item) && task_item->valuestring != nullptr && task_item->valuestring[0] != '\0') {
+                fallback_id = task_item->valuestring;
+            } else {
+                fallback_id = NextLocalTaskId("motion");
+            }
+            EmitMotionEventError(fallback_id, "failed", "E_UNSUPPORTED_CAPABILITY", "capability field is missing");
             return;
         }
         const std::string cap_norm = NormalizeMotionCapabilityName(cap_item->valuestring);
@@ -931,7 +941,8 @@ private:
                 }
             }
             if (path_json.empty()) {
-                ESP_LOGW(TAG, "motion_task run_path: missing path_json/path in params");
+                ESP_LOGW(TAG, "motion_task run_path: missing path_json/path in params task_id=%s", task_id.c_str());
+                EmitMotionEventError(task_id, "failed", "E_MISSING_PATH", "path or path_json is missing from params");
                 return;
             }
             EmitMotionEventPhase(task_id, "accepted");
@@ -946,7 +957,9 @@ private:
                 }
             }
         } else {
-            ESP_LOGW(TAG, "motion_task: unsupported capability '%s'", cap_item->valuestring);
+            ESP_LOGW(TAG, "motion_task: unsupported capability '%s' task_id=%s", cap_item->valuestring, task_id.c_str());
+            EmitMotionEventError(task_id, "failed", "E_UNSUPPORTED_CAPABILITY",
+                                 ("unsupported capability: " + std::string(cap_item->valuestring)).c_str());
         }
     }
 

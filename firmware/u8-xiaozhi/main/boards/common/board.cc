@@ -4,6 +4,7 @@
 #include "display/display.h"
 #include "display/oled_display.h"
 #include "assets/lang_config.h"
+#include "application.h"
 
 #include <esp_log.h>
 #include <esp_ota_ops.h>
@@ -68,7 +69,25 @@ Led* Board::GetLed() {
 }
 
 void Board::HandleMotionTaskJson(const cJSON* root) {
-    (void)root;
+    if (SupportsMotionTask()) {
+        ESP_LOGW(TAG, "HandleMotionTaskJson called on board that claims support but has no override");
+    }
+    const char* task_id = "unknown";
+    const cJSON* task_id_item = cJSON_GetObjectItem(root, "task_id");
+    if (cJSON_IsString(task_id_item)) {
+        task_id = task_id_item->valuestring;
+    }
+    ESP_LOGW(TAG, "motion task %s rejected: board does not support motion tasks", task_id);
+
+    cJSON* event = cJSON_CreateObject();
+    if (event == nullptr) return;
+    cJSON_AddStringToObject(event, "type", "motion_event");
+    cJSON_AddStringToObject(event, "task_id", task_id);
+    cJSON_AddStringToObject(event, "phase", "failed");
+    cJSON_AddStringToObject(event, "error_code", "E_UNSUPPORTED_BOARD");
+    cJSON_AddStringToObject(event, "error_message", "board does not support motion tasks");
+    Application::GetInstance().SendMotionEvent(event);
+    cJSON_Delete(event);
 }
 
 bool Board::CheckU1Uart(std::string& detail) {

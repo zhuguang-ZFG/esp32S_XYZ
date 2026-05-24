@@ -84,8 +84,10 @@ public:
     virtual std::string GetBoardJson() = 0;
     virtual std::string GetDeviceStatusJson() = 0;
 
-    /** M2.5：云端 WSS 下行 `type=motion_task` 时由 Application 转发；默认忽略。 */
+    /** M2.5：云端 WSS 下行 `type=motion_task` 时由 Application 转发；默认发送 E_UNSUPPORTED_BOARD 失败事件。 */
     virtual void HandleMotionTaskJson(const cJSON* root);
+    /** 覆写返回 true 的板子才能接收运动任务。默认 false。 */
+    virtual bool SupportsMotionTask() { return false; }
     virtual bool CheckU1Uart(std::string& detail);
 };
 

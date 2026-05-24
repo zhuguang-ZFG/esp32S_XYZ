@@ -84,6 +84,23 @@ def build_motion_event(
     return event
 
 
+def build_motion_failure_event(
+    *,
+    device_id: str,
+    task_id: str,
+    error_code: str,
+    reason: str = "",
+) -> dict[str, Any]:
+    return {
+        "type": "motion_event",
+        "session_id": device_id,
+        "device_id": device_id,
+        "task_id": task_id,
+        "phase": "failed",
+        "error": {"code": error_code, "reason": reason or error_code},
+    }
+
+
 def assert_frame_type(frame: dict[str, Any], expected_type: str) -> dict[str, Any]:
     actual = frame.get("type")
     if actual != expected_type:
@@ -152,6 +169,38 @@ async def run_websocket_client(config: FakeU8Config) -> list[dict[str, Any]]:
         return await run_fake_u8_script(WebsocketsTransport(websocket), config)
 
 
+async def run_fake_u8_failure_script(
+    transport: JsonTransport,
+    config: FakeU8Config,
+    error_code: str = "E_MISSING_PATH",
+) -> list[dict[str, Any]]:
+    """Run a fake U8 loop that sends a failure event instead of done."""
+    received: list[dict[str, Any]] = []
+
+    await transport.send_json(build_hello(config))
+    hello_ack = assert_frame_type(await transport.receive_json(), "hello_ack")
+    received.append(hello_ack)
+
+    await transport.send_json(build_transcript(config))
+    motion_task = assert_frame_type(await transport.receive_json(), "motion_task")
+    received.append(motion_task)
+
+    task_id = str(motion_task.get("task_id", ""))
+    if not task_id:
+        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
+
+    await transport.send_json(build_motion_event(
+        device_id=config.device_id, task_id=task_id, phase="accepted"))
+    received.append(assert_frame_type(await transport.receive_json(), "motion_event_ack"))
+
+    await transport.send_json(build_motion_failure_event(
+        device_id=config.device_id, task_id=task_id, error_code=error_code,
+        reason=f"fake-U8 simulated {error_code}"))
+    received.append(assert_frame_type(await transport.receive_json(), "motion_event_ack"))
+
+    return received
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Fake U8 client for LiMa /device/v1/ws")
     parser.add_argument("--url", default="ws://127.0.0.1:8080/device/v1/ws")
@@ -160,6 +209,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fw-rev", default="fake-u8-lima-0.1.0")
     parser.add_argument("--transcript", default="写你好")
     parser.add_argument("--uptime-ms", type=int, default=1)
+    parser.add_argument("--test", default="success", choices=("success", "failure"))
+    parser.add_argument("--fail-with", default="E_MISSING_PATH")
     return parser
 
 
@@ -174,8 +225,24 @@ def config_from_args(args: argparse.Namespace) -> FakeU8Config:
     )
 
 
+async def run_failure_websocket_client(config: FakeU8Config, error_code: str) -> list[dict[str, Any]]:
+    try:
+        import websockets
+    except ImportError as exc:
+        raise RuntimeError("Install websockets to run the fake LiMa U8 CLI") from exc
+
+    headers = {"Authorization": f"Bearer {config.token}"}
+    async with websockets.connect(config.url, extra_headers=headers) as websocket:
+        return await run_fake_u8_failure_script(WebsocketsTransport(websocket), config, error_code)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
+    cfg = config_from_args(args)
+    if args.test == "failure":
+        frames = asyncio.run(run_failure_websocket_client(cfg, args.fail_with))
+        print(json.dumps({"ok": True, "test": "failure", "error_code": args.fail_with, "received": frames}, ensure_ascii=False, indent=2))
+        return 0
     frames = asyncio.run(run_websocket_client(config_from_args(args)))
     print(json.dumps({"ok": True, "received": frames}, ensure_ascii=False, indent=2))
     return 0
