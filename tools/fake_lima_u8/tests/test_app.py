@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from fake_lima_u8.app import (
     FakeU8Config,
+    _websocket_header_kwargs,
     assert_frame_type,
     build_arg_parser,
     build_hello,
@@ -101,7 +102,24 @@ class TestFakeLimaU8(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             assert_frame_type({"type": "error", "code": "E_TEST"}, "hello_ack")
 
+    def test_websocket_header_kwargs_supports_new_websockets_api(self):
+        def connect(uri, *, additional_headers=None):
+            return uri, additional_headers
+
+        self.assertEqual(
+            _websocket_header_kwargs(connect, {"Authorization": "Bearer test"}),
+            {"additional_headers": {"Authorization": "Bearer test"}},
+        )
+
+    def test_websocket_header_kwargs_supports_old_websockets_api(self):
+        def connect(uri, *, extra_headers=None):
+            return uri, extra_headers
+
+        self.assertEqual(
+            _websocket_header_kwargs(connect, {"Authorization": "Bearer test"}),
+            {"extra_headers": {"Authorization": "Bearer test"}},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
-

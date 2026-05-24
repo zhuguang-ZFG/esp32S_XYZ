@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import inspect
 import json
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -165,7 +166,7 @@ async def run_websocket_client(config: FakeU8Config) -> list[dict[str, Any]]:
         raise RuntimeError("Install websockets to run the fake LiMa U8 CLI") from exc
 
     headers = {"Authorization": f"Bearer {config.token}"}
-    async with websockets.connect(config.url, extra_headers=headers) as websocket:
+    async with websockets.connect(config.url, **_websocket_header_kwargs(websockets.connect, headers)) as websocket:
         return await run_fake_u8_script(WebsocketsTransport(websocket), config)
 
 
@@ -232,8 +233,15 @@ async def run_failure_websocket_client(config: FakeU8Config, error_code: str) ->
         raise RuntimeError("Install websockets to run the fake LiMa U8 CLI") from exc
 
     headers = {"Authorization": f"Bearer {config.token}"}
-    async with websockets.connect(config.url, extra_headers=headers) as websocket:
+    async with websockets.connect(config.url, **_websocket_header_kwargs(websockets.connect, headers)) as websocket:
         return await run_fake_u8_failure_script(WebsocketsTransport(websocket), config, error_code)
+
+
+def _websocket_header_kwargs(connect_func: Any, headers: dict[str, str]) -> dict[str, dict[str, str]]:
+    params = inspect.signature(connect_func).parameters
+    if "additional_headers" in params:
+        return {"additional_headers": headers}
+    return {"extra_headers": headers}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -250,4 +258,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
