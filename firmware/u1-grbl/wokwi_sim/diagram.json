@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "author": "LiMa Device Gateway",
+  "editor": "web",
+  "parts": [
+    {
+      "type": "wokwi-esp32-s3-devkitc-1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-stepper-motor",
+      "id": "stepper-x",
+      "top": -180,
+      "left": 250,
+      "attrs": { "label": "X-Axis" }
+    },
+    {
+      "type": "wokwi-stepper-motor",
+      "id": "stepper-y",
+      "top": -60,
+      "left": 250,
+      "attrs": { "label": "Y-Axis" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": -100,
+      "left": -80,
+      "attrs": { "color": "green", "label": "Status" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn-x-limit",
+      "top": -220,
+      "left": 380,
+      "attrs": { "label": "X-Limit" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn-y-limit",
+      "top": -100,
+      "left": 380,
+      "attrs": { "label": "Y-Limit" }
+    },
+    {
+      "type": "wokwi-ssd1306",
+      "id": "oled1",
+      "top": -200,
+      "left": -80,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    ["esp:GND", "led1:CATHODE", "black"],
+    ["esp:2", "led1:ANODE", "green"],
+    ["esp:12", "stepper-x:STEP", "blue"],
+    ["esp:14", "stepper-x:DIR", "orange"],
+    ["esp:27", "stepper-x:EN", "red"],
+    ["esp:GND", "stepper-x:GND", "black"],
+    ["esp:26", "stepper-y:STEP", "blue"],
+    ["esp:16", "stepper-y:DIR", "orange"],
+    ["esp:17", "stepper-y:EN", "red"],
+    ["esp:GND", "stepper-y:GND", "black"],
+    ["esp:34", "btn-x-limit:1.l", "yellow"],
+    ["esp:3.3V", "btn-x-limit:2.r", "red"],
+    ["esp:35", "btn-y-limit:1.l", "yellow"],
+    ["esp:3.3V", "btn-y-limit:2.r", "red"],
+    ["esp:5", "oled1:SDA", "green"],
+    ["esp:4", "oled1:SCL", "blue"],
+    ["esp:3.3V", "oled1:VCC", "red"],
+    ["esp:GND", "oled1:GND", "black"]
+  ]
+}
