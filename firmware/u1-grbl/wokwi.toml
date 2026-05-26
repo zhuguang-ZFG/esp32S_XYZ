@@ -1,0 +1,67 @@
+# Wokwi Simulation Configuration for LiMa ESP32S_XYZ U1 (MOTOR_MCU)
+#
+# Usage:
+#   1. Install Wokwi for VS Code extension
+#   2. Open esp32S_XYZ/firmware/u1-grbl/ in VS Code
+#   3. Press F1 -> "Wokwi: Start Simulation"
+#
+# Or via CLI:
+#   npm install -g @wokwi/cli
+#   wokwi-server --platform espressif32 --target esp32-s3-devkitc-1
+
+[wokwi]
+version = 1
+
+# ESP32-S3 with PSRAM (matches platformio.ini release_esp32s3 env)
+[[chip]]
+name = "esp32-s3-devkitc-1"
+type = "esp32-s3"
+flash_size = 16
+psram_size = 8
+
+# Virtual GPIO connections for U1 motor control simulation
+# These map the key pins used by Grbl_Esp32 for step/dir/enable/limit
+
+[[peripheral]]
+type = "wokwi-stepper-motor"
+name = "X_AXIS_STEPPER"
+pins = { step = "GPIO12", dir = "GPIO14", enable = "GPIO27" }
+
+[[peripheral]]
+type = "wokwi-stepper-motor"
+name = "Y_AXIS_STEPPER"
+pins = { step = "GPIO26", dir = "GPIO16", enable = "GPIO17" }
+
+# Limit switches (normally-open, pulled high)
+[[peripheral]]
+type = "wokwi-pushbutton"
+name = "X_MIN_LIMIT"
+pin = "GPIO34"
+
+[[peripheral]]
+type = "wokwi-pushbutton"
+name = "Y_MIN_LIMIT"
+pin = "GPIO35"
+
+# UART bridge to U8 (simulated)
+# U1.IO11 (RX) and U1.IO10 (TX) connect to U8 in real hardware
+# In simulation, we connect to a virtual serial monitor
+[[peripheral]]
+type = "wokwi-uart"
+name = "U8_BRIDGE"
+rx = "GPIO11"
+tx = "GPIO10"
+baud = 115200
+
+# I2C OLED display
+[[peripheral]]
+type = "wokwi-ssd1306"
+name = "OLED"
+sda = "GPIO5"
+scl = "GPIO4"
+
+# Status LED
+[[peripheral]]
+type = "wokwi-led"
+name = "STATUS_LED"
+pin = "GPIO2"
