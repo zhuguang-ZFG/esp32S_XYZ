@@ -59,6 +59,40 @@ int main() {
     assert(json_extract_string_field(input + 1, "cmd", out, sizeof(out)));
     assert(strcmp(out, "GET_STATUS") == 0);
 
-    printf("All 18 JSON parser tests passed!\n");
+    // Edge cases
+    // Empty JSON
+    assert(!json_extract_string_field("{}", "cmd", out, sizeof(out)));
+    assert(!json_extract_float_field("{}", "x", &fval));
+
+    // Whitespace variations
+    assert(json_extract_string_field("{ \"cmd\" : \"HOME\" }", "cmd", out, sizeof(out)));
+    assert(strcmp(out, "HOME") == 0);
+
+    assert(json_extract_float_field("{ \"x\" : 42.0 }", "x", &fval));
+    assert(fval == 42.0f);
+
+    // Integer extraction from float field
+    assert(json_extract_int_field("{\"n\":100}", "n", &ival));
+    assert(ival == 100);
+
+    // Negative integer
+    assert(json_extract_int_field("{\"n\":-5}", "n", &ival));
+    assert(ival == -5);
+
+    // Large number
+    assert(json_extract_float_field("{\"val\":99999.999}", "val", &fval));
+    assert(fval > 99999.0f);
+
+    // String that looks like number should be rejected by float
+    assert(!json_extract_float_field("{\"x\":\"42.0\"}", "x", &fval));
+
+    // PATH_BEGIN realistic message
+    const char* path_json = "{\"msg_id\":\"10\",\"task_id\":\"t1\",\"cmd\":\"PATH_BEGIN\",\"total_segments\":25,\"feed\":1200}";
+    assert(json_extract_int_field(path_json, "total_segments", &ival));
+    assert(ival == 25);
+    assert(json_extract_float_field(path_json, "feed", &fval));
+    assert(fval == 1200.0f);
+
+    printf("All 28 JSON parser tests passed!\n");
     return 0;
 }

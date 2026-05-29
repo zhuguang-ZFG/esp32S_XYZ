@@ -68,6 +68,14 @@ jobs:
             firmware/u1-grbl/Grbl_Esp32/src/json_utils.cpp \
             -o /tmp/test_json_parser && /tmp/test_json_parser
 
+      - name: Verify no E009 regression in Protocol.cpp
+        run: |
+          if grep -n '"E009"' firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp; then
+            echo "ERROR: E009 found in Protocol.cpp — use specific error codes (E001-E008)"
+            exit 1
+          fi
+          echo "OK: No E009 in Protocol.cpp"
+
   fake-integration:
     name: Fake U1 integration
     runs-on: ubuntu-latest
