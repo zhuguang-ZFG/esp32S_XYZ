@@ -27,7 +27,7 @@
 **文件**: `tools/test_vectorize.py:7`
 
 ```python
-API_KEY = 'sk-sp-djI.pO4-by3NZh1AD6lxgsUZqcFjfGrg2wwbZOwfD9vDR0m...'
+API_KEY = 'sk-sp-***REDACTED***'
 ```
 
 - 阿里云 MaaS API 密钥明文写在源码中

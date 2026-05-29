@@ -47,32 +47,53 @@ static bool    private_stop_requested = false;
 #    define PRIVATE_PROTOCOL_HW_REV "DLC_Motor_Control_P1_V1.0_260513"
 #endif
 
+// Skip whitespace
+static const char* json_skip_ws(const char* p) {
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+    return p;
+}
+
 static bool json_extract_string_field(const char* json, const char* field, char* output, size_t output_size) {
     if (json == nullptr || field == nullptr || output == nullptr || output_size == 0) {
         return false;
     }
 
     char pattern[32];
-    snprintf(pattern, sizeof(pattern), "\"%s\":\"", field);
-    const char* start = strstr(json, pattern);
-    if (start == nullptr) {
+    snprintf(pattern, sizeof(pattern), "\"%s\"", field);
+    const char* key = strstr(json, pattern);
+    if (key == nullptr) {
         output[0] = '\0';
         return false;
     }
 
-    start += strlen(pattern);
-    const char* end = strchr(start, '"');
-    if (end == nullptr) {
+    const char* p = json_skip_ws(key + strlen(pattern));
+    if (*p != ':') {
+        output[0] = '\0';
+        return false;
+    }
+    p = json_skip_ws(p + 1);
+    if (*p != '"') {
+        output[0] = '\0';
+        return false;
+    }
+    p++; // skip opening quote
+
+    const char* end = p;
+    while (*end != '\0' && *end != '"') {
+        if (*end == '\\') end++; // skip escaped char
+        end++;
+    }
+    if (*end != '"') {
         output[0] = '\0';
         return false;
     }
 
-    size_t len = end - start;
+    size_t len = end - p;
     if (len >= output_size) {
         len = output_size - 1;
     }
 
-    memcpy(output, start, len);
+    memcpy(output, p, len);
     output[len] = '\0';
     return true;
 }
@@ -83,14 +104,29 @@ static bool json_extract_float_field(const char* json, const char* field, float*
     }
 
     char pattern[32];
-    snprintf(pattern, sizeof(pattern), "\"%s\":", field);
-    const char* start = strstr(json, pattern);
-    if (start == nullptr) {
+    snprintf(pattern, sizeof(pattern), "\"%s\"", field);
+    const char* key = strstr(json, pattern);
+    if (key == nullptr) {
         return false;
     }
 
-    start += strlen(pattern);
-    *output = strtof(start, nullptr);
+    const char* p = json_skip_ws(key + strlen(pattern));
+    if (*p != ':') {
+        return false;
+    }
+    p = json_skip_ws(p + 1);
+
+    // Must be a numeric value (not a string or object)
+    if (*p == '"' || *p == '{' || *p == '[') {
+        return false;
+    }
+
+    char* endptr = nullptr;
+    float val = strtof(p, &endptr);
+    if (endptr == p) {
+        return false; // no digits parsed
+    }
+    *output = val;
     return true;
 }
 
@@ -260,7 +296,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
     json_extract_string_field(json, "msg_id", msg_id, sizeof(msg_id));
     json_extract_string_field(json, "task_id", task_id, sizeof(task_id));
     if (!json_extract_string_field(json, "cmd", cmd, sizeof(cmd))) {
-        send_private_protocol_error(client, msg_id, task_id, "E009", "missing cmd");
+        send_private_protocol_error(client, msg_id, task_id, "E001", "missing cmd");
         return true;
     }
 
@@ -288,7 +324,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"home failed\"}\r\n",
+                       "\"error_code\":\"E002\",\"message\":\"home failed\"}\r\n",
                        msg_id,
                        task_id);
         }
@@ -308,7 +344,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         if (!has_x && !has_y && !has_z) {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"missing axis target\"}\r\n",
+                       "\"error_code\":\"E003\",\"message\":\"missing axis target\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -335,7 +371,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"move failed\"}\r\n",
+                       "\"error_code\":\"E003\",\"message\":\"move failed\"}\r\n",
                        msg_id,
                        task_id);
         }
@@ -350,7 +386,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else if (sys.state == State::Hold || sys.state == State::SafetyDoor) {
             send_private_protocol_ack(client, msg_id, task_id);
         } else {
-            send_private_protocol_error(client, msg_id, task_id, "E009", "pause invalid in current state");
+            send_private_protocol_error(client, msg_id, task_id, "E005", "pause invalid in current state");
         }
         return true;
     }
@@ -361,7 +397,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
             sys_rt_exec_state.bit.cycleStart = true;
             send_private_protocol_ack(client, msg_id, task_id);
         } else {
-            send_private_protocol_error(client, msg_id, task_id, "E009", "resume invalid in current state");
+            send_private_protocol_error(client, msg_id, task_id, "E005", "resume invalid in current state");
         }
         return true;
     }
@@ -372,7 +408,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else if (sys.state == State::Idle) {
             send_private_protocol_ack(client, msg_id, task_id);
         } else {
-            send_private_protocol_error(client, msg_id, task_id, "E009", "stop invalid in current state");
+            send_private_protocol_error(client, msg_id, task_id, "E005", "stop invalid in current state");
         }
         return true;
     }
@@ -393,7 +429,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         if (!json_extract_int_field(json, "total_segments", &total_segments) || total_segments <= 0) {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"invalid total_segments\"}\r\n",
+                       "\"error_code\":\"E006\",\"message\":\"invalid total_segments\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -423,7 +459,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
             !json_extract_float_field(json, "y", &y)) {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"invalid path segment\"}\r\n",
+                       "\"error_code\":\"E006\",\"message\":\"invalid path segment\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -433,7 +469,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         if (segment_index != private_path_received_segments) {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"unexpected segment index\"}\r\n",
+                       "\"error_code\":\"E007\",\"message\":\"unexpected segment index\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -447,7 +483,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         } else {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"unsupported segment cmd\"}\r\n",
+                       "\"error_code\":\"E008\",\"message\":\"unsupported segment cmd\"}\r\n",
                        msg_id,
                        task_id);
             return true;
@@ -466,7 +502,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
         if (private_path_total_segments <= 0 || private_path_received_segments != private_path_total_segments) {
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"incomplete path\"}\r\n",
+                       "\"error_code\":\"E007\",\"message\":\"incomplete path\"}\r\n",
                        msg_id,
                        task_id);
             private_path_reset();
@@ -486,7 +522,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
             private_active_task_reset();
             grbl_sendf(client,
                        "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-                       "\"error_code\":\"E009\",\"message\":\"path execution failed\"}\r\n",
+                       "\"error_code\":\"E004\",\"message\":\"path execution failed\"}\r\n",
                        msg_id,
                        task_id);
         }
@@ -496,7 +532,7 @@ static bool execute_private_protocol_line(char* input, uint8_t client) {
 
     grbl_sendf(client,
                "{\"msg_id\":\"%s\",\"type\":\"error\",\"task_id\":\"%s\",\"state\":\"ERROR\","
-               "\"error_code\":\"E009\",\"message\":\"unsupported cmd\"}\r\n",
+               "\"error_code\":\"E008\",\"message\":\"unsupported cmd\"}\r\n",
                msg_id,
                task_id);
     return true;
