@@ -17,7 +17,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/zhuguang-ZFG/esp32S_XYZ.git
+rtk git clone https://github.com/zhuguang-ZFG/esp32S_XYZ.git
 cd esp32S_XYZ
 
 # 运行所有测试（无需硬件）
@@ -123,18 +123,18 @@ idf.py -p COM4 flash monitor
 ```bash
 cd server/xiaozhi-esp32-server/main/xiaozhi-server
 # Docker 方式
-docker-compose up -d
+rtk docker-compose up -d
 
 # 或直接运行
 pip install -r requirements.txt
-python app.py
+rtk python app.py
 ```
 
 ### BusinessServer (Java)
 
 ```bash
 cd server/xiaozhi-esp32-server/main/manager-api
-mvn clean package
+rtk mvn clean package
 java -jar target/manager-api.jar
 ```
 
@@ -142,9 +142,9 @@ java -jar target/manager-api.jar
 
 ```bash
 cd server/xiaozhi-esp32-server/main/manager-mobile
-pnpm install
-pnpm dev                          # 开发模式
-pnpm build                        # 构建微信小程序
+rtk pnpm install
+rtk pnpm dev                          # 开发模式
+rtk pnpm build                        # 构建微信小程序
 ```
 
 ## 测试
@@ -159,16 +159,16 @@ make test
 
 ```bash
 # Schema 验证
-python tools/validate_schemas.py
+rtk python tools/validate_schemas.py
 
 # GPIO 静态检查
-python tools/check_gpio.py
+rtk python tools/check_gpio.py
 
 # Python 单元测试
-python -m pytest tests/ci/ -v
+rtk python -m pytest tests/ci/ -v
 
 # Fake 集成测试（无需硬件）
-python -m pytest tests/ci/test_fake_integration.py -v
+rtk python -m pytest tests/ci/test_fake_integration.py -v
 ```
 
 ### Fake 模拟器
@@ -184,10 +184,10 @@ python -m pytest tests/ci/test_fake_integration.py -v
 
 ```bash
 # 启动 fake_u1
-cd tools/fake_u1 && python app.py
+cd tools/fake_u1 && rtk python app.py
 
 # 启动 fake_device_server
-cd tools/fake_device_server && python app.py
+cd tools/fake_device_server && rtk python app.py
 ```
 
 ## CI
