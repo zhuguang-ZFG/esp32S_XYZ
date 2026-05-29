@@ -58,6 +58,7 @@ def _is_base64_signature(value: str) -> bool:
     try:
         return bool(base64.b64decode(value, validate=True))
     except Exception:
+        # Not a valid base64 string — expected for non-signature values
         return False
 
 

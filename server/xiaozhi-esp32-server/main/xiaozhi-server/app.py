@@ -51,8 +51,8 @@ async def main():
     try:
         from plugins_func.functions.get_news_from_newsnow import init_news_description
         init_news_description(config)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"插件描述初始化失败（非致命）: {e}")
 
     # auth_key优先级：配置文件server.auth_key > manager-api.secret > 自动生成
     # auth_key用于jwt认证，比如视觉分析接口的jwt认证、ota接口的token生成与websocket认证
