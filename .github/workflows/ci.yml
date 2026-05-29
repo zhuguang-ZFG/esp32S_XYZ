@@ -123,6 +123,44 @@ jobs:
         run: |
           node -e "const fs = require('node:fs'); const app = JSON.parse(fs.readFileSync('dist/build/mp-weixin/app.json', 'utf8')); const permission = app.permission || {}; if (!permission['scope.record']) throw new Error('missing scope.record'); if (!permission['scope.userLocation']) throw new Error('missing scope.userLocation'); if (!(app.requiredPrivateInfos || []).includes('getLocation')) throw new Error('missing getLocation private info');"
 
+  firmware-u1-build:
+    name: U1 firmware build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+          key: ${{ runner.os }}-pio-${{ hashFiles('firmware/u1-grbl/platformio.ini') }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build U1 firmware
+        working-directory: firmware/u1-grbl
+        run: pio run
+
+  firmware-u8-build:
+    name: U8 firmware build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4
+          path: firmware/u8-xiaozhi
+          target: esp32s3
+
   markdown-link-check:
     name: Markdown link check
     runs-on: ubuntu-latest
