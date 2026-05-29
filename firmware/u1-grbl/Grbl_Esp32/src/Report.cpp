@@ -603,7 +603,7 @@ void report_echo_line_received(char* line, uint8_t client) {
 // requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
 // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
 void report_realtime_status(uint8_t client) {
-    char status[200];
+    char status[512];
     char temp[MAX_N_AXIS * 20];
 
     strcpy(status, "<");
@@ -732,6 +732,7 @@ void report_realtime_status(uint8_t client) {
             case State::Jog:
             case State::SafetyDoor:
                 sys.report_wco_counter = (REPORT_WCO_REFRESH_BUSY_COUNT - 1);  // Reset counter for slow refresh
+                break;
             default:
                 sys.report_wco_counter = (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
                 break;
@@ -755,6 +756,7 @@ void report_realtime_status(uint8_t client) {
             case State::Jog:
             case State::SafetyDoor:
                 sys.report_ovr_counter = (REPORT_OVR_REFRESH_BUSY_COUNT - 1);  // Reset counter for slow refresh
+                break;
             default:
                 sys.report_ovr_counter = (REPORT_OVR_REFRESH_IDLE_COUNT - 1);
                 break;
@@ -794,7 +796,7 @@ void report_realtime_status(uint8_t client) {
         sprintf(temp, "|SD:%4.2f,", sd_report_perc_complete());
         strcat(status, temp);
         sd_get_current_filename(temp);
-        strcat(status, temp);
+        strncat(status, temp, sizeof(status) - strlen(status) - 3);
     }
 #endif
 #ifdef REPORT_HEAP

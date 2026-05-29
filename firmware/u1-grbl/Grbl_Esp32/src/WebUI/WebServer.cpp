@@ -628,8 +628,10 @@ namespace WebUI {
                     AuthenticationIP* current_auth = new AuthenticationIP;
                     current_auth->level            = current_auth_level;
                     current_auth->ip               = _webserver->client().remoteIP();
-                    strcpy(current_auth->sessionID, create_session_ID());
-                    strcpy(current_auth->userID, sUser.c_str());
+                    strncpy(current_auth->sessionID, create_session_ID(), sizeof(current_auth->sessionID) - 1);
+                    current_auth->sessionID[sizeof(current_auth->sessionID) - 1] = '\0';
+                    strncpy(current_auth->userID, sUser.c_str(), sizeof(current_auth->userID) - 1);
+                    current_auth->userID[sizeof(current_auth->userID) - 1] = '\0';
                     current_auth->last_time = millis();
                     if (AddAuthIP(current_auth)) {
                         String tmps = "ESPSESSIONID=";
