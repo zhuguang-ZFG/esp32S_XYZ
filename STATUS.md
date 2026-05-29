@@ -11,9 +11,11 @@
 |------|------|------|
 | U1 固件 (Grbl_Esp32) | ✅ P0/P1 已修复 | 缓冲区溢出、fallthrough、JSON 解析器、错误码 |
 | U8 固件 (xiaozhi-esp32) | ✅ cJSON 一致性已修复 | BuildProtocolCommandJson 改用 cJSON |
-| DeviceServer (Python) | ✅ 运行中 | Docker 部署 |
-| BusinessServer (Java) | ✅ 76+ 测试通过 | Maven 构建 |
-| Mobile Client (uni-app) | ✅ TypeScript 类型检查通过 | pnpm 构建 |
+| **小智服务器** (xiaozhi-esp32-server) | ✅ | 整体状态正常 |
+| └ DeviceServer (Python) | ✅ 运行中 | Docker 部署，WebSocket 设备会话管理 |
+| └ BusinessServer (Java) | ✅ 76+ 测试通过 | Spring Boot，账号/设备/任务/审核 |
+| └ Mobile Client (uni-app) | ✅ TypeScript 类型检查通过 | 微信小程序，设备控制 |
+| └ Web Admin (Vue.js) | ✅ | 后台管理界面 |
 | CI Pipeline | ✅ 7 jobs 全绿 | Schema/GPIO/Python/Java/Mobile/Link |
 | 硬件验证 | ⏳ 待验证 | 需实物硬件环境 |
 
