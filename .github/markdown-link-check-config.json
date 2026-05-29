@@ -35,6 +35,9 @@
     },
     {
       "pattern": "github\\.com/rymcu"
+    },
+    {
+      "pattern": "aliexpress\\.com"
     }
   ],
   "timeout": "20s",
