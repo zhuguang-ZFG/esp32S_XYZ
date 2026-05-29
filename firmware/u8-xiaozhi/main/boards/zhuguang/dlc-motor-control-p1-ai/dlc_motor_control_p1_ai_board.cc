@@ -381,14 +381,23 @@ private:
     std::string BuildProtocolCommandJson(uint32_t msg_id,
                                          const std::string& task_id,
                                          const std::string& cmd,
-                                         const std::string& extra_fields = "") {
-        std::string line = "{\"msg_id\":\"" + std::to_string(msg_id) + "\",\"task_id\":\"" + task_id +
-                           "\",\"cmd\":\"" + cmd + "\"";
-        if (!extra_fields.empty()) {
-            line += "," + extra_fields;
+                                         cJSON* extra = nullptr) {
+        cJSON* root = cJSON_CreateObject();
+        cJSON_AddNumberToObject(root, "msg_id", msg_id);
+        cJSON_AddStringToObject(root, "task_id", task_id.c_str());
+        cJSON_AddStringToObject(root, "cmd", cmd.c_str());
+        if (extra != nullptr) {
+            cJSON* child = extra->child;
+            while (child != nullptr) {
+                cJSON_AddItemReferenceToObject(root, child->string, cJSON_Duplicate(child, 1));
+                child = child->next;
+            }
         }
-        line += "}";
-        return line;
+        char* json = cJSON_PrintUnformatted(root);
+        std::string result(json);
+        cJSON_free(json);
+        cJSON_Delete(root);
+        return result;
     }
 
     std::string SendU1ProtocolCommand(uint32_t msg_id, const std::string& task_id, const std::string& cmd, int timeout_ms = 120) {
@@ -399,9 +408,9 @@ private:
     std::string SendU1ProtocolJson(uint32_t msg_id,
                                    const std::string& task_id,
                                    const std::string& cmd,
-                                   const std::string& extra_fields,
+                                   cJSON* extra,
                                    int timeout_ms = 120) {
-        std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd, extra_fields);
+        std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd, extra);
         return SendU1Line("@" + line, timeout_ms);
     }
 
@@ -483,11 +492,13 @@ private:
         }
 
         const uint32_t msg_id = NextProtocolMessageId();
-        const std::string extra_fields = "\"x\":" + std::to_string(x) +
-                                         ",\"y\":" + std::to_string(y) +
-                                         ",\"z\":" + std::to_string(z) +
-                                         ",\"feed\":" + std::to_string(feed);
-        auto response = SendU1ProtocolJson(msg_id, task_id, "MOVE", extra_fields, 200);
+        cJSON* extra = cJSON_CreateObject();
+        cJSON_AddNumberToObject(extra, "x", x);
+        cJSON_AddNumberToObject(extra, "y", y);
+        cJSON_AddNumberToObject(extra, "z", z);
+        cJSON_AddNumberToObject(extra, "feed", feed);
+        auto response = SendU1ProtocolJson(msg_id, task_id, "MOVE", extra, 200);
+        cJSON_Delete(extra);
         return ParseCapabilityResponse(response, msg_id, task_id, "MOVE");
     }
 
@@ -604,10 +615,12 @@ private:
         // PATH_BEGIN/PATH_SEG 都只把段加进 U1 内部 G-code 缓冲区，未真正执行；
         // 但 U1 主循环偶尔会被 feedHold/cycleStart 切换或 UART 抢占，150 ms 余量太紧，
         // 给到 800 ms 仍属"非阻塞 ack"范畴。真实执行的等待由 PATH_END 长超时承担。
+        cJSON* path_begin_extra = cJSON_CreateObject();
+        cJSON_AddNumberToObject(path_begin_extra, "total_segments", total_segments);
+        cJSON_AddNumberToObject(path_begin_extra, "feed", feed_rate);
         auto response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_BEGIN",
-                                           "\"total_segments\":" + std::to_string(total_segments) +
-                                               ",\"feed\":" + std::to_string(feed_rate),
-                                           800);
+                                           path_begin_extra, 800);
+        cJSON_Delete(path_begin_extra);
         if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
             cJSON_Delete(root);
             return std::string("path begin failed: ") + (response.empty() ? "timeout" : response);
@@ -640,14 +653,15 @@ private:
                 return std::string("unsupported segment cmd");
             }
 
+            cJSON* seg_extra = cJSON_CreateObject();
+            cJSON_AddNumberToObject(seg_extra, "segment_index", segment_index);
+            cJSON_AddStringToObject(seg_extra, "segment_cmd", cmd.c_str());
+            cJSON_AddNumberToObject(seg_extra, "x", x_item->valuedouble);
+            cJSON_AddNumberToObject(seg_extra, "y", y_item->valuedouble);
+            cJSON_AddNumberToObject(seg_extra, "feed", feed_rate);
             response = SendU1ProtocolJson(NextProtocolMessageId(), task_id,
-                                          "PATH_SEG",
-                                          "\"segment_index\":" + std::to_string(segment_index) +
-                                              ",\"segment_cmd\":\"" + cmd +
-                                              "\",\"x\":" + xbuf +
-                                              ",\"y\":" + ybuf +
-                                              ",\"feed\":" + std::to_string(feed_rate),
-                                          800);
+                                          "PATH_SEG", seg_extra, 800);
+            cJSON_Delete(seg_extra);
             if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
                 cJSON_Delete(root);
                 return std::string("path segment failed: ") + (response.empty() ? "timeout" : response);
@@ -660,7 +674,7 @@ private:
 
         cJSON_Delete(root);
 
-        response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_END", "", 120000);
+        response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_END", nullptr, 120000);
         if (response.empty()) {
             return std::string("path end failed: timeout");
         }
