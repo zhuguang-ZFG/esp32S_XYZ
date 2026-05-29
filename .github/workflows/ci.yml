@@ -55,6 +55,30 @@ jobs:
           python -m unittest tools.tests.test_check_gpio -v
           python -m unittest discover -s tests -p "test_*.py" -v
 
+  firmware-native-tests:
+    name: U1 firmware native tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+          key: ${{ runner.os }}-pio-native
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Run native firmware tests
+        working-directory: firmware/u1-grbl
+        run: pio test -e native
+
   fake-integration:
     name: Fake U1 integration
     runs-on: ubuntu-latest
