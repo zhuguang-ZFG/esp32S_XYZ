@@ -3,7 +3,7 @@
 > Updated: 2026-05-29
 > Branch: `main`
 > Tests: **251 passed, 0 failed** (`pytest tests/ci/ -q`)
-> Firmware CI: **未配置**（U1/U8 不在 CI 中编译）
+> Firmware CI: **10/10 全绿**（U1/U8 固件编译 + JSON 解析器单测）
 
 ## 当前状态
 
@@ -16,7 +16,7 @@
 | └ BusinessServer (Java) | ✅ 76+ 测试通过 | Spring Boot，账号/设备/任务/审核 |
 | └ Mobile Client (uni-app) | ✅ TypeScript 类型检查通过 | 微信小程序，设备控制 |
 | └ Web Admin (Vue.js) | ✅ | 后台管理界面 |
-| CI Pipeline | ✅ 7 jobs 全绿 | Schema/GPIO/Python/Java/Mobile/Link |
+| CI Pipeline | ✅ 10/10 全绿 | Schema/GPIO/Python/Java/Mobile/Link/U1编译/U8编译/单测 |
 | 硬件验证 | ⏳ 待验证 | 需实物硬件环境 |
 
 ## 测试通过率
@@ -26,6 +26,8 @@
 Java 测试:  76+ passed (manager-api)
 Schema:     62 验证通过
 GPIO:       1 静态检查通过
+固件单测:   18 passed (JSON 解析器, g++ native)
+CI:         10/10 jobs 全绿
 ```
 
 ## 里程碑进度
@@ -60,6 +62,9 @@ GPIO:       1 静态检查通过
 | 5fa5112 | 构建文档 + Makefile + README 更新 |
 | 98d64f7 | U8 cJSON 一致性 |
 | 7c7c1a8 | 审查报告修复记录 |
+| 11eb54c | STATUS.md + getting-started.md rtk 前缀修复 |
+| 463b1d4 | 固件 CI: U1 PlatformIO + U8 ESP-IDF v5.5.2 |
+| 2a3e1ca | 固件单测: JSON 解析器 18 cases (g++ native) |
 
 ## 开发环境
 
