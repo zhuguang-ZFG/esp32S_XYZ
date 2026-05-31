@@ -72,19 +72,20 @@ class PngQuant:
     """
 
     def __init__(self, ncolors=256, dither=True, exec_path="") -> None:
-        executable = path.join(exec_path, "pngquant")
-        self.cmd = (f"{executable} {'--nofs' if not dither else ''} "
-                    f"{ncolors}  --force - < ")
+        self.executable = path.join(exec_path, "pngquant")
+        self.args = ["--nofs"] if not dither else []
+        self.args.extend([str(ncolors), "--force", "-"])
 
     def convert(self, filename) -> bytes:
         if not os.path.isfile(filename):
             raise BaseException(f"file not found: {filename}")
 
         try:
-            compressed = subprocess.check_output(
-                f'{self.cmd} "{str(filename)}"',
-                stderr=subprocess.STDOUT,
-                shell=True)
+            with open(filename, "rb") as src:
+                compressed = subprocess.check_output(
+                    [self.executable, *self.args],
+                    stdin=src,
+                    stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             raise BaseException(
                 "cannot find pngquant tool, install it via "

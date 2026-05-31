@@ -34,9 +34,9 @@ def create_path(path: str) -> None:
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
-def shell(command):
-    """Handle execution of shell commands"""
-    with subprocess.Popen(command, shell=True,
+def run_command(command):
+    """Handle execution of a fixed argv command."""
+    with subprocess.Popen(command,
                           stdout=subprocess.PIPE,
                           universal_newlines=True
                           ) as process:
@@ -140,8 +140,7 @@ class WsOtaHandler (threading.Thread):
             # We can compress fw to make it smaller for upload
             fw_cpress = fw_file
             fw_file = fw_cpress + ".gz"
-            cpress = f"gzip -9 {fw_cpress}"
-            cstate = shell(cpress)
+            cstate = run_command(["gzip", "-9", fw_cpress])
             if cstate:
                 Logger.error("Cannot compress firmware: %s", fw_name)
                 return
