@@ -9,16 +9,14 @@
 
 #include <driver/gpio.h>
 #include <driver/i2c_master.h>
-#include <driver/uart.h>
 #include <esp_log.h>
 #include <cJSON.h>
 
-#include <cstdlib>
-#include <cstdio>
-#include <cstring>
-#include <mutex>
 #include <string>
-#include <variant>
+
+#include "motion_event_emitter.h"
+#include "motion_executor.h"
+#include "u1_protocol_client.h"
 
 #define TAG "DlcMotorP1AiBoard"
 
@@ -52,47 +50,14 @@ public:
 
 class DlcMotorControlP1AiBoard : public WifiBoard {
 private:
-    struct U1CapabilityResult {
-        bool ok = false;
-        uint32_t msg_id = 0;
-        std::string task_id;
-        std::string cmd;
-        std::string response_type;
-        std::string state;
-        std::string error_code;
-        std::string error_message;
-        std::string raw_response;
-        std::string model;
-        std::string hw_rev;
-        std::string fw_rev;
-        bool has_workspace_mm = false;
-        double workspace_x = 0.0;
-        double workspace_y = 0.0;
-        double workspace_z = 0.0;
-        bool has_position = false;
-        double position_x = 0.0;
-        double position_y = 0.0;
-        double position_z = 0.0;
-    };
-
     i2c_master_bus_handle_t i2c_bus_ = nullptr;
     Button boot_button_;
     Esp32Camera* camera_ = nullptr;
     WebSocketControlServer* ws_control_server_ = nullptr;
-    std::mutex uart_mutex_;
-    std::mutex job_mutex_;
-    uint32_t protocol_msg_id_ = 0;
-    std::string last_motion_device_id_;
-    std::string last_motion_capability_raw_;
-    std::string last_motion_source_;
 
-    static bool JsonNumberToString(cJSON* item, char* buffer, size_t buffer_size) {
-        if (item == nullptr || buffer == nullptr || buffer_size == 0 || !cJSON_IsNumber(item)) {
-            return false;
-        }
-        snprintf(buffer, buffer_size, "%.3f", item->valuedouble);
-        return true;
-    }
+    U1ProtocolClient protocol_;
+    MotionEventEmitter emitter_;
+    MotionExecutor executor_;
 
     void InitializeI2c() {
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -157,823 +122,11 @@ private:
         camera_ = new Esp32Camera(config);
     }
 
-    void InitializeU1Uart() {
-        uart_config_t uart_config = {
-            .baud_rate = U1_UART_BAUD_RATE,
-            .data_bits = UART_DATA_8_BITS,
-            .parity = UART_PARITY_DISABLE,
-            .stop_bits = UART_STOP_BITS_1,
-            .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-            .source_clk = UART_SCLK_DEFAULT,
-        };
-
-        ESP_ERROR_CHECK(uart_driver_install(U1_UART_PORT_NUM, U1_UART_BUF_SIZE * 2, U1_UART_BUF_SIZE * 2, 0, NULL, 0));
-        ESP_ERROR_CHECK(uart_param_config(U1_UART_PORT_NUM, &uart_config));
-        ESP_ERROR_CHECK(uart_set_pin(U1_UART_PORT_NUM, U1_UART_TXD, U1_UART_RXD, U1_UART_RTS, U1_UART_CTS));
-    }
-
-    static std::string NormalizeResponse(std::string text) {
-        for (char& ch : text) {
-            if (ch == '\r' || ch == '\n') {
-                ch = ' ';
-            }
-        }
-        while (!text.empty() && text.back() == ' ') {
-            text.pop_back();
-        }
-        return text;
-    }
-
-    std::string ReadU1Response(int timeout_ms) {
-        std::string response;
-        uint8_t buffer[128];
-        int idle_rounds = 0;
-
-        while (idle_rounds < 2) {
-            int len = uart_read_bytes(U1_UART_PORT_NUM, buffer, sizeof(buffer), pdMS_TO_TICKS(timeout_ms));
-            if (len > 0) {
-                response.append(reinterpret_cast<char*>(buffer), len);
-                idle_rounds = 0;
-            } else {
-                ++idle_rounds;
-            }
-        }
-
-        return NormalizeResponse(response);
-    }
-
-    static std::string GetJsonStringValue(cJSON* root, const char* key) {
-        cJSON* item = cJSON_GetObjectItemCaseSensitive(root, key);
-        if (item != nullptr && cJSON_IsString(item) && item->valuestring != nullptr) {
-            return item->valuestring;
-        }
-        return "";
-    }
-
-    static bool GetJsonXyzObject(cJSON* root, const char* key, double& x_out, double& y_out, double& z_out) {
-        cJSON* object = cJSON_GetObjectItemCaseSensitive(root, key);
-        if (object == nullptr || !cJSON_IsObject(object)) {
-            return false;
-        }
-        cJSON* x = cJSON_GetObjectItemCaseSensitive(object, "x");
-        cJSON* y = cJSON_GetObjectItemCaseSensitive(object, "y");
-        cJSON* z = cJSON_GetObjectItemCaseSensitive(object, "z");
-        if (!cJSON_IsNumber(x) || !cJSON_IsNumber(y) || !cJSON_IsNumber(z)) {
-            return false;
-        }
-        x_out = x->valuedouble;
-        y_out = y->valuedouble;
-        z_out = z->valuedouble;
-        return true;
-    }
-
-    static cJSON* BuildCapabilityResponseJson(const U1CapabilityResult& result) {
-        cJSON* root = cJSON_CreateObject();
-        cJSON_AddBoolToObject(root, "ok", result.ok);
-        cJSON_AddNumberToObject(root, "msg_id", static_cast<double>(result.msg_id));
-        cJSON_AddStringToObject(root, "task_id", result.task_id.c_str());
-        cJSON_AddStringToObject(root, "cmd", result.cmd.c_str());
-        cJSON_AddStringToObject(root, "response_type", result.response_type.c_str());
-        cJSON_AddStringToObject(root, "raw", result.raw_response.c_str());
-        if (!result.state.empty()) {
-            cJSON_AddStringToObject(root, "state", result.state.c_str());
-        }
-        if (!result.error_code.empty()) {
-            cJSON_AddStringToObject(root, "error_code", result.error_code.c_str());
-        }
-        if (!result.error_message.empty()) {
-            cJSON_AddStringToObject(root, "error_message", result.error_message.c_str());
-        }
-        if (!result.model.empty()) {
-            cJSON_AddStringToObject(root, "model", result.model.c_str());
-        }
-        if (!result.hw_rev.empty()) {
-            cJSON_AddStringToObject(root, "hw_rev", result.hw_rev.c_str());
-        }
-        if (!result.fw_rev.empty()) {
-            cJSON_AddStringToObject(root, "fw_rev", result.fw_rev.c_str());
-        }
-        if (result.has_workspace_mm) {
-            cJSON* workspace = cJSON_AddObjectToObject(root, "workspace_mm");
-            if (workspace != nullptr) {
-                cJSON_AddNumberToObject(workspace, "x", result.workspace_x);
-                cJSON_AddNumberToObject(workspace, "y", result.workspace_y);
-                cJSON_AddNumberToObject(workspace, "z", result.workspace_z);
-            }
-        }
-        if (result.has_position) {
-            cJSON* position = cJSON_AddObjectToObject(root, "position");
-            if (position != nullptr) {
-                cJSON_AddNumberToObject(position, "x", result.position_x);
-                cJSON_AddNumberToObject(position, "y", result.position_y);
-                cJSON_AddNumberToObject(position, "z", result.position_z);
-            }
-        }
-        return root;
-    }
-
-    ReturnValue ParseCapabilityResponse(const std::string& raw_response,
-                                        uint32_t msg_id,
-                                        const std::string& task_id,
-                                        const std::string& cmd) {
-        U1CapabilityResult result;
-        result.msg_id = msg_id;
-        result.task_id = task_id;
-        result.cmd = cmd;
-        result.raw_response = raw_response;
-
-        if (raw_response.empty()) {
-            result.response_type = "timeout";
-            result.error_code = "timeout";
-            result.error_message = "empty response from u1";
-            return BuildCapabilityResponseJson(result);
-        }
-
-        cJSON* root = cJSON_Parse(raw_response.c_str());
-        if (root == nullptr || !cJSON_IsObject(root)) {
-            if (root != nullptr) {
-                cJSON_Delete(root);
-            }
-            result.response_type = "invalid";
-            result.error_code = "invalid_response";
-            result.error_message = "u1 response is not valid json";
-            return BuildCapabilityResponseJson(result);
-        }
-
-        result.response_type = GetJsonStringValue(root, "type");
-        result.state = GetJsonStringValue(root, "state");
-        result.error_code = GetJsonStringValue(root, "code");
-        result.error_message = GetJsonStringValue(root, "message");
-        result.model = GetJsonStringValue(root, "model");
-        result.hw_rev = GetJsonStringValue(root, "hw_rev");
-        result.fw_rev = GetJsonStringValue(root, "fw_rev");
-        if (GetJsonXyzObject(root, "workspace_mm", result.workspace_x, result.workspace_y, result.workspace_z)) {
-            result.has_workspace_mm = true;
-        }
-        if (GetJsonXyzObject(root, "position", result.position_x, result.position_y, result.position_z)) {
-            result.has_position = true;
-        }
-
-        bool parsed_msg_id = false;
-        cJSON* msg_id_item = cJSON_GetObjectItemCaseSensitive(root, "msg_id");
-        if (msg_id_item != nullptr && cJSON_IsString(msg_id_item) && msg_id_item->valuestring != nullptr) {
-            result.msg_id = static_cast<uint32_t>(strtoul(msg_id_item->valuestring, nullptr, 10));
-            parsed_msg_id = true;
-        }
-
-        auto response_task_id = GetJsonStringValue(root, "task_id");
-        if (!response_task_id.empty()) {
-            result.task_id = response_task_id;
-        }
-
-        result.ok = result.response_type == "ack" || result.response_type == "status" || result.response_type == "result";
-        if (parsed_msg_id && result.msg_id != msg_id) {
-            result.ok = false;
-            result.response_type = "invalid";
-            result.error_code = "msg_id_mismatch";
-            result.error_message = "u1 response msg_id does not match request";
-        } else if (!response_task_id.empty() && response_task_id != task_id) {
-            result.ok = false;
-            result.response_type = "invalid";
-            result.error_code = "task_id_mismatch";
-            result.error_message = "u1 response task_id does not match request";
-        }
-        if (result.response_type == "error" && result.error_message.empty()) {
-            result.error_message = "u1 returned error";
-        }
-        if (result.response_type.empty()) {
-            result.response_type = "unknown";
-            if (result.error_message.empty()) {
-                result.error_message = "u1 response missing type";
-            }
-        }
-
-        cJSON_Delete(root);
-        return BuildCapabilityResponseJson(result);
-    }
-
-    uint32_t NextProtocolMessageId() {
-        std::lock_guard<std::mutex> lock(job_mutex_);
-        return ++protocol_msg_id_;
-    }
-
-    // 给 MCP 调试入口用的本地 task_id 生成器：u8_<prefix>_<msg_id>。
-    // 真实链路（M2.5 起）task_id 由 BusinessServer 透传，**不要**复用本函数。
-    std::string NextLocalTaskId(const char* prefix) {
-        return std::string("u8_") + prefix + "_" + std::to_string(NextProtocolMessageId());
-    }
-
-    std::string SendU1Line(const std::string& line, int timeout_ms = 120) {
-        std::lock_guard<std::mutex> lock(uart_mutex_);
-        uart_flush_input(U1_UART_PORT_NUM);
-
-        std::string command = line + "\n";
-        uart_write_bytes(U1_UART_PORT_NUM, command.data(), command.size());
-        ESP_LOGI(TAG, "U8 -> U1: %s", line.c_str());
-
-        auto response = ReadU1Response(timeout_ms);
-        if (!response.empty()) {
-            ESP_LOGI(TAG, "U1 -> U8: %s", response.c_str());
-        }
-        return response;
-    }
-
-    std::string BuildProtocolCommandJson(uint32_t msg_id,
-                                         const std::string& task_id,
-                                         const std::string& cmd,
-                                         cJSON* extra = nullptr) {
-        cJSON* root = cJSON_CreateObject();
-        cJSON_AddNumberToObject(root, "msg_id", msg_id);
-        cJSON_AddStringToObject(root, "task_id", task_id.c_str());
-        cJSON_AddStringToObject(root, "cmd", cmd.c_str());
-        if (extra != nullptr) {
-            cJSON* child = extra->child;
-            while (child != nullptr) {
-                cJSON_AddItemReferenceToObject(root, child->string, cJSON_Duplicate(child, 1));
-                child = child->next;
-            }
-        }
-        char* json = cJSON_PrintUnformatted(root);
-        std::string result(json);
-        cJSON_free(json);
-        cJSON_Delete(root);
-        return result;
-    }
-
-    std::string SendU1ProtocolCommand(uint32_t msg_id, const std::string& task_id, const std::string& cmd, int timeout_ms = 120) {
-        std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd);
-        return SendU1Line("@" + line, timeout_ms);
-    }
-
-    std::string SendU1ProtocolJson(uint32_t msg_id,
-                                   const std::string& task_id,
-                                   const std::string& cmd,
-                                   cJSON* extra,
-                                   int timeout_ms = 120) {
-        std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd, extra);
-        return SendU1Line("@" + line, timeout_ms);
-    }
-
-    static std::string ToLowerAscii(std::string s) {
-        for (char& c : s) {
-            if (c >= 'A' && c <= 'Z') {
-                c = static_cast<char>(c - 'A' + 'a');
-            }
-        }
-        return s;
-    }
-
-    static std::string NormalizeMotionCapabilityName(const char* raw) {
-        if (raw == nullptr) {
-            return "";
-        }
-        std::string s = raw;
-        if (s.size() > 5 && s.compare(0, 5, "self.") == 0) {
-            s = s.substr(5);
-        }
-        return ToLowerAscii(std::move(s));
-    }
-
-    static int MotionParamsGetInt(cJSON* params, const char* key, int default_value) {
-        if (params == nullptr || !cJSON_IsObject(params)) {
-            return default_value;
-        }
-        cJSON* it = cJSON_GetObjectItemCaseSensitive(params, key);
-        if (it == nullptr || !cJSON_IsNumber(it)) {
-            return default_value;
-        }
-        return static_cast<int>(it->valuedouble);
-    }
-
-    static bool JsonValueIsOk(cJSON* root) {
-        if (root == nullptr) {
-            return false;
-        }
-        cJSON* ok = cJSON_GetObjectItemCaseSensitive(root, "ok");
-        return cJSON_IsBool(ok) && cJSON_IsTrue(ok);
-    }
-
-    static bool JsonValueHasXyz(cJSON* root, const char* key, double& x, double& y, double& z) {
-        return root != nullptr && GetJsonXyzObject(root, key, x, y, z);
-    }
-
-    static void FreeReturnValueIfJson(ReturnValue& rv) {
-        if (auto* p = std::get_if<cJSON*>(&rv)) {
-            if (*p != nullptr) {
-                cJSON_Delete(*p);
-                *p = nullptr;
-            }
-        }
-    }
-
-    ReturnValue ExecuteHomeWithTaskId(const std::string& task_id) {
-        const uint32_t msg_id = NextProtocolMessageId();
-        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "HOME", 250), msg_id, task_id, "HOME");
-    }
-
-    ReturnValue ExecuteGetStatusWithTaskId(const std::string& task_id) {
-        const uint32_t msg_id = NextProtocolMessageId();
-        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "GET_STATUS", 120), msg_id, task_id, "GET_STATUS");
-    }
-
-    ReturnValue ExecuteGetDeviceInfoWithTaskId(const std::string& task_id) {
-        const uint32_t msg_id = NextProtocolMessageId();
-        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, "GET_DEVICE_INFO", 120), msg_id, task_id, "GET_DEVICE_INFO");
-    }
-
-    ReturnValue ExecuteControlWithTaskId(const std::string& task_id, const char* cmd) {
-        const uint32_t msg_id = NextProtocolMessageId();
-        return ParseCapabilityResponse(SendU1ProtocolCommand(msg_id, task_id, cmd, 120), msg_id, task_id, cmd);
-    }
-
-    ReturnValue ExecuteMoveWithTaskId(const std::string& task_id, int x, int y, int z, int feed) {
-        if (feed < 1 || feed > 20000) {
-            return std::string("invalid move params: feed must be within [1, 20000]");
-        }
-
-        const uint32_t msg_id = NextProtocolMessageId();
-        cJSON* extra = cJSON_CreateObject();
-        cJSON_AddNumberToObject(extra, "x", x);
-        cJSON_AddNumberToObject(extra, "y", y);
-        cJSON_AddNumberToObject(extra, "z", z);
-        cJSON_AddNumberToObject(extra, "feed", feed);
-        auto response = SendU1ProtocolJson(msg_id, task_id, "MOVE", extra, 200);
-        cJSON_Delete(extra);
-        return ParseCapabilityResponse(response, msg_id, task_id, "MOVE");
-    }
-
-    ReturnValue ExecuteMoveRelWithTaskId(const std::string& task_id, int dx, int dy, int dz, int feed) {
-        if (feed < 1 || feed > 20000) {
-            return std::string("relative move rejected: feed must be within [1, 20000]");
-        }
-        if (dx < -1 || dx > 1 || dy < -1 || dy > 1 || dz < -1 || dz > 1) {
-            return std::string("relative move rejected: each axis step must be within [-1, 1] mm");
-        }
-        if (dx == 0 && dy == 0 && dz == 0) {
-            return std::string("relative move rejected: at least one axis step is required");
-        }
-
-        ReturnValue status_rv = ExecuteGetStatusWithTaskId(task_id);
-        cJSON* status = nullptr;
-        if (auto* p = std::get_if<cJSON*>(&status_rv)) {
-            status = *p;
-        }
-
-        double current_x = 0.0;
-        double current_y = 0.0;
-        double current_z = 0.0;
-        if (!JsonValueIsOk(status) || !JsonValueHasXyz(status, "position", current_x, current_y, current_z)) {
-            FreeReturnValueIfJson(status_rv);
-            return std::string("relative move rejected: unable to read current position");
-        }
-        FreeReturnValueIfJson(status_rv);
-
-        ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
-        cJSON* info = nullptr;
-        if (auto* p = std::get_if<cJSON*>(&info_rv)) {
-            info = *p;
-        }
-
-        double workspace_x = 0.0;
-        double workspace_y = 0.0;
-        double workspace_z = 0.0;
-        if (!JsonValueIsOk(info) || !JsonValueHasXyz(info, "workspace_mm", workspace_x, workspace_y, workspace_z)) {
-            FreeReturnValueIfJson(info_rv);
-            return std::string("relative move rejected: unable to verify workspace");
-        }
-        FreeReturnValueIfJson(info_rv);
-
-        const double target_x = current_x + dx;
-        const double target_y = current_y + dy;
-        const double target_z = current_z + dz;
-        if (target_x < 0.0 || target_y < 0.0 || target_z < 0.0 ||
-            target_x > workspace_x || target_y > workspace_y || target_z > workspace_z) {
-            return std::string("relative move rejected: target outside workspace");
-        }
-
-        return ExecuteMoveWithTaskId(task_id,
-                                     static_cast<int>(target_x),
-                                     static_cast<int>(target_y),
-                                     static_cast<int>(target_z),
-                                     feed);
-    }
-
-    ReturnValue ExecuteHomeCapability() {
-        return ExecuteHomeWithTaskId(NextLocalTaskId("home"));
-    }
-
-    ReturnValue ExecuteGetStatusCapability() {
-        return ExecuteGetStatusWithTaskId(NextLocalTaskId("status"));
-    }
-
-    ReturnValue ExecuteGetDeviceInfoCapability() {
-        return ExecuteGetDeviceInfoWithTaskId(NextLocalTaskId("device_info"));
-    }
-
-    ReturnValue ExecutePauseCapability() {
-        return ExecuteControlWithTaskId(NextLocalTaskId("pause"), "PAUSE");
-    }
-
-    ReturnValue ExecuteResumeCapability() {
-        return ExecuteControlWithTaskId(NextLocalTaskId("resume"), "RESUME");
-    }
-
-    ReturnValue ExecuteStopCapability() {
-        return ExecuteControlWithTaskId(NextLocalTaskId("stop"), "STOP");
-    }
-
-    ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed) {
-        return ExecuteMoveWithTaskId(NextLocalTaskId("move"), x, y, z, feed);
-    }
-
-    ReturnValue ExecuteMoveRelCapability(int dx, int dy, int dz, int feed) {
-        return ExecuteMoveRelWithTaskId(NextLocalTaskId("move_rel"), dx, dy, dz, feed);
-    }
-
     void InitializeWebSocketControlServer() {
         ws_control_server_ = new WebSocketControlServer();
         if (!ws_control_server_->Start(8080)) {
             delete ws_control_server_;
             ws_control_server_ = nullptr;
-        }
-    }
-
-    ReturnValue RunPathWithTaskId(const std::string& task_id, const std::string& path_json, int feed_rate, bool emit_progress = false) {
-        cJSON* root = cJSON_Parse(path_json.c_str());
-        if (root == nullptr || !cJSON_IsArray(root)) {
-            if (root != nullptr) {
-                cJSON_Delete(root);
-            }
-            return std::string("invalid path json");
-        }
-        int total_segments = cJSON_GetArraySize(root);
-        if (total_segments <= 0) {
-            cJSON_Delete(root);
-            return std::string("path is empty");
-        }
-
-        // PATH_BEGIN/PATH_SEG 都只把段加进 U1 内部 G-code 缓冲区，未真正执行；
-        // 但 U1 主循环偶尔会被 feedHold/cycleStart 切换或 UART 抢占，150 ms 余量太紧，
-        // 给到 800 ms 仍属"非阻塞 ack"范畴。真实执行的等待由 PATH_END 长超时承担。
-        cJSON* path_begin_extra = cJSON_CreateObject();
-        cJSON_AddNumberToObject(path_begin_extra, "total_segments", total_segments);
-        cJSON_AddNumberToObject(path_begin_extra, "feed", feed_rate);
-        auto response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_BEGIN",
-                                           path_begin_extra, 800);
-        cJSON_Delete(path_begin_extra);
-        if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
-            cJSON_Delete(root);
-            return std::string("path begin failed: ") + (response.empty() ? "timeout" : response);
-        }
-
-        cJSON* segment = nullptr;
-        int segment_index = 0;
-        cJSON_ArrayForEach(segment, root) {
-            if (!cJSON_IsObject(segment)) {
-                cJSON_Delete(root);
-                return std::string("invalid path segment");
-            }
-
-            cJSON* cmd_item = cJSON_GetObjectItemCaseSensitive(segment, "cmd");
-            cJSON* x_item = cJSON_GetObjectItemCaseSensitive(segment, "x");
-            cJSON* y_item = cJSON_GetObjectItemCaseSensitive(segment, "y");
-            if (!cJSON_IsString(cmd_item) || cmd_item->valuestring == nullptr || !cJSON_IsNumber(x_item) || !cJSON_IsNumber(y_item)) {
-                cJSON_Delete(root);
-                return std::string("path segment missing cmd/x/y");
-            }
-
-            char xbuf[32];
-            char ybuf[32];
-            JsonNumberToString(x_item, xbuf, sizeof(xbuf));
-            JsonNumberToString(y_item, ybuf, sizeof(ybuf));
-
-            std::string cmd = cmd_item->valuestring;
-            if (cmd != "M" && cmd != "L") {
-                cJSON_Delete(root);
-                return std::string("unsupported segment cmd");
-            }
-
-            cJSON* seg_extra = cJSON_CreateObject();
-            cJSON_AddNumberToObject(seg_extra, "segment_index", segment_index);
-            cJSON_AddStringToObject(seg_extra, "segment_cmd", cmd.c_str());
-            cJSON_AddNumberToObject(seg_extra, "x", x_item->valuedouble);
-            cJSON_AddNumberToObject(seg_extra, "y", y_item->valuedouble);
-            cJSON_AddNumberToObject(seg_extra, "feed", feed_rate);
-            response = SendU1ProtocolJson(NextProtocolMessageId(), task_id,
-                                          "PATH_SEG", seg_extra, 800);
-            cJSON_Delete(seg_extra);
-            if (response.empty() || response.find("\"type\":\"error\"") != std::string::npos) {
-                cJSON_Delete(root);
-                return std::string("path segment failed: ") + (response.empty() ? "timeout" : response);
-            }
-            ++segment_index;
-            if (emit_progress) {
-                EmitMotionEventProgress(task_id, segment_index, total_segments);
-            }
-        }
-
-        cJSON_Delete(root);
-
-        response = SendU1ProtocolJson(NextProtocolMessageId(), task_id, "PATH_END", nullptr, 120000);
-        if (response.empty()) {
-            return std::string("path end failed: timeout");
-        }
-        if (response.find("\"type\":\"error\"") != std::string::npos) {
-            return std::string("path end failed: ") + response;
-        }
-        return response;
-    }
-
-    ReturnValue RunPath(const std::string& path_json, int feed_rate) {
-        return RunPathWithTaskId(NextLocalTaskId("path"), path_json, feed_rate);
-    }
-
-    void EmitMotionEventPhase(const std::string& task_id, const char* phase) {
-        cJSON* o = cJSON_CreateObject();
-        if (o == nullptr) {
-            return;
-        }
-        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
-        cJSON_AddStringToObject(o, "phase", phase);
-        if (!last_motion_device_id_.empty()) {
-            cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
-        }
-        if (!last_motion_capability_raw_.empty()) {
-            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
-        }
-        if (!last_motion_source_.empty()) {
-            cJSON_AddStringToObject(o, "source", last_motion_source_.c_str());
-        }
-        Application::GetInstance().SendMotionEvent(o);
-        cJSON_Delete(o);
-    }
-
-    void EmitMotionEventError(const std::string& task_id, const char* phase, const char* error_code, const char* error_message) {
-        cJSON* o = cJSON_CreateObject();
-        if (o == nullptr) {
-            return;
-        }
-        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
-        cJSON_AddStringToObject(o, "phase", phase);
-        cJSON_AddStringToObject(o, "error_code", error_code);
-        cJSON_AddStringToObject(o, "error_message", error_message);
-        if (!last_motion_device_id_.empty()) {
-            cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
-        }
-        if (!last_motion_capability_raw_.empty()) {
-            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
-        }
-        if (!last_motion_source_.empty()) {
-            cJSON_AddStringToObject(o, "source", last_motion_source_.c_str());
-        }
-        Application::GetInstance().SendMotionEvent(o);
-        cJSON_Delete(o);
-    }
-
-    void EmitMotionEventProgress(const std::string& task_id, int done_segments, int total_segments) {
-        if (total_segments <= 0) {
-            return;
-        }
-        cJSON* o = cJSON_CreateObject();
-        if (o == nullptr) {
-            return;
-        }
-        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
-        cJSON_AddStringToObject(o, "phase", "progress");
-        if (!last_motion_device_id_.empty()) {
-            cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
-        }
-        if (!last_motion_capability_raw_.empty()) {
-            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
-        }
-        if (!last_motion_source_.empty()) {
-            cJSON_AddStringToObject(o, "source", last_motion_source_.c_str());
-        }
-        cJSON* progress = cJSON_AddObjectToObject(o, "progress");
-        if (progress != nullptr) {
-            cJSON_AddNumberToObject(progress, "done_segments", done_segments);
-            cJSON_AddNumberToObject(progress, "total_segments", total_segments);
-            cJSON_AddNumberToObject(progress, "percent", (done_segments * 100) / total_segments);
-        }
-        Application::GetInstance().SendMotionEvent(o);
-        cJSON_Delete(o);
-    }
-
-    static bool ReturnValueU1Ok(const ReturnValue& rv) {
-        const auto* pj = std::get_if<cJSON*>(&rv);
-        if (pj == nullptr || *pj == nullptr) {
-            return false;
-        }
-        cJSON* ok = cJSON_GetObjectItemCaseSensitive(*pj, "ok");
-        return cJSON_IsBool(ok) && cJSON_IsTrue(ok);
-    }
-
-    void EmitMotionEventDoneOrFailed(const ReturnValue& rv, const std::string& task_id) {
-        EmitMotionEventPhase(task_id, ReturnValueU1Ok(rv) ? "done" : "failed");
-    }
-
-    void EmitDeviceInfoIfOk(const ReturnValue& rv, const std::string& task_id) {
-        const auto* pj = std::get_if<cJSON*>(&rv);
-        if (pj == nullptr || *pj == nullptr || !ReturnValueU1Ok(rv)) {
-            return;
-        }
-        if (last_motion_device_id_.empty()) {
-            return;
-        }
-        cJSON* workspace = cJSON_GetObjectItemCaseSensitive(*pj, "workspace_mm");
-        if (workspace == nullptr || !cJSON_IsObject(workspace)) {
-            return;
-        }
-
-        cJSON* o = cJSON_CreateObject();
-        if (o == nullptr) {
-            return;
-        }
-        cJSON_AddStringToObject(o, "task_id", task_id.c_str());
-        cJSON_AddStringToObject(o, "device_id", last_motion_device_id_.c_str());
-        if (!last_motion_capability_raw_.empty()) {
-            cJSON_AddStringToObject(o, "capability", last_motion_capability_raw_.c_str());
-        }
-
-        const char* keys[] = {"model", "hw_rev", "fw_rev"};
-        for (const char* key : keys) {
-            cJSON* value = cJSON_GetObjectItemCaseSensitive(*pj, key);
-            if (!cJSON_IsString(value) || value->valuestring == nullptr || value->valuestring[0] == '\0') {
-                cJSON_Delete(o);
-                return;
-            }
-            cJSON_AddStringToObject(o, key, value->valuestring);
-        }
-
-        cJSON* workspace_copy = cJSON_Duplicate(workspace, 1);
-        if (workspace_copy == nullptr) {
-            cJSON_Delete(o);
-            return;
-        }
-        cJSON_AddItemToObject(o, "workspace_mm", workspace_copy);
-
-        Application::GetInstance().SendDeviceInfo(o);
-        cJSON_Delete(o);
-    }
-
-    void EmitRunPathOutcome(const ReturnValue& rv, const std::string& task_id) {
-        if (const auto* msg = std::get_if<std::string>(&rv)) {
-            const bool ok = msg->find("failed") == std::string::npos && msg->find("invalid") == std::string::npos;
-            EmitMotionEventPhase(task_id, ok ? "done" : "failed");
-        } else {
-            EmitMotionEventPhase(task_id, "failed");
-        }
-    }
-
-    bool SupportsMotionTask() override { return true; }
-
-    void HandleMotionTaskJson(const cJSON* root) override {
-        if (root == nullptr) {
-            return;
-        }
-        cJSON* cap_item = cJSON_GetObjectItemCaseSensitive(root, "capability");
-        if (!cJSON_IsString(cap_item) || cap_item->valuestring == nullptr) {
-            ESP_LOGW(TAG, "motion_task: missing capability");
-            std::string fallback_id;
-            cJSON* task_item = cJSON_GetObjectItemCaseSensitive(root, "task_id");
-            if (cJSON_IsString(task_item) && task_item->valuestring != nullptr && task_item->valuestring[0] != '\0') {
-                fallback_id = task_item->valuestring;
-            } else {
-                fallback_id = NextLocalTaskId("motion");
-            }
-            EmitMotionEventError(fallback_id, "failed", "E_UNSUPPORTED_CAPABILITY", "capability field is missing");
-            return;
-        }
-        const std::string cap_norm = NormalizeMotionCapabilityName(cap_item->valuestring);
-
-        std::string task_id;
-        cJSON* task_item = cJSON_GetObjectItemCaseSensitive(root, "task_id");
-        if (cJSON_IsString(task_item) && task_item->valuestring != nullptr && task_item->valuestring[0] != '\0') {
-            task_id = task_item->valuestring;
-        } else {
-            ESP_LOGW(TAG, "motion_task: missing task_id, generating local id");
-            task_id = NextLocalTaskId("motion");
-        }
-
-        last_motion_capability_raw_ = cap_item->valuestring;
-        last_motion_device_id_.clear();
-        last_motion_source_.clear();
-        cJSON* dev_item = cJSON_GetObjectItemCaseSensitive(root, "device_id");
-        if (cJSON_IsString(dev_item) && dev_item->valuestring != nullptr) {
-            last_motion_device_id_ = dev_item->valuestring;
-        }
-        cJSON* source_item = cJSON_GetObjectItemCaseSensitive(root, "source");
-        if (cJSON_IsString(source_item) && source_item->valuestring != nullptr) {
-            last_motion_source_ = source_item->valuestring;
-        }
-
-        cJSON* params = cJSON_GetObjectItemCaseSensitive(root, "params");
-        ESP_LOGI(TAG, "motion_task capability=%s task_id=%s", cap_norm.c_str(), task_id.c_str());
-
-        if (Application::GetInstance().GetDeviceState() == kDeviceStateUpgrading) {
-            ESP_LOGW(TAG, "motion_task rejected while firmware upgrade is active task_id=%s", task_id.c_str());
-            EmitMotionEventError(task_id, "failed", "E_DEVICE_UPDATING", "device is updating");
-            return;
-        }
-
-        if (cap_norm == "home" || cap_norm == "motor.home") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = ExecuteHomeWithTaskId(task_id);
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "get_status" || cap_norm == "motor.get_status" || cap_norm == "getstatus") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = ExecuteGetStatusWithTaskId(task_id);
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "get_device_info" || cap_norm == "motor.get_device_info" || cap_norm == "device_info") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = ExecuteGetDeviceInfoWithTaskId(task_id);
-            EmitDeviceInfoIfOk(rv, task_id);
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "pause" || cap_norm == "motor.pause") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = ExecuteControlWithTaskId(task_id, "PAUSE");
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "resume" || cap_norm == "motor.resume") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = ExecuteControlWithTaskId(task_id, "RESUME");
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "stop" || cap_norm == "motor.stop") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = ExecuteControlWithTaskId(task_id, "STOP");
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" || cap_norm == "move" || cap_norm == "motor.move") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            const int x = MotionParamsGetInt(params, "x", 0);
-            const int y = MotionParamsGetInt(params, "y", 0);
-            const int z = MotionParamsGetInt(params, "z", 0);
-            const int feed = MotionParamsGetInt(params, "feed", 1000);
-            ReturnValue rv = ExecuteMoveWithTaskId(task_id, x, y, z, feed);
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "move_rel" || cap_norm == "motor.move_rel") {
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            const int dx = MotionParamsGetInt(params, "dx", 0);
-            const int dy = MotionParamsGetInt(params, "dy", 0);
-            const int dz = MotionParamsGetInt(params, "dz", 0);
-            const int feed = MotionParamsGetInt(params, "feed", 800);
-            ReturnValue rv = ExecuteMoveRelWithTaskId(task_id, dx, dy, dz, feed);
-            EmitMotionEventDoneOrFailed(rv, task_id);
-            FreeReturnValueIfJson(rv);
-        } else if (cap_norm == "run_path" || cap_norm == "motor.run_path" || cap_norm == "path") {
-            int feed_rate = MotionParamsGetInt(params, "feed", 1200);
-            if (feed_rate < 1 || feed_rate > 20000) {
-                feed_rate = 1200;
-            }
-            std::string path_json;
-            if (cJSON_IsObject(params)) {
-                cJSON* pj = cJSON_GetObjectItemCaseSensitive(params, "path_json");
-                if (cJSON_IsString(pj) && pj->valuestring != nullptr) {
-                    path_json = pj->valuestring;
-                } else {
-                    cJSON* parr = cJSON_GetObjectItemCaseSensitive(params, "path");
-                    if (parr != nullptr && (cJSON_IsArray(parr) || cJSON_IsObject(parr))) {
-                        char* printed = cJSON_PrintUnformatted(parr);
-                        if (printed != nullptr) {
-                            path_json = printed;
-                            cJSON_free(printed);
-                        }
-                    }
-                }
-            }
-            if (path_json.empty()) {
-                ESP_LOGW(TAG, "motion_task run_path: missing path_json/path in params task_id=%s", task_id.c_str());
-                EmitMotionEventError(task_id, "failed", "E_MISSING_PATH", "path or path_json is missing from params");
-                return;
-            }
-            EmitMotionEventPhase(task_id, "accepted");
-            EmitMotionEventPhase(task_id, "running");
-            ReturnValue rv = RunPathWithTaskId(task_id, path_json, feed_rate, true);
-            EmitRunPathOutcome(rv, task_id);
-            if (const auto* msg = std::get_if<std::string>(&rv)) {
-                if (msg->find("failed") != std::string::npos || msg->find("invalid") != std::string::npos) {
-                    ESP_LOGW(TAG, "motion_task run_path: %s", msg->c_str());
-                } else {
-                    ESP_LOGI(TAG, "motion_task run_path completed");
-                }
-            }
-        } else {
-            ESP_LOGW(TAG, "motion_task: unsupported capability '%s' task_id=%s", cap_item->valuestring, task_id.c_str());
-            EmitMotionEventError(task_id, "failed", "E_UNSUPPORTED_CAPABILITY",
-                                 ("unsupported capability: " + std::string(cap_item->valuestring)).c_str());
         }
     }
 
@@ -984,42 +137,42 @@ private:
                            "Send HOME through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return ExecuteHomeCapability();
+                               return executor_.ExecuteHomeCapability();
                            });
 
         mcp_server.AddTool("self.motor.get_status",
                            "Query U1 status through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return ExecuteGetStatusCapability();
+                               return executor_.ExecuteGetStatusCapability();
                            });
 
         mcp_server.AddTool("self.motor.get_device_info",
                            "Query U1 device information through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return ExecuteGetDeviceInfoCapability();
+                               return executor_.ExecuteGetDeviceInfoCapability();
                            });
 
         mcp_server.AddTool("self.motor.pause",
                            "Send PAUSE through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return ExecutePauseCapability();
+                               return executor_.ExecutePauseCapability();
                            });
 
         mcp_server.AddTool("self.motor.resume",
                            "Send RESUME through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return ExecuteResumeCapability();
+                               return executor_.ExecuteResumeCapability();
                            });
 
         mcp_server.AddTool("self.motor.stop",
                            "Send STOP through the private protocol.",
                            PropertyList(),
                            [this](const PropertyList&) -> ReturnValue {
-                               return ExecuteStopCapability();
+                               return executor_.ExecuteStopCapability();
                            });
 
         mcp_server.AddTool("self.motor.move_abs",
@@ -1035,7 +188,7 @@ private:
                                 int y = properties["y"].value<int>();
                                 int z = properties["z"].value<int>();
                                 int feed = properties["feed"].value<int>();
-                                return ExecuteMoveCapability(x, y, z, feed);
+                                return executor_.ExecuteMoveCapability(x, y, z, feed);
                             });
 
         mcp_server.AddTool("self.motor.move_rel",
@@ -1051,7 +204,7 @@ private:
                                int dy = properties["dy"].value<int>();
                                int dz = properties["dz"].value<int>();
                                int feed = properties["feed"].value<int>();
-                               return ExecuteMoveRelCapability(dx, dy, dz, feed);
+                               return executor_.ExecuteMoveRelCapability(dx, dy, dz, feed);
                            });
 
         mcp_server.AddTool("self.motor.run_path",
@@ -1061,18 +214,201 @@ private:
                                 Property("feed", kPropertyTypeInteger, 1200, 1, 20000)
                            }),
                            [this](const PropertyList& properties) -> ReturnValue {
-                               return RunPath(properties["path_json"].value<std::string>(),
-                                              properties["feed"].value<int>());
+                               return executor_.RunPath(properties["path_json"].value<std::string>(),
+                                                        properties["feed"].value<int>());
                            });
+    }
+
+    void HandleMotionTaskJson(const cJSON* root) override {
+        if (root == nullptr) {
+            return;
+        }
+        cJSON* cap_item = cJSON_GetObjectItemCaseSensitive(root, "capability");
+        if (!cJSON_IsString(cap_item) || cap_item->valuestring == nullptr) {
+            ESP_LOGW(TAG, "motion_task: missing capability");
+            std::string fallback_id;
+            cJSON* task_item = cJSON_GetObjectItemCaseSensitive(root, "task_id");
+            if (cJSON_IsString(task_item) && task_item->valuestring != nullptr &&
+                task_item->valuestring[0] != '\0') {
+                fallback_id = task_item->valuestring;
+            } else {
+                fallback_id = protocol_.NextLocalTaskId("motion");
+            }
+            emitter_.EmitError(fallback_id, "failed", "E_UNSUPPORTED_CAPABILITY",
+                               "capability field is missing");
+            return;
+        }
+        const std::string cap_norm =
+            U1ProtocolClient::NormalizeMotionCapabilityName(cap_item->valuestring);
+
+        std::string task_id;
+        cJSON* task_item = cJSON_GetObjectItemCaseSensitive(root, "task_id");
+        if (cJSON_IsString(task_item) && task_item->valuestring != nullptr &&
+            task_item->valuestring[0] != '\0') {
+            task_id = task_item->valuestring;
+        } else {
+            ESP_LOGW(TAG, "motion_task: missing task_id, generating local id");
+            task_id = protocol_.NextLocalTaskId("motion");
+        }
+
+        emitter_.ClearMotionContext();
+        std::string device_id;
+        cJSON* dev_item = cJSON_GetObjectItemCaseSensitive(root, "device_id");
+        if (cJSON_IsString(dev_item) && dev_item->valuestring != nullptr) {
+            device_id = dev_item->valuestring;
+        }
+        std::string source;
+        cJSON* source_item = cJSON_GetObjectItemCaseSensitive(root, "source");
+        if (cJSON_IsString(source_item) && source_item->valuestring != nullptr) {
+            source = source_item->valuestring;
+        }
+        emitter_.SetMotionContext(device_id, cap_item->valuestring, source);
+
+        cJSON* params = cJSON_GetObjectItemCaseSensitive(root, "params");
+        ESP_LOGI(TAG, "motion_task capability=%s task_id=%s", cap_norm.c_str(),
+                 task_id.c_str());
+
+        if (Application::GetInstance().GetDeviceState() == kDeviceStateUpgrading) {
+            ESP_LOGW(TAG,
+                     "motion_task rejected while firmware upgrade is active task_id=%s",
+                     task_id.c_str());
+            emitter_.EmitError(task_id, "failed", "E_DEVICE_UPDATING",
+                               "device is updating");
+            return;
+        }
+
+        if (cap_norm == "home" || cap_norm == "motor.home") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.ExecuteHomeWithTaskId(task_id);
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "get_status" || cap_norm == "motor.get_status" ||
+                   cap_norm == "getstatus") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.ExecuteGetStatusWithTaskId(task_id);
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "get_device_info" ||
+                   cap_norm == "motor.get_device_info" ||
+                   cap_norm == "device_info") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.ExecuteGetDeviceInfoWithTaskId(task_id);
+            emitter_.EmitDeviceInfoIfOk(rv, task_id);
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "pause" || cap_norm == "motor.pause") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "PAUSE");
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "resume" || cap_norm == "motor.resume") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "RESUME");
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "stop" || cap_norm == "motor.stop") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "STOP");
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" ||
+                   cap_norm == "move" || cap_norm == "motor.move") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            const int x = U1ProtocolClient::MotionParamsGetInt(params, "x", 0);
+            const int y = U1ProtocolClient::MotionParamsGetInt(params, "y", 0);
+            const int z = U1ProtocolClient::MotionParamsGetInt(params, "z", 0);
+            const int feed =
+                U1ProtocolClient::MotionParamsGetInt(params, "feed", 1000);
+            ReturnValue rv =
+                executor_.ExecuteMoveWithTaskId(task_id, x, y, z, feed);
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "move_rel" || cap_norm == "motor.move_rel") {
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            const int dx = U1ProtocolClient::MotionParamsGetInt(params, "dx", 0);
+            const int dy = U1ProtocolClient::MotionParamsGetInt(params, "dy", 0);
+            const int dz = U1ProtocolClient::MotionParamsGetInt(params, "dz", 0);
+            const int feed =
+                U1ProtocolClient::MotionParamsGetInt(params, "feed", 800);
+            ReturnValue rv =
+                executor_.ExecuteMoveRelWithTaskId(task_id, dx, dy, dz, feed);
+            emitter_.EmitDoneOrFailed(rv, task_id);
+            U1ProtocolClient::FreeReturnValueIfJson(rv);
+        } else if (cap_norm == "run_path" || cap_norm == "motor.run_path" ||
+                   cap_norm == "path") {
+            int feed_rate =
+                U1ProtocolClient::MotionParamsGetInt(params, "feed", 1200);
+            if (feed_rate < 1 || feed_rate > 20000) {
+                feed_rate = 1200;
+            }
+            std::string path_json;
+            if (cJSON_IsObject(params)) {
+                cJSON* pj =
+                    cJSON_GetObjectItemCaseSensitive(params, "path_json");
+                if (cJSON_IsString(pj) && pj->valuestring != nullptr) {
+                    path_json = pj->valuestring;
+                } else {
+                    cJSON* parr =
+                        cJSON_GetObjectItemCaseSensitive(params, "path");
+                    if (parr != nullptr &&
+                        (cJSON_IsArray(parr) || cJSON_IsObject(parr))) {
+                        char* printed = cJSON_PrintUnformatted(parr);
+                        if (printed != nullptr) {
+                            path_json = printed;
+                            cJSON_free(printed);
+                        }
+                    }
+                }
+            }
+            if (path_json.empty()) {
+                ESP_LOGW(TAG,
+                         "motion_task run_path: missing path_json/path in params "
+                         "task_id=%s",
+                         task_id.c_str());
+                emitter_.EmitError(task_id, "failed", "E_MISSING_PATH",
+                                   "path or path_json is missing from params");
+                return;
+            }
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.RunPathWithTaskId(
+                task_id, path_json, feed_rate, true);
+            emitter_.EmitRunPathOutcome(rv, task_id);
+            if (const auto* msg = std::get_if<std::string>(&rv)) {
+                if (msg->find("failed") != std::string::npos ||
+                    msg->find("invalid") != std::string::npos) {
+                    ESP_LOGW(TAG, "motion_task run_path: %s", msg->c_str());
+                } else {
+                    ESP_LOGI(TAG, "motion_task run_path completed");
+                }
+            }
+        } else {
+            ESP_LOGW(TAG, "motion_task: unsupported capability '%s' task_id=%s",
+                     cap_item->valuestring, task_id.c_str());
+            emitter_.EmitError(
+                task_id, "failed", "E_UNSUPPORTED_CAPABILITY",
+                ("unsupported capability: " +
+                 std::string(cap_item->valuestring))
+                    .c_str());
+        }
     }
 
 public:
     DlcMotorControlP1AiBoard()
-        : boot_button_(BOOT_BUTTON_GPIO) {
+        : boot_button_(BOOT_BUTTON_GPIO),
+          executor_(protocol_, emitter_) {
         InitializeI2c();
         InitializeButtons();
         InitializeCamera();
-        InitializeU1Uart();
+        protocol_.InitializeU1Uart();
         InitializeTools();
     }
 
@@ -1091,11 +427,13 @@ public:
         return camera_;
     }
 
+    bool SupportsMotionTask() override { return true; }
+
     bool CheckU1Uart(std::string& detail) override {
-        ReturnValue rv = ExecuteGetStatusWithTaskId("self_check_u1");
-        const bool ok = ReturnValueU1Ok(rv);
+        ReturnValue rv = executor_.ExecuteGetStatusWithTaskId("self_check_u1");
+        const bool ok = U1ProtocolClient::ReturnValueU1Ok(rv);
         detail = ok ? "GET_STATUS ok" : "GET_STATUS failed";
-        FreeReturnValueIfJson(rv);
+        U1ProtocolClient::FreeReturnValueIfJson(rv);
         return ok;
     }
 };

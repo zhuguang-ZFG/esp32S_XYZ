@@ -56,7 +56,7 @@ jobs:
           python -m unittest discover -s tests -p "test_*.py" -v
 
   firmware-native-tests:
-    name: U1 firmware native tests
+    name: Firmware native tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +67,12 @@ jobs:
             firmware/u1-grbl/test/test_json_parser.cpp \
             firmware/u1-grbl/Grbl_Esp32/src/json_utils.cpp \
             -o /tmp/test_json_parser && /tmp/test_json_parser
+
+      - name: Compile and run U8 protocol logic tests
+        run: |
+          g++ -std=c++17 \
+            firmware/u8-xiaozhi/main/boards/zhuguang/dlc-motor-control-p1-ai/test_u8_protocol_logic.cpp \
+            -o /tmp/test_u8_protocol_logic && /tmp/test_u8_protocol_logic
 
       - name: Verify no E009 regression in Protocol.cpp
         run: |

@@ -68,3 +68,14 @@ M5.1~M5.8 — 需要实机
 - 2026-05-16: 本地 CI 等价验证全部通过
 - 2026-05-16: 远端 CI 6/7 jobs 通过（python-unit 缺 httpx 已修复）
 - 2026-05-16: markdown-link-check 外部链接误报已通过 ignorePatterns 修复
+- 2026-06-03: 无硬件期技术债清理完成（见 Phase 4）
+
+### Phase 4: 无硬件期技术债清理 [complete]
+
+按 Superpowers SPC 流程执行（Spec→Plan→Code→Verify），2026-06-03。
+
+- [x] P1-7: U8 板文件模块化拆分 — 1104行 board.cc → 404行组装层 + 3 模块 (U1ProtocolClient, MotionExecutor, MotionEventEmitter)
+- [x] P2-12: 固件单元测试扩展 — 新增 22 个 U8 协议逻辑测试 (g++ native)，CI 集成
+- [x] P3-16: 死代码评估 — 确认上游代码，保留不删
+- [x] P3-17: 依赖锁定 — TMCStepper 收紧至 >=0.7.3,<0.8.0，创建 requirements.txt
+- [x] 251 CI 测试全部通过，无回归

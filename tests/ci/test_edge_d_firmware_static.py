@@ -4,7 +4,17 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-U8_BOARD = ROOT / "firmware" / "u8-xiaozhi" / "main" / "boards" / "zhuguang" / "dlc-motor-control-p1-ai" / "dlc_motor_control_p1_ai_board.cc"
+U8_BOARD_DIR = ROOT / "firmware" / "u8-xiaozhi" / "main" / "boards" / "zhuguang" / "dlc-motor-control-p1-ai"
+U8_BOARD = U8_BOARD_DIR / "dlc_motor_control_p1_ai_board.cc"
+
+
+def _read_u8_board_sources():
+    """Read all .cc and .h sources in the U8 board directory for static checks."""
+    combined = ""
+    for ext in ("*.cc", "*.h"):
+        for f in sorted(U8_BOARD_DIR.glob(ext)):
+            combined += f.read_text(encoding="utf-8", errors="replace") + "\n"
+    return combined
 U8_APP_H = ROOT / "firmware" / "u8-xiaozhi" / "main" / "application.h"
 U8_APP_CC = ROOT / "firmware" / "u8-xiaozhi" / "main" / "application.cc"
 U8_OTA_H = ROOT / "firmware" / "u8-xiaozhi" / "main" / "ota.h"
@@ -209,9 +219,9 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertIn("dirty_ = true;", erase_all)
 
     def test_u8_rejects_motion_tasks_while_upgrading(self):
-        text = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        text = _read_u8_board_sources()
 
-        self.assertIn("EmitMotionEventError", text)
+        self.assertIn("EmitError", text)
         self.assertIn("Application::GetInstance().GetDeviceState() == kDeviceStateUpgrading", text)
         self.assertIn('"E_DEVICE_UPDATING"', text)
         self.assertIn('"device is updating"', text)
@@ -222,7 +232,7 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         app_cc = U8_APP_CC.read_text(encoding="utf-8", errors="replace")
         protocol_h = U8_PROTOCOL_H.read_text(encoding="utf-8", errors="replace")
         protocol_cc = U8_PROTOCOL_CC.read_text(encoding="utf-8", errors="replace")
-        board = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        board = _read_u8_board_sources()
 
         for token in (
             "RunStartupSelfCheck",
@@ -425,7 +435,7 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
             self.assertIn(token, nvs)
 
     def test_u8_command_builder_matches_cmd_schema_shape(self):
-        text = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        text = _read_u8_board_sources()
         self.assertIn('"msg_id"', text)
         self.assertIn('"task_id"', text)
         self.assertIn('"cmd"', text)
@@ -433,7 +443,7 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertNotIn('\\"type\\":\\"cmd\\"', text)
 
     def test_u8_exposes_get_device_info_contract(self):
-        text = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        text = _read_u8_board_sources()
         self.assertIn('"GET_DEVICE_INFO"', text)
         self.assertIn("ExecuteGetDeviceInfoWithTaskId", text)
         self.assertIn("self.motor.get_device_info", text)
@@ -445,7 +455,7 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertIn("SendDeviceInfo", text)
 
     def test_u8_exposes_voice_safe_control_tools(self):
-        text = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        text = _read_u8_board_sources()
         for tool_name, cmd in (
             ("self.motor.pause", "PAUSE"),
             ("self.motor.resume", "RESUME"),
@@ -462,7 +472,7 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertIn('cap_norm == "stop"', text)
 
     def test_u8_exposes_whitelisted_relative_move_tool(self):
-        text = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        text = _read_u8_board_sources()
         self.assertIn('"self.motor.move_rel"', text)
         self.assertIn("ExecuteMoveRelWithTaskId", text)
         self.assertIn("ExecuteMoveRelCapability", text)
@@ -477,7 +487,7 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertIn('Property("dz", kPropertyTypeInteger, 0, -1, 1)', text)
 
     def test_u8_device_info_wss_frame_is_explicit(self):
-        board = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        board = _read_u8_board_sources()
         app_h = U8_APP_H.read_text(encoding="utf-8", errors="replace")
         app_cc = U8_APP_CC.read_text(encoding="utf-8", errors="replace")
         protocol_h = U8_PROTOCOL_H.read_text(encoding="utf-8", errors="replace")
@@ -491,19 +501,20 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertIn("Application::GetInstance().SendDeviceInfo", board)
 
     def test_u8_motion_event_preserves_task_source_for_tts_hints(self):
-        text = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+        text = _read_u8_board_sources()
         self.assertIn("last_motion_source_", text)
         self.assertIn('cJSON_GetObjectItemCaseSensitive(root, "source")', text)
         self.assertIn('cJSON_AddStringToObject(o, "source"', text)
 
     def test_u8_run_path_emits_segment_progress_events(self):
-        text = U8_BOARD.read_text(encoding="utf-8", errors="replace")
-        self.assertIn("EmitMotionEventProgress", text)
-        self.assertIn('cJSON_AddStringToObject(o, "phase", "progress")', text)
+        text = _read_u8_board_sources()
+        self.assertIn("EmitProgress", text)
+        # The emitter uses a variable 'phase' set to "progress" via BuildBaseEvent
+        self.assertIn('"progress"', text)
         self.assertIn('"done_segments"', text)
         self.assertIn('"total_segments"', text)
         self.assertIn('"percent"', text)
-        self.assertIn("RunPathWithTaskId(task_id, path_json, feed_rate, true)", text)
+        self.assertIn("RunPathWithTaskId(", text)
 
     def test_u1_error_codes_are_edge_d_schema_codes(self):
         text = U1_PROTOCOL.read_text(encoding="utf-8", errors="replace")

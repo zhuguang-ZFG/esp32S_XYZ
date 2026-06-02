@@ -1,6 +1,6 @@
 # esp32S_XYZ Status
 
-> Updated: 2026-05-29
+> Updated: 2026-06-03
 > Branch: `main`
 > Tests: **251 passed, 0 failed** (`pytest tests/ci/ -q`)
 > Firmware CI: **10/10 全绿**（U1/U8 固件编译 + JSON 解析器单测）
@@ -26,7 +26,7 @@
 Java 测试:  76+ passed (manager-api)
 Schema:     62 验证通过
 GPIO:       1 静态检查通过
-固件单测:   18 passed (JSON 解析器, g++ native)
+固件单测:   40 passed (JSON 解析器 18 + U8 协议逻辑 22, g++ native)
 CI:         10/10 jobs 全绿
 ```
 
@@ -48,12 +48,20 @@ CI:         10/10 jobs 全绿
 | 风险 | 等级 | 说明 | 缓解措施 |
 |------|------|------|----------|
 | R-018 | 中 | CH340C 自动下载电路时序未验证 | 手动按 BOOT 键重试 |
-| U8 单体文件 | 中 | board.cc 1089 行 | 待拆分（P2-7） |
-| 无固件 CI | 中 | C/C++ 回归不可见 | 待配置 PlatformIO/ESP-IDF CI |
+| ~~U8 单体文件~~ | ~~中~~ | ~~board.cc 1089 行~~ | ✅ 已拆分 P1-7：4 模块 + 组装层(404行) |
+| ~~无固件 CI~~ | ~~中~~ | ~~C/C++ 回归不可见~~ | ✅ 已配置 P1-8：10/10 jobs 全绿 |
 | ReturnValue variant | 低 | 59 处手动内存管理 | 待 RAII 重构（P2-15） |
 | U8 CMake 700行 if/else | 低 | 板选择硬编码 | 待数据驱动重构（P2-11） |
 
-## 最近修复（2026-05-29）
+## 最近修复（2026-06-03）
+
+| Commit | 修复 |
+|--------|------|
+| — | U8 板文件模块化拆分（P1-7）：1104行→4模块+组装层 |
+| — | U8 协议逻辑单元测试（P2-12）：22 cases, g++ native |
+| — | 依赖版本锁定（P3-17）：TMCStepper + requirements.txt |
+
+## 历史修复（2026-05-29）
 
 | Commit | 修复 |
 |--------|------|
