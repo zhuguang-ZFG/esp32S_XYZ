@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include <cstdlib>
+#include <esp_err.h>
 
 U1ProtocolClient::U1ProtocolClient() = default;
 
@@ -54,10 +55,20 @@ std::string U1ProtocolClient::ReadU1Response(int timeout_ms) {
 
 std::string U1ProtocolClient::SendU1Line(const std::string& line, int timeout_ms) {
     std::lock_guard<std::mutex> lock(uart_mutex_);
-    uart_flush_input(U1_UART_PORT_NUM);
+    const esp_err_t flush_result = uart_flush_input(U1_UART_PORT_NUM);
+    if (flush_result != ESP_OK) {
+        ESP_LOGE(TAG_U1_PROTOCOL, "Failed to flush U1 UART input: %s",
+                 esp_err_to_name(flush_result));
+        return "";
+    }
 
     std::string command = line + "\n";
-    uart_write_bytes(U1_UART_PORT_NUM, command.data(), command.size());
+    const int written = uart_write_bytes(U1_UART_PORT_NUM, command.data(), command.size());
+    if (written < 0 || static_cast<size_t>(written) != command.size()) {
+        ESP_LOGE(TAG_U1_PROTOCOL, "Failed to write full U1 command: %d/%u",
+                 written, static_cast<unsigned>(command.size()));
+        return "";
+    }
     ESP_LOGI(TAG_U1_PROTOCOL, "U8 -> U1: %s", line.c_str());
 
     auto response = ReadU1Response(timeout_ms);
@@ -68,33 +79,61 @@ std::string U1ProtocolClient::SendU1Line(const std::string& line, int timeout_ms
 }
 
 std::string U1ProtocolClient::BuildProtocolCommandJson(uint32_t msg_id,
-                                                        const std::string& task_id,
-                                                        const std::string& cmd,
-                                                        cJSON* extra) {
+                                                         const std::string& task_id,
+                                                         const std::string& cmd,
+                                                         cJSON* extra) {
     cJSON* root = cJSON_CreateObject();
-    cJSON_AddNumberToObject(root, "msg_id", msg_id);
-    cJSON_AddStringToObject(root, "task_id", task_id.c_str());
-    cJSON_AddStringToObject(root, "cmd", cmd.c_str());
+    if (root == nullptr) {
+        ESP_LOGE(TAG_U1_PROTOCOL, "Failed to allocate U1 command JSON");
+        return "";
+    }
+    if (cJSON_AddNumberToObject(root, "msg_id", msg_id) == nullptr ||
+        cJSON_AddStringToObject(root, "task_id", task_id.c_str()) == nullptr ||
+        cJSON_AddStringToObject(root, "cmd", cmd.c_str()) == nullptr) {
+        ESP_LOGE(TAG_U1_PROTOCOL, "Failed to populate U1 command JSON");
+        cJSON_Delete(root);
+        return "";
+    }
     if (extra != nullptr) {
         cJSON* child = extra->child;
         while (child != nullptr) {
-            cJSON_AddItemReferenceToObject(root, child->string,
-                                           cJSON_Duplicate(child, 1));
+            cJSON* duplicated = cJSON_Duplicate(child, 1);
+            if (duplicated == nullptr) {
+                ESP_LOGE(TAG_U1_PROTOCOL, "Failed to copy U1 command field: %s",
+                         child->string != nullptr ? child->string : "<unnamed>");
+                cJSON_Delete(root);
+                return "";
+            }
+            if (!cJSON_AddItemToObject(root, child->string, duplicated)) {
+                ESP_LOGE(TAG_U1_PROTOCOL, "Failed to add U1 command field: %s",
+                         child->string != nullptr ? child->string : "<unnamed>");
+                cJSON_Delete(duplicated);
+                cJSON_Delete(root);
+                return "";
+            }
             child = child->next;
         }
     }
     char* json = cJSON_PrintUnformatted(root);
-    std::string result(json);
-    cJSON_free(json);
+    std::string result;
+    if (json != nullptr) {
+        result = json;
+        cJSON_free(json);
+    } else {
+        ESP_LOGE(TAG_U1_PROTOCOL, "Failed to print U1 command JSON");
+    }
     cJSON_Delete(root);
     return result;
 }
 
 std::string U1ProtocolClient::SendU1ProtocolCommand(uint32_t msg_id,
-                                                     const std::string& task_id,
-                                                     const std::string& cmd,
-                                                     int timeout_ms) {
+                                                      const std::string& task_id,
+                                                      const std::string& cmd,
+                                                      int timeout_ms) {
     std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd);
+    if (line.empty()) {
+        return "";
+    }
     return SendU1Line("@" + line, timeout_ms);
 }
 
@@ -104,6 +143,9 @@ std::string U1ProtocolClient::SendU1ProtocolJson(uint32_t msg_id,
                                                   cJSON* extra,
                                                   int timeout_ms) {
     std::string line = BuildProtocolCommandJson(msg_id, task_id, cmd, extra);
+    if (line.empty()) {
+        return "";
+    }
     return SendU1Line("@" + line, timeout_ms);
 }
 

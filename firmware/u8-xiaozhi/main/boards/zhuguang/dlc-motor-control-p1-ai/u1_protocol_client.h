@@ -100,4 +100,18 @@ private:
     uint32_t protocol_msg_id_ = 0;
 };
 
+class ReturnValueJsonGuard {
+public:
+    explicit ReturnValueJsonGuard(ReturnValue& value) : value_(value) {}
+    ~ReturnValueJsonGuard() {
+        U1ProtocolClient::FreeReturnValueIfJson(value_);
+    }
+
+    ReturnValueJsonGuard(const ReturnValueJsonGuard&) = delete;
+    ReturnValueJsonGuard& operator=(const ReturnValueJsonGuard&) = delete;
+
+private:
+    ReturnValue& value_;
+};
+
 #endif  // U1_PROTOCOL_CLIENT_H

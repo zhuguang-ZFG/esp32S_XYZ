@@ -281,42 +281,42 @@ private:
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
             ReturnValue rv = executor_.ExecuteHomeWithTaskId(task_id);
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "get_status" || cap_norm == "motor.get_status" ||
                    cap_norm == "getstatus") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
             ReturnValue rv = executor_.ExecuteGetStatusWithTaskId(task_id);
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "get_device_info" ||
                    cap_norm == "motor.get_device_info" ||
                    cap_norm == "device_info") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
             ReturnValue rv = executor_.ExecuteGetDeviceInfoWithTaskId(task_id);
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDeviceInfoIfOk(rv, task_id);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "pause" || cap_norm == "motor.pause") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
             ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "PAUSE");
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "resume" || cap_norm == "motor.resume") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
             ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "RESUME");
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "stop" || cap_norm == "motor.stop") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
             ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "STOP");
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" ||
                    cap_norm == "move" || cap_norm == "motor.move") {
             emitter_.EmitPhase(task_id, "accepted");
@@ -328,8 +328,8 @@ private:
                 U1ProtocolClient::MotionParamsGetInt(params, "feed", 1000);
             ReturnValue rv =
                 executor_.ExecuteMoveWithTaskId(task_id, x, y, z, feed);
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "move_rel" || cap_norm == "motor.move_rel") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
@@ -340,8 +340,8 @@ private:
                 U1ProtocolClient::MotionParamsGetInt(params, "feed", 800);
             ReturnValue rv =
                 executor_.ExecuteMoveRelWithTaskId(task_id, dx, dy, dz, feed);
+            ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
-            U1ProtocolClient::FreeReturnValueIfJson(rv);
         } else if (cap_norm == "run_path" || cap_norm == "motor.run_path" ||
                    cap_norm == "path") {
             int feed_rate =
@@ -431,9 +431,9 @@ public:
 
     bool CheckU1Uart(std::string& detail) override {
         ReturnValue rv = executor_.ExecuteGetStatusWithTaskId("self_check_u1");
+        ReturnValueJsonGuard rv_guard(rv);
         const bool ok = U1ProtocolClient::ReturnValueU1Ok(rv);
         detail = ok ? "GET_STATUS ok" : "GET_STATUS failed";
-        U1ProtocolClient::FreeReturnValueIfJson(rv);
         return ok;
     }
 };

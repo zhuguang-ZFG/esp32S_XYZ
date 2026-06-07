@@ -74,41 +74,43 @@ ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId(
             "relative move rejected: at least one axis step is required");
     }
 
-    ReturnValue status_rv = ExecuteGetStatusWithTaskId(task_id);
-    cJSON* status = nullptr;
-    if (auto* p = std::get_if<cJSON*>(&status_rv)) {
-        status = *p;
-    }
-
     double current_x = 0.0;
     double current_y = 0.0;
     double current_z = 0.0;
-    if (!U1ProtocolClient::JsonValueIsOk(status) ||
-        !U1ProtocolClient::JsonValueHasXyz(status, "position", current_x,
-                                           current_y, current_z)) {
-        U1ProtocolClient::FreeReturnValueIfJson(status_rv);
-        return std::string(
-            "relative move rejected: unable to read current position");
-    }
-    U1ProtocolClient::FreeReturnValueIfJson(status_rv);
+    {
+        ReturnValue status_rv = ExecuteGetStatusWithTaskId(task_id);
+        ReturnValueJsonGuard status_guard(status_rv);
+        cJSON* status = nullptr;
+        if (auto* p = std::get_if<cJSON*>(&status_rv)) {
+            status = *p;
+        }
 
-    ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
-    cJSON* info = nullptr;
-    if (auto* p = std::get_if<cJSON*>(&info_rv)) {
-        info = *p;
+        if (!U1ProtocolClient::JsonValueIsOk(status) ||
+            !U1ProtocolClient::JsonValueHasXyz(status, "position", current_x,
+                                               current_y, current_z)) {
+            return std::string(
+                "relative move rejected: unable to read current position");
+        }
     }
 
     double workspace_x = 0.0;
     double workspace_y = 0.0;
     double workspace_z = 0.0;
-    if (!U1ProtocolClient::JsonValueIsOk(info) ||
-        !U1ProtocolClient::JsonValueHasXyz(info, "workspace_mm", workspace_x,
-                                           workspace_y, workspace_z)) {
-        U1ProtocolClient::FreeReturnValueIfJson(info_rv);
-        return std::string(
-            "relative move rejected: unable to verify workspace");
+    {
+        ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
+        ReturnValueJsonGuard info_guard(info_rv);
+        cJSON* info = nullptr;
+        if (auto* p = std::get_if<cJSON*>(&info_rv)) {
+            info = *p;
+        }
+
+        if (!U1ProtocolClient::JsonValueIsOk(info) ||
+            !U1ProtocolClient::JsonValueHasXyz(info, "workspace_mm", workspace_x,
+                                               workspace_y, workspace_z)) {
+            return std::string(
+                "relative move rejected: unable to verify workspace");
+        }
     }
-    U1ProtocolClient::FreeReturnValueIfJson(info_rv);
 
     const double target_x = current_x + dx;
     const double target_y = current_y + dy;

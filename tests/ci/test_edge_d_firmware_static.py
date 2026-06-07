@@ -442,6 +442,90 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertNotIn('"type":"cmd"', text)
         self.assertNotIn('\\"type\\":\\"cmd\\"', text)
 
+    def test_u8_protocol_command_builder_owns_extra_json_copies(self):
+        text = U8_BOARD_DIR.joinpath("u1_protocol_client.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        builder = text[
+            text.index("std::string U1ProtocolClient::BuildProtocolCommandJson"):
+            text.index("std::string U1ProtocolClient::SendU1ProtocolCommand")
+        ]
+        self.assertIn("cJSON_Duplicate(child, 1)", builder)
+        self.assertIn("cJSON_AddItemToObject(root, child->string, duplicated)", builder)
+        self.assertNotIn("cJSON_AddItemReferenceToObject", builder)
+
+    def test_u8_protocol_command_builder_handles_cjson_allocation_failures(self):
+        text = U8_BOARD_DIR.joinpath("u1_protocol_client.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        builder = text[
+            text.index("std::string U1ProtocolClient::BuildProtocolCommandJson"):
+            text.index("std::string U1ProtocolClient::SendU1ProtocolCommand")
+        ]
+        self.assertIn("if (root == nullptr)", builder)
+        self.assertIn("std::string result;", builder)
+        self.assertIn("if (json != nullptr)", builder)
+        self.assertNotIn("std::string result(json);", builder)
+
+    def test_u8_protocol_send_checks_uart_flush_and_write_results(self):
+        text = U8_BOARD_DIR.joinpath("u1_protocol_client.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        send_line = text[
+            text.index("std::string U1ProtocolClient::SendU1Line"):
+            text.index("std::string U1ProtocolClient::BuildProtocolCommandJson")
+        ]
+        self.assertIn("const esp_err_t flush_result = uart_flush_input", send_line)
+        self.assertIn("flush_result != ESP_OK", send_line)
+        self.assertIn("const int written = uart_write_bytes", send_line)
+        self.assertIn("static_cast<size_t>(written) != command.size()", send_line)
+
+    def test_u8_protocol_send_skips_empty_built_json(self):
+        text = U8_BOARD_DIR.joinpath("u1_protocol_client.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        send_helpers = text[
+            text.index("std::string U1ProtocolClient::SendU1ProtocolCommand"):
+            text.index("// --- Static helpers ---")
+        ]
+        self.assertGreaterEqual(send_helpers.count("if (line.empty())"), 2)
+        self.assertGreaterEqual(send_helpers.count('return "";'), 2)
+
+    def test_u8_return_value_json_guard_is_defined(self):
+        header = U8_BOARD_DIR.joinpath("u1_protocol_client.h").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        self.assertIn("class ReturnValueJsonGuard", header)
+        self.assertIn("explicit ReturnValueJsonGuard(ReturnValue& value)", header)
+        self.assertIn("~ReturnValueJsonGuard()", header)
+        self.assertIn("U1ProtocolClient::FreeReturnValueIfJson(value_)", header)
+        self.assertIn("ReturnValueJsonGuard(const ReturnValueJsonGuard&) = delete", header)
+
+    def test_u8_board_uses_return_value_json_guard_for_motion_results(self):
+        board = U8_BOARD.read_text(encoding="utf-8", errors="replace")
+
+        self.assertGreaterEqual(board.count("ReturnValueJsonGuard rv_guard(rv);"), 9)
+        self.assertNotIn("U1ProtocolClient::FreeReturnValueIfJson(rv);", board)
+
+    def test_u8_motion_executor_uses_return_value_json_guard_for_relative_move(self):
+        text = U8_BOARD_DIR.joinpath("motion_executor.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        relative_move = text[
+            text.index("ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId"):
+            text.index("// --- Capability wrappers")
+        ]
+        self.assertIn("ReturnValueJsonGuard status_guard(status_rv);", relative_move)
+        self.assertIn("ReturnValueJsonGuard info_guard(info_rv);", relative_move)
+        self.assertNotIn("FreeReturnValueIfJson(status_rv)", relative_move)
+        self.assertNotIn("FreeReturnValueIfJson(info_rv)", relative_move)
+
     def test_u8_exposes_get_device_info_contract(self):
         text = _read_u8_board_sources()
         self.assertIn('"GET_DEVICE_INFO"', text)
