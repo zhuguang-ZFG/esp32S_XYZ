@@ -7,6 +7,12 @@
   "source": "client",
   "request_id": "req-path-001",
   "trace_id": "trace-path-001",
+  "route_policy": {
+    "route_role": "device_vector",
+    "model_required": false,
+    "primary_strategy": "provided_path",
+    "artifact_required": "preview_svg"
+  },
   "params": {
     "feed": 900,
     "path": [

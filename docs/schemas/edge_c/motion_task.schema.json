@@ -17,6 +17,26 @@
     "source": { "type": "string", "enum": ["client", "voice"] },
     "request_id": { "type": "string" },
     "trace_id": { "type": "string" },
+    "route_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route_role", "model_required", "primary_strategy", "artifact_required"],
+      "properties": {
+        "route_role": {
+          "type": "string",
+          "enum": ["device_control", "device_write", "device_draw", "device_vector", "device_unknown"]
+        },
+        "model_required": { "type": "boolean" },
+        "primary_strategy": {
+          "type": "string",
+          "enum": ["deterministic", "image_then_vector", "svg_vector", "provided_path", "planner_required"]
+        },
+        "artifact_required": {
+          "type": "string",
+          "enum": ["none", "preview_svg", "vector_path"]
+        }
+      }
+    },
     "params": { "type": "object" },
     "constraints": {
       "type": "object",
