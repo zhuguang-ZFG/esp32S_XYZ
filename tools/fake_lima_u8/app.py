@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Fake U8 client for the LiMa direct Device Gateway.
 
 The core client is transport-injected so unit tests do not need a real network
@@ -34,7 +34,7 @@ class FakeU8Config:
     token: str = "test-device-token"
     device_id: str = "dev-1"
     fw_rev: str = "fake-u8-lima-0.1.0"
-    transcript: str = "写你好"
+    transcript: str = "hello"
     uptime_ms: int = 1
     capabilities: list[str] = field(default_factory=lambda: list(DEFAULT_CAPABILITIES))
 
@@ -131,6 +131,27 @@ async def run_fake_u8_script(transport: JsonTransport, config: FakeU8Config) -> 
     if not task_id:
         raise RuntimeError(f"motion_task missing task_id: {motion_task}")
 
+    # 解析并记录 route_policy
+    route_policy = motion_task.get("route_policy")
+    if route_policy:
+        import os
+        import time
+        artifact_dir = "device_artifacts"
+        os.makedirs(artifact_dir, exist_ok=True)
+        log_file = os.path.join(artifact_dir, f"fake_u8_route_policy_{config.device_id}.log")
+        log_entry = {
+            "timestamp": time.time(),
+            "device_id": config.device_id,
+            "task_id": task_id,
+            "route_policy": route_policy,
+            "consumed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        }
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False, indent=2) + "\n")
+        received.append({"type": "route_policy_consumed", "route_policy": route_policy})
+    if not task_id:
+        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
+
     await transport.send_json(build_motion_event(device_id=config.device_id, task_id=task_id, phase="progress", percent=50))
     progress_ack = assert_frame_type(await transport.receive_json(), "motion_event_ack")
     received.append(progress_ack)
@@ -138,6 +159,17 @@ async def run_fake_u8_script(transport: JsonTransport, config: FakeU8Config) -> 
     await transport.send_json(build_motion_event(device_id=config.device_id, task_id=task_id, phase="done", percent=100))
     done_ack = assert_frame_type(await transport.receive_json(), "motion_event_ack")
     received.append(done_ack)
+
+    # 回传 route_policy 消费证据（附加到 done 事件）
+    if route_policy:
+        done_event = build_motion_event(device_id=config.device_id, task_id=task_id, phase="done", percent=100)
+        done_event["route_policy_evidence"] = {
+            "consumed": True,
+            "route_role": route_policy.get("route_role"),
+            "model_required": route_policy.get("model_required"),
+            "primary_strategy": route_policy.get("primary_strategy")
+        }
+        await transport.send_json(done_event)  # 回传带证据的事件
 
     return received
 
@@ -190,6 +222,26 @@ async def run_fake_u8_failure_script(
     if not task_id:
         raise RuntimeError(f"motion_task missing task_id: {motion_task}")
 
+    # 解析并记录 route_policy（失败场景也需记录）
+    route_policy = motion_task.get("route_policy")
+    if route_policy:
+        import os
+        import time
+        artifact_dir = "device_artifacts"
+        os.makedirs(artifact_dir, exist_ok=True)
+        log_file = os.path.join(artifact_dir, f"fake_u8_route_policy_{config.device_id}.log")
+        log_entry = {
+            "timestamp": time.time(),
+            "device_id": config.device_id,
+            "task_id": task_id,
+            "route_policy": route_policy,
+            "consumed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "scenario": "failure"
+        }
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False, indent=2) + "\n")
+        received.append({"type": "route_policy_consumed", "route_policy": route_policy, "scenario": "failure"})
+
     await transport.send_json(build_motion_event(
         device_id=config.device_id, task_id=task_id, phase="accepted"))
     received.append(assert_frame_type(await transport.receive_json(), "motion_event_ack"))
@@ -208,7 +260,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--token", default="test-device-token")
     parser.add_argument("--device-id", default="dev-1")
     parser.add_argument("--fw-rev", default="fake-u8-lima-0.1.0")
-    parser.add_argument("--transcript", default="写你好")
+    parser.add_argument("--transcript", default="hello")
     parser.add_argument("--uptime-ms", type=int, default=1)
     parser.add_argument("--test", default="success", choices=("success", "failure"))
     parser.add_argument("--fail-with", default="E_MISSING_PATH")
@@ -237,6 +289,47 @@ async def run_failure_websocket_client(config: FakeU8Config, error_code: str) ->
         return await run_fake_u8_failure_script(WebsocketsTransport(websocket), config, error_code)
 
 
+
+async def run_fake_u8_reconnect_script(
+    transport_factory,
+    config: FakeU8Config,
+) -> list[dict[str, Any]]:
+    """Run a fake U8 loop that disconnects mid-task and reconnects."""
+    received: list[dict[str, Any]] = []
+    t1 = await transport_factory()
+    await t1.send_json(build_hello(config))
+    hello_ack1 = assert_frame_type(await t1.receive_json(), "hello_ack")
+    received.append(hello_ack1)
+    await t1.send_json(build_transcript(config, request_id="reconnect-req-1"))
+    motion_task = assert_frame_type(await t1.receive_json(), "motion_task")
+    received.append(motion_task)
+    task_id = str(motion_task.get("task_id", ""))
+    if not task_id:
+        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
+    await t1.send_json(build_motion_event(device_id=config.device_id, task_id=task_id, phase="accepted"))
+    received.append(assert_frame_type(await t1.receive_json(), "motion_event_ack"))
+    if hasattr(t1, "close"):
+        await t1.close()
+    import asyncio as _asyncio
+    await _asyncio.sleep(0.5)
+    t2 = await transport_factory()
+    await t2.send_json(build_hello(config))
+    hello_ack2 = assert_frame_type(await t2.receive_json(), "hello_ack")
+    received.append(hello_ack2)
+    return received
+
+
+async def run_websocket_reconnect_client(config: FakeU8Config) -> list[dict[str, Any]]:
+    try:
+        import websockets
+    except ImportError as exc:
+        raise RuntimeError("Install websockets to run the fake LiMa U8 CLI") from exc
+    headers = {"Authorization": f"Bearer {config.token}"}
+    url = config.url
+    async def _factory():
+        ws = await websockets.connect(url, **_websocket_header_kwargs(websockets.connect, headers))
+        return WebsocketsTransport(ws)
+    return await run_fake_u8_reconnect_script(_factory, config)
 def _websocket_header_kwargs(connect_func: Any, headers: dict[str, str]) -> dict[str, dict[str, str]]:
     params = inspect.signature(connect_func).parameters
     if "additional_headers" in params:
@@ -258,3 +351,6 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+
