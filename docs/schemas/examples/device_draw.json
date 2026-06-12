@@ -1,0 +1,33 @@
+{
+  "_comment": "设备绘画路由示例 - 需要 AI 模型生成图像并转换为矢量路径",
+  "_note": "draw_generated 能力，prompt 为自然语言，需要 image_then_vector 策略",
+  "type": "motion_task",
+  "task_id": "draw-001",
+  "device_id": "dev-1",
+  "capability": "run_path",
+  "source": "voice",
+  "route_policy": {
+    "route_role": "device_draw",
+    "model_required": true,
+    "primary_strategy": "image_then_vector",
+    "artifact_required": "vector_path"
+  },
+  "params": {
+    "feed": 900,
+    "prompt": "画一个五角星",
+    "path": [
+      {"x": 50, "y": 0, "z": 0},
+      {"x": 61, "y": 35, "z": -5},
+      {"x": 98, "y": 35, "z": -5},
+      {"x": 68, "y": 57, "z": -5},
+      {"x": 79, "y": 91, "z": -5},
+      {"x": 50, "y": 70, "z": -5},
+      {"x": 21, "y": 91, "z": -5},
+      {"x": 32, "y": 57, "z": -5},
+      {"x": 2, "y": 35, "z": -5},
+      {"x": 39, "y": 35, "z": -5},
+      {"x": 50, "y": 0, "z": 0}
+    ],
+    "preview_svg": "<svg viewBox='0 0 100 100'><path d='M50 0 L61 35 L98 35 L68 57 L79 91 L50 70 L21 91 L32 57 L2 35 L39 35 Z'/></svg>"
+  }
+}

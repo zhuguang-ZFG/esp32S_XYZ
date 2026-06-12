@@ -1,0 +1,25 @@
+{
+  "_comment": "设备矢量路由示例 - SVG 路径直接作为输入，不需要 AI 模型",
+  "_note": "draw_generated + SVG-like prompt 触发 device_vector 路由",
+  "type": "motion_task",
+  "task_id": "vector-001",
+  "device_id": "dev-1",
+  "capability": "run_path",
+  "source": "voice",
+  "route_policy": {
+    "route_role": "device_vector",
+    "model_required": false,
+    "primary_strategy": "svg_vector",
+    "artifact_required": "preview_svg"
+  },
+  "params": {
+    "feed": 1200,
+    "prompt": "M 0 0 L 50 50 L 100 0 Z",
+    "path": [
+      {"x": 0, "y": 0, "z": 0},
+      {"x": 50, "y": 50, "z": -5},
+      {"x": 100, "y": 0, "z": 0}
+    ],
+    "preview_svg": "<svg viewBox='0 0 100 100'><path d='M0 0 L50 50 L100 0 Z'/></svg>"
+  }
+}
