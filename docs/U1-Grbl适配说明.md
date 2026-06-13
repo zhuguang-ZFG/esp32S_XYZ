@@ -6,11 +6,11 @@
 
 当前默认机型已经切换为：
 
-- [firmware/u1-grbl/Grbl_Esp32/src/Machines/dlc_motor_control_p1.h](/C:/Users/zhugu/Desktop/xue/esp32S_XYZ/firmware/u1-grbl/Grbl_Esp32/src/Machines/dlc_motor_control_p1.h)
+- [firmware/u1-grbl/Grbl_Esp32/src/Machines/dlc_motor_control_p1.h](../firmware/u1-grbl/Grbl_Esp32/src/Machines/dlc_motor_control_p1.h)
 
 默认选择文件：
 
-- [firmware/u1-grbl/Grbl_Esp32/src/Machine.h](/C:/Users/zhugu/Desktop/xue/esp32S_XYZ/firmware/u1-grbl/Grbl_Esp32/src/Machine.h)
+- [firmware/u1-grbl/Grbl_Esp32/src/Machine.h](../firmware/u1-grbl/Grbl_Esp32/src/Machine.h)
 
 ## 2. 轴定义
 
