@@ -34,6 +34,11 @@
         "artifact_required": {
           "type": "string",
           "enum": ["none", "preview_svg", "vector_path"]
+        },
+        "backend": {
+          "type": "string",
+          "minLength": 0,
+          "description": "Selected backend id for this task. Empty when unresolved; 'deterministic' marks the local deterministic resolver (not a real backend)."
         }
       }
     },
