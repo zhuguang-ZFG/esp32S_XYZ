@@ -4,7 +4,7 @@
   "title": "Edge-C motion_task 下行（DeviceServer→U8 WSS）",
   "type": "object",
   "additionalProperties": false,
-  "required": ["type", "task_id", "device_id", "capability"],
+  "required": ["type", "task_id", "device_id", "capability", "route_policy"],
   "properties": {
     "type": { "const": "motion_task" },
     "task_id": { "type": "string", "minLength": 1 },

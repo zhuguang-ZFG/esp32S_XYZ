@@ -4,6 +4,12 @@
   "device_id": "dev_SN001",
   "account_id": 42,
   "capability": "home",
+  "route_policy": {
+    "route_role": "device_control",
+    "model_required": false,
+    "primary_strategy": "deterministic",
+    "artifact_required": "none"
+  },
   "source": "client",
   "request_id": "req-001",
   "trace_id": "trace-001",
