@@ -15,6 +15,11 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from fake_lima_u8.route_policy_consumer import (
+    attach_route_policy_evidence,
+    parse_route_policy,
+    record_route_policy_consumed,
+)
 
 PROTOCOL_VERSION = "lima-device-v1"
 DEFAULT_CAPABILITIES = ["run_path", "device_info", "self_check"]
@@ -37,6 +42,7 @@ class FakeU8Config:
     transcript: str = "hello"
     uptime_ms: int = 1
     capabilities: list[str] = field(default_factory=lambda: list(DEFAULT_CAPABILITIES))
+    artifact_dir: str = "device_artifacts"
 
 
 def build_hello(config: FakeU8Config) -> dict[str, Any]:
@@ -109,6 +115,26 @@ def assert_frame_type(frame: dict[str, Any], expected_type: str) -> dict[str, An
     return frame
 
 
+def _consume_route_policy(
+    motion_task: dict[str, Any],
+    config: FakeU8Config,
+    *,
+    scenario: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    route_policy = parse_route_policy(motion_task)
+    task_id = str(motion_task.get("task_id", ""))
+    if not task_id:
+        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
+    consumed = record_route_policy_consumed(
+        device_id=config.device_id,
+        task_id=task_id,
+        route_policy=route_policy,
+        artifact_dir=config.artifact_dir,
+        scenario=scenario,
+    )
+    return route_policy, consumed
+
+
 async def run_fake_u8_script(transport: JsonTransport, config: FakeU8Config) -> list[dict[str, Any]]:
     """Run a deterministic fake U8 hello/heartbeat/transcript/motion loop."""
     received: list[dict[str, Any]] = []
@@ -127,49 +153,21 @@ async def run_fake_u8_script(transport: JsonTransport, config: FakeU8Config) -> 
         raise RuntimeError(f"expected run_path motion_task, got: {motion_task}")
     received.append(motion_task)
 
-    task_id = str(motion_task.get("task_id", ""))
-    if not task_id:
-        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
-
-    # 解析并记录 route_policy
-    route_policy = motion_task.get("route_policy")
-    if route_policy:
-        import os
-        import time
-        artifact_dir = "device_artifacts"
-        os.makedirs(artifact_dir, exist_ok=True)
-        log_file = os.path.join(artifact_dir, f"fake_u8_route_policy_{config.device_id}.log")
-        log_entry = {
-            "timestamp": time.time(),
-            "device_id": config.device_id,
-            "task_id": task_id,
-            "route_policy": route_policy,
-            "consumed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")
-        }
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(log_entry, ensure_ascii=False, indent=2) + "\n")
-        received.append({"type": "route_policy_consumed", "route_policy": route_policy})
-    if not task_id:
-        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
+    route_policy, consumed = _consume_route_policy(motion_task, config, scenario="success")
+    received.append(consumed)
+    task_id = str(motion_task["task_id"])
 
     await transport.send_json(build_motion_event(device_id=config.device_id, task_id=task_id, phase="progress", percent=50))
     progress_ack = assert_frame_type(await transport.receive_json(), "motion_event_ack")
     received.append(progress_ack)
 
-    await transport.send_json(build_motion_event(device_id=config.device_id, task_id=task_id, phase="done", percent=100))
+    done_event = attach_route_policy_evidence(
+        build_motion_event(device_id=config.device_id, task_id=task_id, phase="done", percent=100),
+        route_policy,
+    )
+    await transport.send_json(done_event)
     done_ack = assert_frame_type(await transport.receive_json(), "motion_event_ack")
     received.append(done_ack)
-
-    # 回传 route_policy 消费证据（附加到 done 事件）
-    if route_policy:
-        done_event = build_motion_event(device_id=config.device_id, task_id=task_id, phase="done", percent=100)
-        done_event["route_policy_evidence"] = {
-            "consumed": True,
-            "route_role": route_policy.get("route_role"),
-            "model_required": route_policy.get("model_required"),
-            "primary_strategy": route_policy.get("primary_strategy")
-        }
-        await transport.send_json(done_event)  # 回传带证据的事件
 
     return received
 
@@ -218,37 +216,23 @@ async def run_fake_u8_failure_script(
     motion_task = assert_frame_type(await transport.receive_json(), "motion_task")
     received.append(motion_task)
 
-    task_id = str(motion_task.get("task_id", ""))
-    if not task_id:
-        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
+    route_policy, consumed = _consume_route_policy(motion_task, config, scenario="failure")
+    received.append(consumed)
+    task_id = str(motion_task["task_id"])
 
-    # 解析并记录 route_policy（失败场景也需记录）
-    route_policy = motion_task.get("route_policy")
-    if route_policy:
-        import os
-        import time
-        artifact_dir = "device_artifacts"
-        os.makedirs(artifact_dir, exist_ok=True)
-        log_file = os.path.join(artifact_dir, f"fake_u8_route_policy_{config.device_id}.log")
-        log_entry = {
-            "timestamp": time.time(),
-            "device_id": config.device_id,
-            "task_id": task_id,
-            "route_policy": route_policy,
-            "consumed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "scenario": "failure"
-        }
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(log_entry, ensure_ascii=False, indent=2) + "\n")
-        received.append({"type": "route_policy_consumed", "route_policy": route_policy, "scenario": "failure"})
-
-    await transport.send_json(build_motion_event(
-        device_id=config.device_id, task_id=task_id, phase="accepted"))
+    await transport.send_json(build_motion_event(device_id=config.device_id, task_id=task_id, phase="accepted"))
     received.append(assert_frame_type(await transport.receive_json(), "motion_event_ack"))
 
-    await transport.send_json(build_motion_failure_event(
-        device_id=config.device_id, task_id=task_id, error_code=error_code,
-        reason=f"fake-U8 simulated {error_code}"))
+    failure_event = attach_route_policy_evidence(
+        build_motion_failure_event(
+            device_id=config.device_id,
+            task_id=task_id,
+            error_code=error_code,
+            reason=f"fake-U8 simulated {error_code}",
+        ),
+        route_policy,
+    )
+    await transport.send_json(failure_event)
     received.append(assert_frame_type(await transport.receive_json(), "motion_event_ack"))
 
     return received
@@ -262,6 +246,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fw-rev", default="fake-u8-lima-0.1.0")
     parser.add_argument("--transcript", default="hello")
     parser.add_argument("--uptime-ms", type=int, default=1)
+    parser.add_argument("--artifact-dir", default="device_artifacts")
     parser.add_argument("--test", default="success", choices=("success", "failure"))
     parser.add_argument("--fail-with", default="E_MISSING_PATH")
     return parser
@@ -275,6 +260,7 @@ def config_from_args(args: argparse.Namespace) -> FakeU8Config:
         fw_rev=args.fw_rev,
         transcript=args.transcript,
         uptime_ms=args.uptime_ms,
+        artifact_dir=args.artifact_dir,
     )
 
 
@@ -287,7 +273,6 @@ async def run_failure_websocket_client(config: FakeU8Config, error_code: str) ->
     headers = {"Authorization": f"Bearer {config.token}"}
     async with websockets.connect(config.url, **_websocket_header_kwargs(websockets.connect, headers)) as websocket:
         return await run_fake_u8_failure_script(WebsocketsTransport(websocket), config, error_code)
-
 
 
 async def run_fake_u8_reconnect_script(
@@ -303,15 +288,14 @@ async def run_fake_u8_reconnect_script(
     await t1.send_json(build_transcript(config, request_id="reconnect-req-1"))
     motion_task = assert_frame_type(await t1.receive_json(), "motion_task")
     received.append(motion_task)
-    task_id = str(motion_task.get("task_id", ""))
-    if not task_id:
-        raise RuntimeError(f"motion_task missing task_id: {motion_task}")
+    route_policy, consumed = _consume_route_policy(motion_task, config, scenario="reconnect")
+    received.append(consumed)
+    task_id = str(motion_task["task_id"])
     await t1.send_json(build_motion_event(device_id=config.device_id, task_id=task_id, phase="accepted"))
     received.append(assert_frame_type(await t1.receive_json(), "motion_event_ack"))
     if hasattr(t1, "close"):
         await t1.close()
-    import asyncio as _asyncio
-    await _asyncio.sleep(0.5)
+    await asyncio.sleep(0.5)
     t2 = await transport_factory()
     await t2.send_json(build_hello(config))
     hello_ack2 = assert_frame_type(await t2.receive_json(), "hello_ack")
@@ -326,10 +310,14 @@ async def run_websocket_reconnect_client(config: FakeU8Config) -> list[dict[str,
         raise RuntimeError("Install websockets to run the fake LiMa U8 CLI") from exc
     headers = {"Authorization": f"Bearer {config.token}"}
     url = config.url
+
     async def _factory():
         ws = await websockets.connect(url, **_websocket_header_kwargs(websockets.connect, headers))
         return WebsocketsTransport(ws)
+
     return await run_fake_u8_reconnect_script(_factory, config)
+
+
 def _websocket_header_kwargs(connect_func: Any, headers: dict[str, str]) -> dict[str, dict[str, str]]:
     params = inspect.signature(connect_func).parameters
     if "additional_headers" in params:
@@ -344,13 +332,10 @@ def main(argv: list[str] | None = None) -> int:
         frames = asyncio.run(run_failure_websocket_client(cfg, args.fail_with))
         print(json.dumps({"ok": True, "test": "failure", "error_code": args.fail_with, "received": frames}, ensure_ascii=False, indent=2))
         return 0
-    frames = asyncio.run(run_websocket_client(config_from_args(args)))
+    frames = asyncio.run(run_websocket_client(cfg))
     print(json.dumps({"ok": True, "received": frames}, ensure_ascii=False, indent=2))
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-
