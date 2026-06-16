@@ -1,0 +1,31 @@
+{
+  "type": "motion_task",
+  "task_id": "550e8400-e29b-41d4-a716-446655440015",
+  "device_id": "dev_SN001",
+  "account_id": 42,
+  "capability": "run_path",
+  "source": "voice",
+  "request_id": "req-draw-001",
+  "trace_id": "trace-draw-001",
+  "route_policy": {
+    "route_role": "device_draw",
+    "model_required": true,
+    "primary_strategy": "image_then_vector",
+    "artifact_required": "vector_path",
+    "backend": "dashscope_wanx"
+  },
+  "params": {
+    "feed": 900,
+    "source_capability": "draw_generated",
+    "prompt": "一只猫",
+    "preview_svg": "<svg>...</svg>",
+    "path": [
+      { "cmd": "M", "x": 50, "y": 50, "z": 0 },
+      { "cmd": "L", "x": 60, "y": 50, "z": 0 },
+      { "cmd": "L", "x": 60, "y": 60, "z": 0 },
+      { "cmd": "L", "x": 50, "y": 60, "z": 0 },
+      { "cmd": "L", "x": 50, "y": 50, "z": 0 }
+    ]
+  },
+  "constraints": { "timeout_ms": 180000, "safety_level": "strict" }
+}

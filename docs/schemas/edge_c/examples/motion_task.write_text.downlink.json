@@ -1,0 +1,28 @@
+{
+  "type": "motion_task",
+  "task_id": "550e8400-e29b-41d4-a716-446655440014",
+  "device_id": "dev_SN001",
+  "account_id": 42,
+  "capability": "run_path",
+  "source": "voice",
+  "request_id": "req-write-001",
+  "trace_id": "trace-write-001",
+  "route_policy": {
+    "route_role": "device_write",
+    "model_required": false,
+    "primary_strategy": "provided_path",
+    "artifact_required": "preview_svg",
+    "backend": "scnet_ds"
+  },
+  "params": {
+    "feed": 900,
+    "source_capability": "write_text",
+    "text": "你好",
+    "preview_svg": "<svg>...</svg>",
+    "path": [
+      { "cmd": "M", "x": 5, "y": 20, "z": 0 },
+      { "cmd": "L", "x": 10, "y": 15, "z": 0 }
+    ]
+  },
+  "constraints": { "timeout_ms": 120000, "safety_level": "strict" }
+}
