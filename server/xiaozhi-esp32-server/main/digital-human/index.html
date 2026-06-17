@@ -148,6 +148,15 @@
                         <div class="control-panel">
                             <div class="config-row">
                                 <div class="config-item">
+                                    <label for="serverType">服务器类型:</label>
+                                    <select id="serverType" class="model-select">
+                                        <option value="lima">LiMa (直连)</option>
+                                        <option value="xiaozhi">小智服务器 (OTA)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="config-row">
+                                <div class="config-item">
                                     <label for="deviceMac">设备MAC:</label>
                                     <input type="text" id="deviceMac" placeholder="device-id">
                                 </div>
@@ -175,8 +184,22 @@
                         </div>
                     </div>
 
-                    <!-- 连接信息面板 -->
-                    <div class="connection-controls">
+                    <!-- 连接信息面板 - LiMa 直连 -->
+                    <div class="connection-controls" id="limaConnection">
+                        <div class="input-group">
+                            <label for="limaWsUrl">LiMa WebSocket 地址:</label>
+                            <input type="text" id="limaWsUrl" value="ws://127.0.0.1:8080/device/v1/ws"
+                                placeholder="LiMa WebSocket地址，如：ws://127.0.0.1:8080/device/v1/ws" />
+                        </div>
+                        <div class="input-group">
+                            <label for="limaToken">LiMa 认证令牌:</label>
+                            <input type="text" id="limaToken" value=""
+                                placeholder="LIMA_API_KEY 或设备令牌" />
+                        </div>
+                    </div>
+
+                    <!-- 连接信息面板 - 小智 OTA -->
+                    <div class="connection-controls" id="xiaozhiConnection" style="display:none;">
                         <div class="input-group">
                             <label for="otaUrl">OTA服务器地址:</label>
                             <input type="text" id="otaUrl" value="http://127.0.0.1:8002/xiaozhi/ota/"

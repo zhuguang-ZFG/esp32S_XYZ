@@ -158,6 +158,26 @@ export class StreamingContext {
         }
     }
 
+    // LiMa PCM 旁路模式：直接转发 Float32 样本（无需 Opus 解码）
+    async processPCMFrames() {
+        log('PCM旁路模式启动', 'info');
+
+        while (true) {
+            let samples = [];
+            for (const sample of this.pendingAudioBufferQueue) {
+                samples.push(sample);
+            }
+
+            if (samples.length > 0) {
+                for (let i = 0; i < samples.length; i++) {
+                    this.activeQueue.enqueue(samples[i]);
+                }
+                this.totalSamples += samples.length;
+            }
+            await this.getPendingAudioBufferQueue();
+        }
+    }
+
     // 开始播放音频
     async startPlaying() {
         this.scheduledEndTime = this.audioContext.currentTime; // 跟踪已调度音频的结束时间

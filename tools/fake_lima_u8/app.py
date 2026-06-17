@@ -23,6 +23,31 @@ from fake_lima_u8.route_policy_consumer import (
 
 PROTOCOL_VERSION = "lima-device-v1"
 DEFAULT_CAPABILITIES = ["run_path", "device_info", "self_check"]
+AUDIO_SAMPLE_RATE = 16000
+AUDIO_SAMPLE_WIDTH = 2  # 16-bit
+AUDIO_CHANNELS = 1
+AUDIO_CHUNK_MS = 30  # 30ms per chunk
+AUDIO_CHUNK_BYTES = int(AUDIO_SAMPLE_RATE * AUDIO_SAMPLE_WIDTH * AUDIO_CHANNELS * AUDIO_CHUNK_MS / 1000)
+
+
+def _generate_silence_pcm(duration_ms: int) -> bytes:
+    """Generate silent PCM data for the given duration."""
+    num_samples = int(AUDIO_SAMPLE_RATE * duration_ms / 1000)
+    return b"\x00\x00" * num_samples
+
+
+def _generate_tone_pcm(frequency: int, duration_ms: int, amplitude: float = 0.3) -> bytes:
+    """Generate a simple sine wave tone for testing."""
+    import math
+    import struct
+
+    num_samples = int(AUDIO_SAMPLE_RATE * duration_ms / 1000)
+    data = bytearray()
+    for i in range(num_samples):
+        t = i / AUDIO_SAMPLE_RATE
+        sample = int(amplitude * 32767 * math.sin(2 * math.pi * frequency * t))
+        data.extend(struct.pack("<h", max(-32768, min(32767, sample))))
+    return bytes(data)
 
 
 class JsonTransport(Protocol):
@@ -30,6 +55,16 @@ class JsonTransport(Protocol):
         ...
 
     async def receive_json(self) -> dict[str, Any]:
+        ...
+
+
+class BinaryTransport(Protocol):
+    """Extension for binary frame (PCM audio) support."""
+
+    async def send_bytes(self, data: bytes) -> None:
+        ...
+
+    async def receive_bytes(self) -> bytes:
         ...
 
 
@@ -41,7 +76,7 @@ class FakeU8Config:
     fw_rev: str = "fake-u8-lima-0.1.0"
     transcript: str = "hello"
     uptime_ms: int = 1
-    capabilities: list[str] = field(default_factory=lambda: list(DEFAULT_CAPABILITIES))
+    capabilities: list[str] = field(default_factory=lambda: list(DEFAULT_CAPABILITIES + ["audio"]))
     artifact_dir: str = "device_artifacts"
 
 
@@ -180,13 +215,16 @@ class WebsocketsTransport:
         await self.websocket.send(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 
     async def receive_json(self) -> dict[str, Any]:
+        return await _recv_json_or_skip_binary(self)
+
+    async def send_bytes(self, data: bytes) -> None:
+        await self.websocket.send(data)
+
+    async def receive_bytes(self) -> bytes:
         raw = await self.websocket.recv()
-        if isinstance(raw, bytes):
-            raw = raw.decode("utf-8")
-        data = json.loads(raw)
-        if not isinstance(data, dict):
-            raise RuntimeError(f"expected JSON object, got: {data!r}")
-        return data
+        if not isinstance(raw, bytes):
+            raise RuntimeError(f"expected bytes, got text: {raw[:80]!r}")
+        return raw
 
 
 async def run_websocket_client(config: FakeU8Config) -> list[dict[str, Any]]:
@@ -247,7 +285,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--transcript", default="hello")
     parser.add_argument("--uptime-ms", type=int, default=1)
     parser.add_argument("--artifact-dir", default="device_artifacts")
-    parser.add_argument("--test", default="success", choices=("success", "failure"))
+    parser.add_argument("--test", default="success", choices=("success", "failure", "audio"))
     parser.add_argument("--fail-with", default="E_MISSING_PATH")
     return parser
 
@@ -325,6 +363,19 @@ def _websocket_header_kwargs(connect_func: Any, headers: dict[str, str]) -> dict
     return {"extra_headers": headers}
 
 
+async def _recv_json_or_skip_binary(transport: WebsocketsTransport) -> dict[str, Any]:
+    """Receive JSON from WebSocket, silently skipping any binary frames."""
+    while True:
+        raw = await transport.websocket.recv()
+        if isinstance(raw, bytes):
+            # Skip binary frames (audio replies) during JSON receive
+            continue
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            raise RuntimeError(f"expected JSON object, got: {data!r}")
+        return data
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
     cfg = config_from_args(args)
@@ -332,9 +383,62 @@ def main(argv: list[str] | None = None) -> int:
         frames = asyncio.run(run_failure_websocket_client(cfg, args.fail_with))
         print(json.dumps({"ok": True, "test": "failure", "error_code": args.fail_with, "received": frames}, ensure_ascii=False, indent=2))
         return 0
+    if args.test == "audio":
+        frames = asyncio.run(run_audio_streaming_client(cfg))
+        print(json.dumps({"ok": True, "test": "audio", "received": frames}, ensure_ascii=False, indent=2))
+        return 0
     frames = asyncio.run(run_websocket_client(cfg))
     print(json.dumps({"ok": True, "received": frames}, ensure_ascii=False, indent=2))
     return 0
+
+
+async def run_audio_streaming_client(config: FakeU8Config) -> list[dict[str, Any]]:
+    """Run fake U8 with audio streaming: send PCM chunks, receive voice responses."""
+    try:
+        import websockets
+    except ImportError as exc:
+        raise RuntimeError("Install websockets to run the fake LiMa U8 CLI") from exc
+
+    headers = {"Authorization": f"Bearer {config.token}"}
+    async with websockets.connect(config.url, **_websocket_header_kwargs(websockets.connect, headers)) as websocket:
+        transport = WebsocketsTransport(websocket)
+        received: list[dict[str, Any]] = []
+
+        # 1. Send hello
+        await transport.send_json(build_hello(config))
+        hello_ack = await transport.receive_json()
+        assert_frame_type(hello_ack, "hello_ack")
+        received.append(hello_ack)
+
+        # 2. Send audio chunks (simulated PCM tone)
+        tone = _generate_tone_pcm(440, 500)  # 440Hz, 500ms
+        silence = _generate_silence_pcm(1500)  # 1500ms silence (trigger utterance end)
+        audio_data = tone + silence
+
+        # Send audio in chunks
+        offset = 0
+        while offset < len(audio_data):
+            chunk = audio_data[offset : offset + AUDIO_CHUNK_BYTES]
+            if chunk:
+                await transport.send_bytes(chunk)
+            offset += AUDIO_CHUNK_BYTES
+            await asyncio.sleep(0.01)
+
+        # 3. Collect voice_status and audio_reply frames
+        try:
+            while True:
+                raw = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+                if isinstance(raw, bytes):
+                    received.append({"type": "audio_reply_binary", "bytes": len(raw)})
+                else:
+                    frame = json.loads(raw)
+                    received.append(frame)
+                    if frame.get("type") == "voice_status" and frame.get("status") == "idle":
+                        break
+        except asyncio.TimeoutError:
+            received.append({"type": "timeout", "message": "audio pipeline timeout"})
+
+        return received
 
 
 if __name__ == "__main__":

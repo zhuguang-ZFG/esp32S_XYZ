@@ -3,6 +3,11 @@ import { log } from '../../utils/logger.js?v=0205';
 // WebSocket 连接
 export async function webSocketConnect(otaUrl, config) {
 
+    // LiMa 直连模式：跳过 OTA，直接连接 WebSocket
+    if (config.serverType === 'lima') {
+        return await limaDirectConnect(config);
+    }
+
     if (!validateConfig(config)) {
         return;
     }
@@ -46,6 +51,43 @@ export async function webSocketConnect(otaUrl, config) {
     }
 
     return new WebSocket(connUrl.toString());
+}
+
+// LiMa 直连：构建 WS URL 并直接连接
+async function limaDirectConnect(config) {
+    if (!config.deviceId) {
+        log('设备ID不能为空', 'error');
+        return;
+    }
+
+    const wsUrl = config.limaWsUrl;
+    if (!wsUrl) {
+        log('LiMa WebSocket地址不能为空', 'error');
+        return;
+    }
+
+    try {
+        const connUrl = new URL(wsUrl);
+        connUrl.searchParams.append('device-id', config.deviceId);
+        connUrl.searchParams.append('client-id', config.clientId || 'web_test_client');
+        if (config.limaToken) {
+            const token = config.limaToken.startsWith('Bearer ') ? config.limaToken : 'Bearer ' + config.limaToken;
+            connUrl.searchParams.append('authorization', token);
+        }
+
+        const wsurl = connUrl.toString();
+        log(`正在连接LiMa: ${wsurl}`, 'info');
+
+        const serverUrlEl = document.getElementById('serverUrl');
+        if (serverUrlEl) {
+            serverUrlEl.value = wsurl;
+        }
+
+        return new WebSocket(wsurl);
+    } catch (error) {
+        log(`LiMa连接URL构建失败: ${error.message}`, 'error');
+        return;
+    }
 }
 
 // 验证配置

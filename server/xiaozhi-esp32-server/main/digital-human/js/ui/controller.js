@@ -1,5 +1,5 @@
 // UI controller module
-import { loadConfig, saveConfig } from '../config/manager.js?v=0205';
+import { loadConfig, saveConfig, toggleConnectionPanel } from '../config/manager.js?v=0205';
 import { getAudioPlayer } from '../core/audio/player.js?v=0205';
 import { getAudioRecorder } from '../core/audio/recorder.js?v=0205';
 import { requestWakewordBridge, stopWakewordBridgeListener, startWakewordBridgeListener, getWakewordBridgeUrl, onNextBridgeConnected } from '../core/network/wakeword-bridge.js?v=0205';
@@ -102,6 +102,14 @@ class UIController {
         if (modelSelect) {
             modelSelect.addEventListener('change', () => {
                 this.switchLive2DModel();
+            });
+        }
+
+        // Server type change event
+        const serverTypeSelect = document.getElementById('serverType');
+        if (serverTypeSelect) {
+            serverTypeSelect.addEventListener('change', () => {
+                toggleConnectionPanel(serverTypeSelect.value);
             });
         }
 
@@ -693,17 +701,21 @@ class UIController {
             // Wait for DOM update
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            const otaUrlInput = document.getElementById('otaUrl');
+            const serverType = document.getElementById('serverType')?.value || 'lima';
 
-            console.log('otaUrl element:', otaUrlInput);
-
-            if (!otaUrlInput || !otaUrlInput.value) {
-                this.addChatMessage('请输入OTA服务器地址', false);
-                return;
+            if (serverType === 'lima') {
+                const limaWsUrl = document.getElementById('limaWsUrl')?.value?.trim();
+                if (!limaWsUrl) {
+                    this.addChatMessage('请输入LiMa WebSocket地址', false);
+                    return;
+                }
+            } else {
+                const otaUrlInput = document.getElementById('otaUrl');
+                if (!otaUrlInput || !otaUrlInput.value) {
+                    this.addChatMessage('请输入OTA服务器地址', false);
+                    return;
+                }
             }
-
-            const otaUrl = otaUrlInput.value;
-            console.log('otaUrl value:', otaUrl);
 
             // Update dial button state to connecting
             const dialBtn = document.getElementById('dialBtn');

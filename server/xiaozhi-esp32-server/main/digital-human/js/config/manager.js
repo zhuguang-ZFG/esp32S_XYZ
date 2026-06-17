@@ -22,6 +22,9 @@ export function loadConfig() {
     const deviceNameInput = document.getElementById('deviceName');
     const clientIdInput = document.getElementById('clientId');
     const otaUrlInput = document.getElementById('otaUrl');
+    const serverTypeInput = document.getElementById('serverType');
+    const limaWsUrlInput = document.getElementById('limaWsUrl');
+    const limaTokenInput = document.getElementById('limaToken');
     const wakewordWsUrlInput = document.getElementById('wakewordWsUrl');
     const wakewordEnabledInput = document.getElementById('wakewordEnabled');
     const wakewordListInput = document.getElementById('wakewordList');
@@ -46,8 +49,29 @@ export function loadConfig() {
     }
 
     const savedOtaUrl = localStorage.getItem('xz_tester_otaUrl');
-    if (savedOtaUrl) {
+    if (savedOtaUrl && otaUrlInput) {
         otaUrlInput.value = savedOtaUrl;
+    }
+
+    // LiMa 配置
+    const savedServerType = localStorage.getItem('xz_tester_serverType');
+    if (savedServerType && serverTypeInput) {
+        serverTypeInput.value = savedServerType;
+    }
+
+    const savedLimaWsUrl = localStorage.getItem('xz_tester_limaWsUrl');
+    if (savedLimaWsUrl && limaWsUrlInput) {
+        limaWsUrlInput.value = savedLimaWsUrl;
+    }
+
+    const savedLimaToken = localStorage.getItem('xz_tester_limaToken');
+    if (savedLimaToken && limaTokenInput) {
+        limaTokenInput.value = savedLimaToken;
+    }
+
+    // 根据服务器类型切换面板显示
+    if (serverTypeInput) {
+        toggleConnectionPanel(serverTypeInput.value);
     }
 
     const savedWakewordWsUrl = localStorage.getItem('xz_tester_wakewordWsUrl');
@@ -74,11 +98,22 @@ export function loadConfig() {
     }
 }
 
+// 切换连接面板显示（LiMa 直连 vs 小智 OTA）
+export function toggleConnectionPanel(serverType) {
+    const limaPanel = document.getElementById('limaConnection');
+    const xiaozhiPanel = document.getElementById('xiaozhiConnection');
+    if (limaPanel && xiaozhiPanel) {
+        limaPanel.style.display = serverType === 'lima' ? 'block' : 'none';
+        xiaozhiPanel.style.display = serverType === 'xiaozhi' ? 'block' : 'none';
+    }
+}
+
 // 保存配置
 export function saveConfig() {
     const deviceMacInput = document.getElementById('deviceMac');
     const deviceNameInput = document.getElementById('deviceName');
     const clientIdInput = document.getElementById('clientId');
+    const serverTypeInput = document.getElementById('serverType');
     const wakewordWsUrlInput = document.getElementById('wakewordWsUrl');
     const wakewordEnabledInput = document.getElementById('wakewordEnabled');
     const wakewordListInput = document.getElementById('wakewordList');
@@ -89,6 +124,10 @@ export function saveConfig() {
     const emojiEnabledInput = document.getElementById('emojiEnabled');
     if (emojiEnabledInput) {
         localStorage.setItem('xz_tester_emojiEnabled', emojiEnabledInput.value);
+    }
+    // LiMa 配置
+    if (serverTypeInput) {
+        localStorage.setItem('xz_tester_serverType', serverTypeInput.value);
     }
     if (wakewordEnabledInput) {
         localStorage.setItem('xz_tester_wakewordEnabled', wakewordEnabledInput.value);
@@ -108,20 +147,30 @@ export function getConfig() {
     const deviceName = document.getElementById('deviceName')?.value.trim() || '';
     const clientId = document.getElementById('clientId')?.value.trim() || '';
     const emojiEnabled = document.getElementById('emojiEnabled')?.value !== 'false';
+    const serverType = document.getElementById('serverType')?.value || 'lima';
+    const limaWsUrl = document.getElementById('limaWsUrl')?.value.trim() || '';
+    const limaToken = document.getElementById('limaToken')?.value.trim() || '';
 
     return {
         deviceId: deviceMac,  // 使用MAC地址作为deviceId
         deviceName,
         deviceMac,
         clientId,
-        emojiEnabled
+        emojiEnabled,
+        serverType,
+        limaWsUrl,
+        limaToken
     };
 }
 
 // 保存连接URL
 export function saveConnectionUrls() {
-    const otaUrl = document.getElementById('otaUrl').value.trim();
-    const wsUrl = document.getElementById('serverUrl').value.trim();
+    const otaUrl = document.getElementById('otaUrl')?.value.trim() || '';
+    const wsUrl = document.getElementById('serverUrl')?.value.trim() || '';
+    const limaWsUrl = document.getElementById('limaWsUrl')?.value.trim() || '';
+    const limaToken = document.getElementById('limaToken')?.value.trim() || '';
     localStorage.setItem('xz_tester_otaUrl', otaUrl);
     localStorage.setItem('xz_tester_wsUrl', wsUrl);
+    localStorage.setItem('xz_tester_limaWsUrl', limaWsUrl);
+    localStorage.setItem('xz_tester_limaToken', limaToken);
 }

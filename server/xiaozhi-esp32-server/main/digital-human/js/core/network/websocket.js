@@ -18,6 +18,17 @@ export class WebSocketHandler {
         this.onChatMessage = null; // 新增：聊天消息回调
         this.currentSessionId = null;
         this.isRemoteSpeaking = false;
+        this._expectingAudioReply = false;  // LiMa: 标记即将接收二进制音频
+    }
+
+    // 检查是否为 LiMa 模式
+    isLimaMode() {
+        try {
+            const config = getConfig();
+            return config.serverType === 'lima';
+        } catch {
+            return false;
+        }
     }
 
     // 发送hello握手消息
@@ -27,17 +38,30 @@ export class WebSocketHandler {
         try {
             const config = getConfig();
 
-            const helloMessage = {
-                type: 'hello',
-                device_id: config.deviceId,
-                device_name: config.deviceName,
-                device_mac: config.deviceMac,
-                token: config.token,
-                features: {
-                    mcp: true,
-                    emoji: config.emojiEnabled
-                }
-            };
+            let helloMessage;
+            if (config.serverType === 'lima') {
+                // LiMa lima-device-v1 协议格式
+                helloMessage = {
+                    type: 'hello',
+                    protocol: 'lima-device-v1',
+                    device_id: config.deviceId,
+                    capabilities: ['audio', 'text_chat'],
+                    fw_rev: 'digital-human-v1.0',
+                };
+            } else {
+                // 小智服务器原有格式
+                helloMessage = {
+                    type: 'hello',
+                    device_id: config.deviceId,
+                    device_name: config.deviceName,
+                    device_mac: config.deviceMac,
+                    token: config.token,
+                    features: {
+                        mcp: true,
+                        emoji: config.emojiEnabled
+                    }
+                };
+            }
 
             log('发送hello握手消息', 'info');
             this.websocket.send(JSON.stringify(helloMessage));
@@ -52,7 +76,13 @@ export class WebSocketHandler {
                 const onMessageHandler = (event) => {
                     try {
                         const response = JSON.parse(event.data);
-                        if (response.type === 'hello' && response.session_id) {
+                        // LiMa 响应: hello_ack, 小智响应: hello with session_id
+                        if (response.type === 'hello_ack') {
+                            log(`LiMa握手成功，设备ID: ${response.device_id}`, 'success');
+                            clearTimeout(timeout);
+                            this.websocket.removeEventListener('message', onMessageHandler);
+                            resolve(true);
+                        } else if (response.type === 'hello' && response.session_id) {
                             log(`服务器握手成功，会话ID: ${response.session_id}`, 'success');
                             clearTimeout(timeout);
                             this.websocket.removeEventListener('message', onMessageHandler);
@@ -73,6 +103,9 @@ export class WebSocketHandler {
 
     _sendWakeupMessages(sessionId) {
         if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) return;
+
+        // LiMa 模式不需要发送 listen detect/start
+        if (this.isLimaMode()) return;
 
         // listen detect
         this.websocket.send(JSON.stringify({
@@ -95,6 +128,43 @@ export class WebSocketHandler {
 
     // 处理文本消息
     handleTextMessage(message) {
+        // ── LiMa 消息处理 ──
+        if (message.type === 'hello_ack') {
+            log(`LiMa服务器回应：${JSON.stringify(message, null, 2)}`, 'success');
+            window.cameraAvailable = true;
+            log('连接成功，摄像头已可用', 'success');
+            uiController.updateDialButton(true);
+
+            // LiMa 模式不需要 wakeup messages
+            if (!this.isLimaMode()) {
+                this._sendWakeupMessages(message.device_id);
+            }
+
+            uiController.startAIChatSession();
+            return;
+        }
+
+        if (message.type === 'voice_status') {
+            this.handleVoiceStatus(message);
+            return;
+        }
+
+        if (message.type === 'audio_reply') {
+            log(`收到音频回复元数据: format=${message.format}, sample_rate=${message.sample_rate}`, 'info');
+            // 准备接收二进制 PCM 音频
+            this._expectingAudioReply = true;
+            return;
+        }
+
+        if (message.type === 'error') {
+            log(`服务器错误: ${message.code} - ${message.message}`, 'error');
+            if (this.onChatMessage) {
+                this.onChatMessage(`⚠️ 服务器错误: ${message.message}`, false);
+            }
+            return;
+        }
+
+        // ── 小智服务器消息处理（原有逻辑） ──
         if (message.type === 'hello') {
             log(`服务器回应：${JSON.stringify(message, null, 2)}`, 'success');
             window.cameraAvailable = true;
@@ -371,7 +441,38 @@ export class WebSocketHandler {
         }
     }
 
-    // 处理二进制消息
+    // Handle LiMa voice_status messages
+    handleVoiceStatus(message) {
+        const status = message.status;
+        const transcript = message.transcript || '';
+
+        log('Voice status: ' + status + (transcript ? ', text: ' + transcript : ''), 'info');
+
+        if (status === 'speaking' || status === 'thinking') {
+            this.isRemoteSpeaking = true;
+            if (this.onSessionStateChange) {
+                this.onSessionStateChange(true);
+            }
+            this.startLive2DTalking();
+        } else if (status === 'idle') {
+            this.isRemoteSpeaking = false;
+            if (this.onRecordButtonStateChange) {
+                this.onRecordButtonStateChange(false);
+            }
+            if (this.onSessionStateChange) {
+                this.onSessionStateChange(false);
+            }
+            setTimeout(() => {
+                this.stopLive2DTalking();
+            }, 1000);
+        }
+
+        if (transcript && this.onChatMessage) {
+            this.onChatMessage(transcript, false);
+        }
+    }
+
+    // Handle binary message
     async handleBinaryMessage(data) {
         try {
             let arrayBuffer;
@@ -385,9 +486,18 @@ export class WebSocketHandler {
                 return;
             }
 
-            const opusData = new Uint8Array(arrayBuffer);
-            const audioPlayer = getAudioPlayer();
-            audioPlayer.enqueueAudioData(opusData);
+            if (this.isLimaMode()) {
+                // LiMa: raw PCM 16kHz 16bit mono
+                const pcmInt16 = new Int16Array(arrayBuffer);
+                const audioPlayer = getAudioPlayer();
+                audioPlayer.enqueuePCMData(pcmInt16);
+                this._expectingAudioReply = false;
+            } else {
+                // XiaoZhi: Opus encoded
+                const opusData = new Uint8Array(arrayBuffer);
+                const audioPlayer = getAudioPlayer();
+                audioPlayer.enqueueAudioData(opusData);
+            }
         } catch (error) {
             log(`处理二进制消息出错: ${error.message}`, 'error');
         }
@@ -524,6 +634,19 @@ export class WebSocketHandler {
         }
 
         try {
+            if (this.isLimaMode()) {
+                // LiMa: 发送 transcript 类型
+                const config = getConfig();
+                const transcriptMessage = {
+                    type: 'transcript',
+                    device_id: config.deviceId,
+                    text: text
+                };
+                this.websocket.send(JSON.stringify(transcriptMessage));
+                log(`发送LiMa文本消息: ${text}`, 'info');
+                return true;
+            }
+
             // 如果对方正在说话，先发送打断消息
             if (this.isRemoteSpeaking && this.currentSessionId) {
                 const abortMessage = {

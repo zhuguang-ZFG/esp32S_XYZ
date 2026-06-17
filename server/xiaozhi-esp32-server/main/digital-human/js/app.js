@@ -6,6 +6,7 @@ import { initMcpTools } from './core/mcp/tools.js?v=0205';
 import { startWakewordBridgeListener } from './core/network/wakeword-bridge.js?v=0205';
 import { uiController } from './ui/controller.js?v=0205';
 import { log } from './utils/logger.js?v=0205';
+import { getConfig } from './config/manager.js?v=0205';
 
 // 辅助函数：将Base64数据转换为Blob
 function dataURItoBlob(dataURI) {
@@ -35,10 +36,13 @@ class App {
         // 初始化UI控制器
         this.uiController = uiController;
         this.uiController.init();
-        // 检查Opus库
-        checkOpusLoaded();
-        // 初始化Opus编码器
-        initOpusEncoder();
+        // 检查Opus库 (LiMa 模式不需要)
+        const isLima = getConfig().serverType === 'lima';
+        if (!isLima) {
+            checkOpusLoaded();
+            // 初始化Opus编码器
+            initOpusEncoder();
+        }
         // 初始化音频播放器
         this.audioPlayer = getAudioPlayer();
         await this.audioPlayer.start();

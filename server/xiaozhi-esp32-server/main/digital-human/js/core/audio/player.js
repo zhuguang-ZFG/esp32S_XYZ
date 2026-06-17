@@ -2,6 +2,7 @@
 import BlockingQueue from '../../utils/blocking-queue.js?v=0205';
 import { log } from '../../utils/logger.js?v=0205';
 import { createStreamingContext } from './stream-context.js?v=0205';
+import { getConfig } from '../../config/manager.js?v=0205';
 
 // 音频播放器类
 export class AudioPlayer {
@@ -151,9 +152,11 @@ export class AudioPlayer {
     async startAudioBuffering() {
         log("开始音频缓冲...", 'info');
 
-        this.initOpusDecoder().catch(error => {
-            log(`预初始化Opus解码器失败: ${error.message}`, 'warning');
-        });
+        if (!this.isLimaMode()) {
+            this.initOpusDecoder().catch(error => {
+                log(`预初始化Opus解码器失败: ${error.message}`, 'warning');
+            });
+        }
 
         const timeout = 400;
         while (true) {
@@ -184,6 +187,24 @@ export class AudioPlayer {
     async playBufferedAudio() {
         try {
             this.audioContext = this.getAudioContext();
+
+            if (this.isLimaMode()) {
+                // LiMa mode: queue already contains Float32 PCM samples
+                // No Opus decoder needed, feed directly to streaming context
+                if (!this.streamingContext) {
+                    this.streamingContext = createStreamingContext(
+                        null,  // no opus decoder needed
+                        this.audioContext,
+                        this.SAMPLE_RATE,
+                        this.CHANNELS,
+                        this.MIN_AUDIO_DURATION
+                    );
+                    this.streamingContext.pcmBypassMode = true;
+                }
+                this.streamingContext.processPCMFrames();
+                this.streamingContext.startPlaying();
+                return;
+            }
 
             if (!this.opusDecoder) {
                 log('初始化Opus解码器...', 'info');
@@ -232,6 +253,41 @@ export class AudioPlayer {
         }
     }
 
+    // 添加原始 PCM 数据到队列（LiMa 模式）
+    enqueuePCMData(pcmInt16) {
+        if (!pcmInt16 || pcmInt16.length === 0) {
+            log('收到空PCM数据', 'warning');
+            if (this.isPlaying && this.streamingContext) {
+                this.streamingContext.endOfStream = true;
+            }
+            return;
+        }
+
+        // Split into 960-sample frames and convert to Float32
+        const frameSize = this.FRAME_SIZE;  // 960
+        for (let offset = 0; offset < pcmInt16.length; offset += frameSize) {
+            const frame = pcmInt16.slice(offset, offset + frameSize);
+            const floatData = new Float32Array(frame.length);
+            for (let i = 0; i < frame.length; i++) {
+                floatData[i] = frame[i] / 32768.0;
+            }
+            // Push each float sample individually to match the queue format
+            for (let i = 0; i < floatData.length; i++) {
+                this.queue.enqueue(floatData[i]);
+            }
+        }
+    }
+
+    // Check if running in LiMa mode
+    isLimaMode() {
+        try {
+            const config = getConfig();
+            return config && config.serverType === 'lima';
+        } catch {
+            return false;
+        }
+    }
+
     // 预加载解码器
     async preload() {
         log('预加载Opus解码器...', 'info');
@@ -245,7 +301,9 @@ export class AudioPlayer {
 
     // 启动播放系统
     async start() {
-        await this.preload();
+        if (!this.isLimaMode()) {
+            await this.preload();
+        }
         this.playBufferedAudio();
         this.startAudioBuffering();
     }

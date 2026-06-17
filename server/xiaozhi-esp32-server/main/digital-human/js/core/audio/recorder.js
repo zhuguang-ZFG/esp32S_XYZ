@@ -2,6 +2,7 @@
 import { log } from '../../utils/logger.js?v=0205';
 import { initOpusEncoder } from './opus-codec.js?v=0205';
 import { getAudioPlayer } from './player.js?v=0205';
+import { getConfig } from '../../config/manager.js?v=0205';
 
 // Audio recorder class
 export class AudioRecorder {
@@ -159,8 +160,32 @@ export class AudioRecorder {
         }
     }
 
-    // Encode and send Opus data
+    // Encode and send Opus data (or raw PCM for LiMa)
     encodeAndSendOpus(pcmData = null) {
+        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+            // Check if LiMa mode: send raw PCM directly
+            try {
+                const config = getConfig();
+                if (config && config.serverType === 'lima') {
+                    if (pcmData) {
+                        // Send raw PCM Int16Array as binary
+                        this.websocket.send(pcmData.buffer);
+                        this.audioBuffers.push(pcmData.buffer);
+                        this.totalAudioSize += pcmData.length * 2;
+                    } else {
+                        // Flush remaining buffer
+                        if (this.pcmDataBuffer.length > 0) {
+                            this.websocket.send(this.pcmDataBuffer.buffer);
+                            this.pcmDataBuffer = new Int16Array(0);
+                        }
+                    }
+                    return;
+                }
+            } catch (e) {
+                // Config not available, fall through to Opus
+            }
+        }
+
         if (!this.opusEncoder) {
             log('Opus编码器未初始化', 'error');
             return;
@@ -203,9 +228,20 @@ export class AudioRecorder {
     async start() {
         if (this.isRecording) return false;
         try {
-            if (!this.initEncoder()) {
-                log('无法开始录音: Opus编码器初始化失败', 'error');
-                return false;
+            // LiMa mode: skip Opus encoder init
+            try {
+                const config = getConfig();
+                if (!config || config.serverType !== 'lima') {
+                    if (!this.initEncoder()) {
+                        log('无法开始录音: Opus编码器初始化失败', 'error');
+                        return false;
+                    }
+                }
+            } catch (e) {
+                if (!this.initEncoder()) {
+                    log('无法开始录音: Opus编码器初始化失败', 'error');
+                    return false;
+                }
             }
             log('请至少录制1-2秒音频以确保收集足够的数据', 'info');
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000, channelCount: 1 } });
@@ -304,11 +340,20 @@ export class AudioRecorder {
             }
             // Encode and send remaining data
             this.encodeAndSendOpus();
-            // Send end signal
+            // Send end signal (Opus mode only)
             if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                const emptyOpusFrame = new Uint8Array(0);
-                this.websocket.send(emptyOpusFrame);
-                log('已发送录音停止信号', 'info');
+                try {
+                    const config = getConfig();
+                    if (!config || config.serverType !== 'lima') {
+                        const emptyOpusFrame = new Uint8Array(0);
+                        this.websocket.send(emptyOpusFrame);
+                        log('已发送录音停止信号', 'info');
+                    }
+                } catch (e) {
+                    const emptyOpusFrame = new Uint8Array(0);
+                    this.websocket.send(emptyOpusFrame);
+                    log('已发送录音停止信号', 'info');
+                }
             }
             if (this.onRecordingStop) {
                 this.onRecordingStop();

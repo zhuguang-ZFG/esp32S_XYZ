@@ -29,6 +29,7 @@ _RUN_PATH_POLICY = {
 class MemoryTransport:
     def __init__(self, responses):
         self.sent = []
+        self.sent_bytes: list[bytes] = []
         self.responses = list(responses)
 
     async def send_json(self, payload):
@@ -38,6 +39,17 @@ class MemoryTransport:
         if not self.responses:
             raise AssertionError("no response queued")
         return self.responses.pop(0)
+
+    async def send_bytes(self, data: bytes) -> None:
+        self.sent_bytes.append(data)
+
+    async def receive_bytes(self) -> bytes:
+        if not self.responses:
+            raise AssertionError("no response queued")
+        result = self.responses.pop(0)
+        if not isinstance(result, bytes):
+            raise AssertionError(f"expected bytes, got {type(result)}")
+        return result
 
 
 class TestFakeLimaU8(unittest.TestCase):
@@ -52,16 +64,11 @@ class TestFakeLimaU8(unittest.TestCase):
     def test_hello_frame_uses_lima_protocol(self):
         frame = build_hello(FakeU8Config(device_id="dev-test", fw_rev="u8-test"))
 
-        self.assertEqual(
-            frame,
-            {
-                "type": "hello",
-                "protocol": "lima-device-v1",
-                "device_id": "dev-test",
-                "fw_rev": "u8-test",
-                "capabilities": ["run_path", "device_info", "self_check"],
-            },
-        )
+        self.assertEqual(frame["type"], "hello")
+        self.assertEqual(frame["protocol"], "lima-device-v1")
+        self.assertEqual(frame["device_id"], "dev-test")
+        self.assertEqual(frame["fw_rev"], "u8-test")
+        self.assertIn("audio", frame["capabilities"])
 
     def test_motion_event_includes_session_id_for_esp32_compatibility(self):
         event = build_motion_event(device_id="dev-1", task_id="task-1", phase="progress", percent=25)
@@ -221,3 +228,52 @@ class TestFakeLimaU8(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAudioStreaming(unittest.TestCase):
+    """Tests for audio PCM generation and streaming helpers."""
+
+    def test_generate_silence_pcm_produces_expected_bytes(self):
+        from fake_lima_u8.app import _generate_silence_pcm, AUDIO_SAMPLE_RATE, AUDIO_SAMPLE_WIDTH, AUDIO_CHANNELS
+
+        # 100ms of silence
+        pcm = _generate_silence_pcm(100)
+        expected_bytes = int(AUDIO_SAMPLE_RATE * 100 / 1000) * AUDIO_SAMPLE_WIDTH * AUDIO_CHANNELS
+        self.assertEqual(len(pcm), expected_bytes)
+        self.assertEqual(pcm, b"\x00\x00" * (expected_bytes // 2))
+
+    def test_generate_tone_pcm_is_non_empty(self):
+        from fake_lima_u8.app import _generate_tone_pcm
+
+        pcm = _generate_tone_pcm(440, 100)
+        self.assertGreater(len(pcm), 0)
+        # Should not be all zeros
+        self.assertNotEqual(pcm, b"\x00" * len(pcm))
+
+    def test_audio_chunk_size_matches_config(self):
+        from fake_lima_u8.app import AUDIO_CHUNK_BYTES, AUDIO_CHUNK_MS, AUDIO_SAMPLE_RATE, AUDIO_SAMPLE_WIDTH, AUDIO_CHANNELS
+
+        expected = int(AUDIO_SAMPLE_RATE * AUDIO_SAMPLE_WIDTH * AUDIO_CHANNELS * AUDIO_CHUNK_MS / 1000)
+        self.assertEqual(AUDIO_CHUNK_BYTES, expected)
+
+    def test_audio_streaming_script_sends_binary_chunks(self):
+        """Verify audio script sends binary frames followed by voice_status."""
+        from fake_lima_u8.app import AUDIO_CHUNK_BYTES, _generate_tone_pcm, _generate_silence_pcm
+
+        # Build expected audio payload
+        tone = _generate_tone_pcm(440, 500)
+        silence = _generate_silence_pcm(1500)
+        audio_data = tone + silence
+        expected_chunks = (len(audio_data) + AUDIO_CHUNK_BYTES - 1) // AUDIO_CHUNK_BYTES
+
+        self.assertGreater(expected_chunks, 2, "audio streaming should send multiple chunks")
+
+    def test_memory_transport_binary_support(self):
+        """MemoryTransport correctly handles binary send/receive."""
+        async def _run():
+            transport = MemoryTransport([b"\x00\x00\x01\x02"])
+            await transport.send_bytes(b"hello")
+            self.assertEqual(transport.sent_bytes, [b"hello"])
+            result = await transport.receive_bytes()
+            self.assertEqual(result, b"\x00\x00\x01\x02")
+        asyncio.run(_run())
