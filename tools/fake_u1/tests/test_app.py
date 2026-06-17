@@ -158,6 +158,87 @@ class FakeU1SimulatorTests(unittest.TestCase):
         self.assertEqual(data["workspace_mm"], {"x": 200.0, "y": 150.0, "z": 50.0})
         self.assert_schema_valid(self.device_info_schema, data)
 
+    def test_home_with_valid_route_policy_succeeds(self):
+        data = self.send(
+            {
+                "msg_id": "21",
+                "task_id": "t_home_policy",
+                "cmd": "HOME",
+                "route_policy": {
+                    "route_role": "device_control",
+                    "model_required": False,
+                    "primary_strategy": "deterministic",
+                    "artifact_required": "none",
+                },
+            }
+        )
+        self.assertEqual(data["type"], "result")
+        self.assertEqual(data["result"], "DONE")
+        self.assert_schema_valid(self.result_schema, data)
+
+    def test_home_with_unknown_route_role_rejected(self):
+        data = self.send(
+            {
+                "msg_id": "22",
+                "task_id": "t_home_bad_role",
+                "cmd": "HOME",
+                "route_policy": {
+                    "route_role": "invalid_role",
+                    "model_required": False,
+                    "primary_strategy": "deterministic",
+                    "artifact_required": "none",
+                },
+            }
+        )
+        self.assertEqual(data["type"], "error")
+        self.assertEqual(data["error_code"], "E009")
+        self.assertIn("route_role", data["message"])
+        self.assert_schema_valid(self.error_schema, data)
+
+    def test_home_with_non_deterministic_control_rejected(self):
+        data = self.send(
+            {
+                "msg_id": "23",
+                "task_id": "t_home_bad_strategy",
+                "cmd": "HOME",
+                "route_policy": {
+                    "route_role": "device_control",
+                    "model_required": False,
+                    "primary_strategy": "image_then_vector",
+                    "artifact_required": "none",
+                },
+            }
+        )
+        self.assertEqual(data["type"], "error")
+        self.assertEqual(data["error_code"], "E009")
+        self.assertIn("strategy", data["message"])
+        self.assert_schema_valid(self.error_schema, data)
+
+    def test_path_begin_without_run_path_capability_rejected(self):
+        sim = FakeU1Simulator(fw_capabilities=set())
+        data = json.loads(
+            sim.handle_line(
+                "@"
+                + json.dumps(
+                    {
+                        "msg_id": "24",
+                        "task_id": "t_path_nocap",
+                        "cmd": "HOME",
+                        "route_policy": {
+                            "route_role": "device_vector",
+                            "model_required": False,
+                            "primary_strategy": "provided_path",
+                            "artifact_required": "preview_svg",
+                        },
+                    }
+                )
+            )
+        )
+        self.assertEqual(data["type"], "error")
+        self.assertEqual(data["error_code"], "E009")
+        self.assertIn("run_path", data["message"])
+        self.assert_schema_valid(self.error_schema, data)
+
 
 if __name__ == "__main__":
     unittest.main()

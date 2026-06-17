@@ -5,7 +5,12 @@ import socketserver
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Deque, Dict, List, Optional
+from typing import Deque, Dict, List, Optional, Set
+
+try:
+    from tools.fake_u1.route_policy_validator import validate_route_policy_for_u1
+except ImportError:
+    from fake_u1.route_policy_validator import validate_route_policy_for_u1
 
 
 WORKSPACE_MM = {
@@ -33,11 +38,19 @@ class FakeU1State:
     path_received_segments: int = 0
     path_task_id: str = ""
     path_last_position: Dict[str, float] = field(default_factory=dict)
+    fw_capabilities: Set[str] = field(default_factory=lambda: {"run_path", "device_info"})
 
 
 class FakeU1Simulator:
-    def __init__(self, inject_codes: Optional[List[str]] = None, latency_ms: int = 0) -> None:
+    def __init__(
+        self,
+        inject_codes: Optional[List[str]] = None,
+        latency_ms: int = 0,
+        fw_capabilities: Optional[Set[str]] = None,
+    ) -> None:
         self.state = FakeU1State()
+        if fw_capabilities is not None:
+            self.state.fw_capabilities = set(fw_capabilities)
         self.latency_ms = latency_ms
         self.inject_codes: Deque[str] = deque()
         if inject_codes:
@@ -49,6 +62,37 @@ class FakeU1Simulator:
         if normalized not in INJECTABLE_ERRORS:
             raise ValueError(f"unsupported inject code: {code}")
         self.inject_codes.append(normalized)
+
+    @staticmethod
+    def _extract_route_policy(payload: Dict[str, object]) -> Optional[Dict[str, object]]:
+        policy = payload.get("route_policy")
+        if isinstance(policy, dict):
+            return policy
+        return None
+
+    def _validate_route_policy(
+        self,
+        msg_id: str,
+        task_id: str,
+        payload: Dict[str, object],
+    ) -> Optional[str]:
+        """Return an error JSON string if route_policy is invalid, else None."""
+        policy = self._extract_route_policy(payload)
+        if policy is None:
+            return None
+        ok, error_code, message = validate_route_policy_for_u1(
+            policy, fw_capabilities=self.state.fw_capabilities
+        )
+        if ok:
+            return None
+        return self._error(
+            msg_id,
+            task_id,
+            error_code,
+            message,
+            state="ERROR",
+            alarm_code=None,
+        )
 
     def handle_line(self, line: str) -> str:
         if self.latency_ms > 0:
@@ -76,7 +120,7 @@ class FakeU1Simulator:
         if cmd == "GET_DEVICE_INFO":
             return self._device_info_result(msg_id, task_id)
         if cmd == "HOME":
-            return self._home(msg_id, task_id)
+            return self._home(msg_id, task_id, payload)
         if cmd == "MOVE":
             return self._move(msg_id, task_id, payload)
         if cmd == "PAUSE":
@@ -110,7 +154,10 @@ class FakeU1Simulator:
             self.state.homed = False
         return self._error(msg_id, task_id, code, str(meta["message"]), state=self.state.state, alarm_code=self.state.alarm_code)
 
-    def _home(self, msg_id: str, task_id: str) -> str:
+    def _home(self, msg_id: str, task_id: str, payload: Dict[str, object]) -> str:
+        policy_error = self._validate_route_policy(msg_id, task_id, payload)
+        if policy_error is not None:
+            return policy_error
         injected = self._consume_injected_error(msg_id, task_id)
         if injected is not None:
             return injected
@@ -124,6 +171,9 @@ class FakeU1Simulator:
         return self._result(msg_id, task_id, "DONE", state="IDLE")
 
     def _move(self, msg_id: str, task_id: str, payload: Dict[str, object]) -> str:
+        policy_error = self._validate_route_policy(msg_id, task_id, payload)
+        if policy_error is not None:
+            return policy_error
         has_axis = any(axis in payload for axis in ("x", "y", "z"))
         if not has_axis:
             return self._error(msg_id, task_id, "E009", "missing axis target", state="ERROR")
@@ -147,6 +197,9 @@ class FakeU1Simulator:
         return self._result(msg_id, task_id, "DONE", state="IDLE")
 
     def _path_begin(self, msg_id: str, task_id: str, payload: Dict[str, object]) -> str:
+        policy_error = self._validate_route_policy(msg_id, task_id, payload)
+        if policy_error is not None:
+            return policy_error
         if not self.state.homed:
             self.state.state = "ERROR"
             return self._error(msg_id, task_id, "E001", "home required", state="ERROR")

@@ -121,6 +121,37 @@ class TestMotionTaskMapping(unittest.TestCase):
             },
         )
 
+    def test_home_command_forwards_route_policy(self):
+        policy = {
+            "route_role": "device_control",
+            "model_required": False,
+            "primary_strategy": "deterministic",
+            "artifact_required": "none",
+        }
+        cmd = motion_task_to_u1_command(
+            {"capability": "home", "task_id": "task-home-policy", "route_policy": policy}
+        )
+        self.assertEqual(cmd["cmd"], "HOME")
+        self.assertEqual(cmd["route_policy"], policy)
+
+    def test_run_path_command_forwards_route_policy_in_path_begin(self):
+        policy = {
+            "route_role": "device_vector",
+            "model_required": False,
+            "primary_strategy": "provided_path",
+            "artifact_required": "preview_svg",
+        }
+        commands = motion_task_to_u1_commands(
+            {
+                "capability": "run_path",
+                "task_id": "task-path-policy",
+                "route_policy": policy,
+                "params": {"path": [{"cmd": "L", "x": 10, "y": 0}], "feed": 900},
+            }
+        )
+        self.assertEqual(commands[0]["cmd"], "PATH_BEGIN")
+        self.assertEqual(commands[0]["route_policy"], policy)
+
 
 if __name__ == "__main__":
     unittest.main()

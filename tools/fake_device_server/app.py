@@ -20,6 +20,7 @@ def motion_task_to_u1_command(body: Dict[str, Any]) -> Dict[str, Any]:
     params = body.get("params", {})
     if not isinstance(params, dict):
         params = {}
+    route_policy = body.get("route_policy")
 
     simple_map = {
         "home": "HOME",
@@ -31,10 +32,13 @@ def motion_task_to_u1_command(body: Dict[str, Any]) -> Dict[str, Any]:
         "estop": "ESTOP",
     }
     if capability in simple_map:
-        return {"msg_id": "1", "task_id": task_id, "cmd": simple_map[capability]}
+        cmd: Dict[str, Any] = {"msg_id": "1", "task_id": task_id, "cmd": simple_map[capability]}
+        if isinstance(route_policy, dict):
+            cmd["route_policy"] = route_policy
+        return cmd
 
     if capability == "move_abs":
-        return {
+        cmd = {
             "msg_id": "1",
             "task_id": task_id,
             "cmd": "MOVE",
@@ -43,9 +47,12 @@ def motion_task_to_u1_command(body: Dict[str, Any]) -> Dict[str, Any]:
             "z": params.get("z", 0),
             "feed": params.get("feed", 1200),
         }
+        if isinstance(route_policy, dict):
+            cmd["route_policy"] = route_policy
+        return cmd
 
     if capability == "move_rel":
-        return {
+        cmd = {
             "msg_id": "1",
             "task_id": task_id,
             "cmd": "MOVE_REL",
@@ -54,8 +61,14 @@ def motion_task_to_u1_command(body: Dict[str, Any]) -> Dict[str, Any]:
             "dz": params.get("dz", 0),
             "feed": params.get("feed", 800),
         }
+        if isinstance(route_policy, dict):
+            cmd["route_policy"] = route_policy
+        return cmd
 
-    return {"msg_id": "1", "task_id": task_id, "cmd": capability.upper()}
+    cmd = {"msg_id": "1", "task_id": task_id, "cmd": capability.upper()}
+    if isinstance(route_policy, dict):
+        cmd["route_policy"] = route_policy
+    return cmd
 
 
 def motion_task_to_u1_commands(body: Dict[str, Any]) -> list[Dict[str, Any]]:
@@ -72,9 +85,17 @@ def motion_task_to_u1_commands(body: Dict[str, Any]) -> list[Dict[str, Any]]:
     if not isinstance(path, list):
         path = []
     feed = params.get("feed", 1200)
-    commands: list[Dict[str, Any]] = [
-        {"msg_id": "1", "task_id": task_id, "cmd": "PATH_BEGIN", "total_segments": len(path), "feed": feed}
-    ]
+    route_policy = body.get("route_policy")
+    begin_cmd: Dict[str, Any] = {
+        "msg_id": "1",
+        "task_id": task_id,
+        "cmd": "PATH_BEGIN",
+        "total_segments": len(path),
+        "feed": feed,
+    }
+    if isinstance(route_policy, dict):
+        begin_cmd["route_policy"] = route_policy
+    commands: list[Dict[str, Any]] = [begin_cmd]
     for index, segment in enumerate(path):
         if not isinstance(segment, dict):
             segment = {}
@@ -215,8 +236,16 @@ class FakeDeviceServerHandler(BaseHTTPRequestHandler):
         result_type = result.get("type", "?") if result else "no-response"
         print(f"  motion_task {capability} task_id={task_id} -> fake_u1: {result_type}")
 
-        data: Dict[str, Any] = {"task_id": task_id, "status": result.get("state", "unknown") if result else "dispatched"}
-        if capability == "get_device_info" and result:
+        is_error = result and result.get("type") == "error"
+        data: Dict[str, Any] = {
+            "task_id": task_id,
+            "status": "ERROR" if is_error else result.get("state", "unknown") if result else "dispatched",
+        }
+        if is_error:
+            data["error_code"] = result.get("error_code", "E_UNKNOWN")
+            data["error_message"] = result.get("message", "unknown error")
+            data["route_policy_rejected"] = "route_policy" in (commands[0] if commands else {})
+        if capability == "get_device_info" and result and not is_error:
             device_info = device_info_report_from_u1_response(body, result)
             data["device_info"] = device_info
             if self.business_base_url:
