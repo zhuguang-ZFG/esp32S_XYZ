@@ -36,7 +36,7 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
       }
       catch (error) {
         // 切换到登录页
-        await uni.reLaunch({ url: '/pages/login/index' })
+        await uni.reLaunch({ url: '/pages/v2/login/index' })
         throw error
       }
     },
@@ -82,10 +82,17 @@ const alovaInstance = createAlova({
 
     // 处理认证信息
     if (!ignoreAuth) {
-      const authInfo = JSON.parse(uni.getStorageSync('token') || '{}')
+      const rawToken = uni.getStorageSync('token') || ''
+      let authInfo: { token?: string } = {}
+      try {
+        authInfo = JSON.parse(rawToken || '{}')
+      }
+      catch {
+        authInfo = { token: rawToken }
+      }
       if (!authInfo.token) {
         // 跳转到登录页
-        uni.reLaunch({ url: '/pages/login/index' })
+        uni.reLaunch({ url: '/pages/v2/login/index' })
         throw new Error('[请求错误]：未登录')
       }
       // 添加 Authorization 头
@@ -125,12 +132,15 @@ const alovaInstance = createAlova({
 
     // 处理业务逻辑错误
     const { code, msg, data } = rawData as IResponse
+    if (code === undefined) {
+      return rawData
+    }
     if (code !== ResultEnum.Success) {
       // 检查是否为token失效
       if (code === ResultEnum.Unauthorized) {
         // 清除token并跳转到登录页
         uni.removeStorageSync('token')
-        uni.reLaunch({ url: '/pages/login/index' })
+        uni.reLaunch({ url: '/pages/v2/login/index' })
         throw new Error(`请求错误[${code}]：${msg}`)
       }
 

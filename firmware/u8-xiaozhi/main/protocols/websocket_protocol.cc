@@ -12,10 +12,7 @@
 
 #define TAG "WS"
 
-// LiMa direct mode: firmware connects to LiMa /device/v1/ws instead of xiaozhi-server
-#ifdef CONFIG_LIMA_DIRECT_MODE
 #define LIMA_PROTOCOL_VERSION "lima-device-v1"
-#endif
 
 WebsocketProtocol::WebsocketProtocol() {
     event_group_handle_ = xEventGroupCreate();
@@ -89,21 +86,17 @@ bool WebsocketProtocol::OpenAudioChannel() {
     Settings settings("websocket", false);
     std::string url = settings.GetString("url");
     std::string token = settings.GetString("token");
-    int version = settings.GetInt("version");
-    if (version != 0) {
-        version_ = version;
-    }
 
     error_occurred_ = false;
-
-#ifdef CONFIG_LIMA_DIRECT_MODE
-    // LiMa sends raw PCM binary frames (no binary protocol wrapper)
     version_ = 0;
-    // LiMa default URL if not configured
     if (url.empty()) {
-        url = "ws://chat.donglicao.com/device/v1/ws";
+        url = "wss://chat.donglicao.com/device/v1/ws";
     }
-#endif
+    if (url.rfind("wss://", 0) != 0) {
+        ESP_LOGE(TAG, "LiMa direct mode requires secure websocket URL");
+        SetError(Lang::Strings::SERVER_NOT_CONNECTED);
+        return false;
+    }
 
     auto network = Board::GetInstance().GetNetwork();
     websocket_ = network->CreateWebSocket(1);
@@ -113,20 +106,12 @@ bool WebsocketProtocol::OpenAudioChannel() {
     }
 
     if (!token.empty()) {
-        // If token not has a space, add "Bearer " prefix
         if (token.find(" ") == std::string::npos) {
             token = "Bearer " + token;
         }
         websocket_->SetHeader("Authorization", token.c_str());
     }
-#ifdef CONFIG_LIMA_DIRECT_MODE
-    // LiMa uses Device-Id header for token validation
     websocket_->SetHeader("Device-Id", SystemInfo::GetMacAddress().c_str());
-#else
-    websocket_->SetHeader("Protocol-Version", std::to_string(version_).c_str());
-    websocket_->SetHeader("Device-Id", SystemInfo::GetMacAddress().c_str());
-    websocket_->SetHeader("Client-Id", Board::GetInstance().GetUuid().c_str());
-#endif
 
     websocket_->OnData([this](const char* data, size_t len, bool binary) {
         if (binary) {
@@ -165,11 +150,9 @@ bool WebsocketProtocol::OpenAudioChannel() {
                 }
             }
         } else {
-            // Parse JSON data
             auto root = cJSON_ParseWithLength(data, len);
             auto type = cJSON_GetObjectItem(root, "type");
             if (cJSON_IsString(type)) {
-#ifdef CONFIG_LIMA_DIRECT_MODE
                 if (strcmp(type->valuestring, "hello_ack") == 0) {
                     ParseServerHello(root);
                 } else if (strcmp(type->valuestring, "voice_status") == 0) {
@@ -190,15 +173,6 @@ bool WebsocketProtocol::OpenAudioChannel() {
                         on_incoming_json_(root);
                     }
                 }
-#else
-                if (strcmp(type->valuestring, "hello") == 0) {
-                    ParseServerHello(root);
-                } else {
-                    if (on_incoming_json_ != nullptr) {
-                        on_incoming_json_(root);
-                    }
-                }
-#endif
             } else {
                 ESP_LOGE(TAG, "Missing message type, data: %s", std::string(data, len).c_str());
             }
@@ -243,8 +217,6 @@ bool WebsocketProtocol::OpenAudioChannel() {
 }
 
 std::string WebsocketProtocol::GetHelloMessage() {
-#ifdef CONFIG_LIMA_DIRECT_MODE
-    // LiMa Device Gateway protocol (lima-device-v1)
     cJSON* root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "type", "hello");
     cJSON_AddStringToObject(root, "protocol", LIMA_PROTOCOL_VERSION);
@@ -267,36 +239,9 @@ std::string WebsocketProtocol::GetHelloMessage() {
     cJSON_free(json_str);
     cJSON_Delete(root);
     return message;
-#else
-    // Original xiaozhi-server protocol
-    // keys: message type, version, audio_params (format, sample_rate, channels)
-    cJSON* root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "type", "hello");
-    cJSON_AddNumberToObject(root, "version", version_);
-    cJSON* features = cJSON_CreateObject();
-#if CONFIG_USE_SERVER_AEC
-    cJSON_AddBoolToObject(features, "aec", true);
-#endif
-    cJSON_AddBoolToObject(features, "mcp", true);
-    cJSON_AddItemToObject(root, "features", features);
-    cJSON_AddStringToObject(root, "transport", "websocket");
-    cJSON* audio_params = cJSON_CreateObject();
-    cJSON_AddStringToObject(audio_params, "format", "opus");
-    cJSON_AddNumberToObject(audio_params, "sample_rate", 16000);
-    cJSON_AddNumberToObject(audio_params, "channels", 1);
-    cJSON_AddNumberToObject(audio_params, "frame_duration", OPUS_FRAME_DURATION_MS);
-    cJSON_AddItemToObject(root, "audio_params", audio_params);
-    auto json_str = cJSON_PrintUnformatted(root);
-    std::string message(json_str);
-    cJSON_free(json_str);
-    cJSON_Delete(root);
-    return message;
-#endif
 }
 
 void WebsocketProtocol::ParseServerHello(const cJSON* root) {
-#ifdef CONFIG_LIMA_DIRECT_MODE
-    // LiMa Device Gateway hello_ack response
     auto ack_type = cJSON_GetObjectItem(root, "type");
     if (ack_type == nullptr || strcmp(ack_type->valuestring, "hello_ack") != 0) {
         ESP_LOGE(TAG, "Expected hello_ack, got: %s", ack_type ? ack_type->valuestring : "null");
@@ -324,32 +269,4 @@ void WebsocketProtocol::ParseServerHello(const cJSON* root) {
     server_frame_duration_ = 60;
 
     xEventGroupSetBits(event_group_handle_, WEBSOCKET_PROTOCOL_SERVER_HELLO_EVENT);
-#else
-    // Original xiaozhi-server hello parsing
-    auto transport = cJSON_GetObjectItem(root, "transport");
-    if (transport == nullptr || strcmp(transport->valuestring, "websocket") != 0) {
-        ESP_LOGE(TAG, "Unsupported transport: %s", transport->valuestring);
-        return;
-    }
-
-    auto session_id = cJSON_GetObjectItem(root, "session_id");
-    if (cJSON_IsString(session_id)) {
-        session_id_ = session_id->valuestring;
-        ESP_LOGI(TAG, "Session ID: %s", session_id_.c_str());
-    }
-
-    auto audio_params = cJSON_GetObjectItem(root, "audio_params");
-    if (cJSON_IsObject(audio_params)) {
-        auto sample_rate = cJSON_GetObjectItem(audio_params, "sample_rate");
-        if (cJSON_IsNumber(sample_rate)) {
-            server_sample_rate_ = sample_rate->valueint;
-        }
-        auto frame_duration = cJSON_GetObjectItem(audio_params, "frame_duration");
-        if (cJSON_IsNumber(frame_duration)) {
-            server_frame_duration_ = frame_duration->valueint;
-        }
-    }
-
-    xEventGroupSetBits(event_group_handle_, WEBSOCKET_PROTOCOL_SERVER_HELLO_EVENT);
-#endif
 }

@@ -594,8 +594,7 @@ async function handleAcceptTransfer() {
 
 function currentTransferId() {
   const raw = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '')
-  const value = Number(raw)
-  return Number.isFinite(value) && value > 0 ? value : null
+  return raw || null
 }
 
 function taskSubmitErrorMessage(error: any) {

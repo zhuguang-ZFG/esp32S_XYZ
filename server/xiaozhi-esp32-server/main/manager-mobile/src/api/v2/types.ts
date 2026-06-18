@@ -29,7 +29,7 @@ export interface V2SelfCheckHistoryResponse {
   checksJson?: string
   reportedAt?: string
 }
-export interface V2LoginResponse { token: string; userId: number }
+export interface V2LoginResponse { token: string; userId: string; expiresIn?: number }
 export interface V2DeviceSupplyUpdateRequest {
   paperSlotState?: 'empty' | 'loaded' | 'unknown'
   penInstalledAt?: string
@@ -47,10 +47,10 @@ export interface V2DeviceTransferRequest {
   targetUnionid: string
 }
 export interface V2DeviceTransferResponse {
-  transferId: number
+  transferId: string
   deviceId: string
-  sourceAccountId: number
-  targetAccountId: number
+  sourceAccountId: string
+  targetAccountId: string
   status: 'pending' | 'accepted' | 'cancelled'
 }
 export interface V2DeletionResponse {

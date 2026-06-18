@@ -28,7 +28,7 @@
       {
         "iconPath": "static/tabbar/robot.png",
         "selectedIconPath": "static/tabbar/robot_activate.png",
-        "pagePath": "pages/index/index",
+        "pagePath": "pages/v2/device-list/index",
         "text": "首页",
         "icon": "home",
         "iconType": "uiLib"

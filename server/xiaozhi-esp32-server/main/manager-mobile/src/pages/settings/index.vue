@@ -15,7 +15,13 @@ import { useToast } from 'wot-design-uni/components/wd-toast'
 import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
 import { v2DeleteAccount } from '@/api/v2'
 import { useConfigStore } from '@/store'
-import { clearServerBaseUrlOverride, getEnvBaseUrl, getServerBaseUrlOverride, setServerBaseUrlOverride } from '@/utils'
+import {
+  clearServerBaseUrlOverride,
+  getEnvBaseUrl,
+  getServerBaseUrlOverride,
+  isValidServerBaseUrl,
+  setServerBaseUrlOverride,
+} from '@/utils'
 import { isMp } from '@/utils/platform'
 
 defineOptions({
@@ -70,7 +76,7 @@ function validateUrl() {
     return
   }
 
-  if (!/^https?:\/\/.+\/xiaozhi$/.test(baseUrlInput.value)) {
+  if (!isValidServerBaseUrl(baseUrlInput.value)) {
     urlError.value = t('settings.validServerUrl')
   }
 }
@@ -80,13 +86,13 @@ async function testServerBaseUrl() {
   // 先清除错误信息
   urlError.value = ''
 
-  if (!baseUrlInput.value || !/^https?:\/\/.+\/xiaozhi$/.test(baseUrlInput.value)) {
+  if (!baseUrlInput.value || !isValidServerBaseUrl(baseUrlInput.value)) {
     return false
   }
 
   try {
     const response = await uni.request({
-      url: `${baseUrlInput.value}/api/ping`,
+      url: `${baseUrlInput.value.replace(/\/$/, '')}/health`,
       method: 'GET',
       timeout: 3000,
     })
@@ -114,7 +120,7 @@ async function testServerBaseUrl() {
 
 // 保存服务端地址
 async function saveServerBaseUrl() {
-  if (!baseUrlInput.value || !/^https?:\/\/.+\/xiaozhi$/.test(baseUrlInput.value)) {
+  if (!baseUrlInput.value || !isValidServerBaseUrl(baseUrlInput.value)) {
     toast.warning(t('settings.validServerUrl'))
     return
   }
@@ -201,7 +207,7 @@ function restartApp() {
   plus.runtime.restart()
   // #endif
   // #ifndef APP-PLUS
-  uni.reLaunch({ url: '/pages/index/index' })
+  uni.reLaunch({ url: '/pages/v2/device-list/index' })
   // #endif
 }
 
@@ -249,7 +255,7 @@ async function clearCache() {
 
           // 延迟跳转到登录页
           setTimeout(() => {
-            uni.reLaunch({ url: '/pages/login/index' })
+            uni.reLaunch({ url: '/pages/v2/login/index' })
           }, 1500)
         }
       },

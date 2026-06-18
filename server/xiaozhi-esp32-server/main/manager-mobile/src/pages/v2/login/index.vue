@@ -21,7 +21,7 @@ async function handleLogin() {
     const res = await uni.login({ provider: 'weixin' })
     if (!res.code) { message.alert(t('v2.login.wxLogin') + '失败'); return }
     const data = await v2Login(res.code)
-    uni.setStorageSync('token', data.token)
+    uni.setStorageSync('token', JSON.stringify({ token: data.token, expire: data.expiresIn }))
     uni.redirectTo({ url: '/pages/v2/device-list/index' })
     // #endif
     // #ifndef MP-WEIXIN

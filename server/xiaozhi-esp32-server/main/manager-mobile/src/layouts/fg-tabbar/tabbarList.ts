@@ -30,7 +30,7 @@ export const tabbarList: FgTabBarItem[] = [
   {
     iconPath: 'static/tabbar/robot.png',
     selectedIconPath: 'static/tabbar/robot_activate.png',
-    pagePath: 'pages/index/index',
+    pagePath: 'pages/v2/device-list/index',
     text: '首页',
     icon: 'home',
     // 选用 UI 框架自带的 icon 时，iconType 为 uiLib

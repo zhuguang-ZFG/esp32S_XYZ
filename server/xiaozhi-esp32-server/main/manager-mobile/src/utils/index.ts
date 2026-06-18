@@ -15,6 +15,16 @@ export function setServerBaseUrlOverride(url: string) {
   uni.setStorageSync(SERVER_BASE_URL_OVERRIDE_KEY, url)
 }
 
+export function isValidServerBaseUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.host)
+  }
+  catch {
+    return false
+  }
+}
+
 export function clearServerBaseUrlOverride() {
   uni.removeStorageSync(SERVER_BASE_URL_OVERRIDE_KEY)
 }

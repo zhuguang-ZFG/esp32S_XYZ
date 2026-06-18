@@ -56,7 +56,7 @@ async function handleBind() {
   finally { bindLoading.value = false }
 }
 
-async function handleAcceptIncomingTransfer(transferId: number) {
+async function handleAcceptIncomingTransfer(transferId: string) {
   transferLoading.value = true
   try {
     await v2AcceptDeviceTransfer(transferId)
