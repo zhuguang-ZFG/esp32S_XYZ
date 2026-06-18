@@ -7,6 +7,7 @@
 #include <cstring>
 #include <cJSON.h>
 #include <esp_log.h>
+#include <esp_ota_ops.h>
 #include <arpa/inet.h>
 #include "assets/lang_config.h"
 
@@ -221,7 +222,7 @@ std::string WebsocketProtocol::GetHelloMessage() {
     cJSON_AddStringToObject(root, "type", "hello");
     cJSON_AddStringToObject(root, "protocol", LIMA_PROTOCOL_VERSION);
     cJSON_AddStringToObject(root, "device_id", SystemInfo::GetMacAddress().c_str());
-    cJSON_AddStringToObject(root, "fw_rev", Board::GetInstance().GetFirmwareVersion().c_str());
+    cJSON_AddStringToObject(root, "fw_rev", esp_app_get_description()->version);
     cJSON* capabilities = cJSON_CreateArray();
     cJSON_AddItemToArray(capabilities, cJSON_CreateString("audio"));
     cJSON_AddItemToArray(capabilities, cJSON_CreateString("run_path"));
