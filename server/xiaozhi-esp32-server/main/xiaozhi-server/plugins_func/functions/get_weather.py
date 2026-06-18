@@ -1,3 +1,5 @@
+import os
+
 import requests
 from bs4 import BeautifulSoup
 from config.logger import setup_logging
@@ -164,8 +166,11 @@ def get_weather(conn: "ConnectionHandler", location: str = None, lang: str = "zh
 
     weather_config = conn.config.get("plugins", {}).get("get_weather", {})
     api_host = weather_config.get("api_host", "mj7p3y7naa.re.qweatherapi.com")
-    api_key = weather_config.get("api_key", "a861d0d5e7bf4ee1a83d9a9e4f96d4da")
+    api_key = weather_config.get("api_key", "") or os.environ.get("QWEATHER_API_KEY", "")
     default_location = weather_config.get("default_location", "广州")
+    if not api_key:
+        logger.warning("QWeather API key is not configured; set plugins.get_weather.api_key or QWEATHER_API_KEY")
+        return ActionResponse(Action.REQLLM, "天气服务未配置 API Key，请联系管理员", None)
     client_ip = conn.client_ip
 
     # 优先使用用户提供的location参数
