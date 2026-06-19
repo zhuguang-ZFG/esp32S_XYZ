@@ -150,9 +150,10 @@ export function getEnvBaseUrl() {
   let baseUrl = import.meta.env.VITE_SERVER_BASEURL
 
   // # 有些同学可能需要在微信小程序里面根据 develop、trial、release 分别设置上传地址，参考代码如下。
-  const VITE_SERVER_BASEURL__WEIXIN_DEVELOP = 'https://ukw0y1.laf.run'
-  const VITE_SERVER_BASEURL__WEIXIN_TRIAL = 'https://ukw0y1.laf.run'
-  const VITE_SERVER_BASEURL__WEIXIN_RELEASE = 'https://ukw0y1.laf.run'
+  // Migrated to LiMa: WeChat mini-program now talks to chat.donglicao.com by default.
+  const VITE_SERVER_BASEURL__WEIXIN_DEVELOP = 'https://chat.donglicao.com'
+  const VITE_SERVER_BASEURL__WEIXIN_TRIAL = 'https://chat.donglicao.com'
+  const VITE_SERVER_BASEURL__WEIXIN_RELEASE = 'https://chat.donglicao.com'
 
   // 微信小程序端环境区分
   if (isMpWeixin) {
@@ -236,9 +237,10 @@ export function getEnvBaseUploadUrl() {
   // 请求基准地址
   let baseUploadUrl = import.meta.env.VITE_UPLOAD_BASEURL
 
-  const VITE_UPLOAD_BASEURL__WEIXIN_DEVELOP = 'https://ukw0y1.laf.run/upload'
-  const VITE_UPLOAD_BASEURL__WEIXIN_TRIAL = 'https://ukw0y1.laf.run/upload'
-  const VITE_UPLOAD_BASEURL__WEIXIN_RELEASE = 'https://ukw0y1.laf.run/upload'
+  // Migrated to LiMa: upload endpoint now points to chat.donglicao.com.
+  const VITE_UPLOAD_BASEURL__WEIXIN_DEVELOP = 'https://chat.donglicao.com/upload'
+  const VITE_UPLOAD_BASEURL__WEIXIN_TRIAL = 'https://chat.donglicao.com/upload'
+  const VITE_UPLOAD_BASEURL__WEIXIN_RELEASE = 'https://chat.donglicao.com/upload'
 
   // 微信小程序端环境区分
   if (isMpWeixin) {
