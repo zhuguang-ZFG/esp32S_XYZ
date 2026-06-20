@@ -2,15 +2,15 @@
 {
   "style": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "AI 创作",
-    "enablePullDownRefresh": true
+    "navigationBarTitleText": "AI 创作"
   }
 }
 </route>
 
 <script lang="ts" setup>
-import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { ref, onUnmounted } from 'vue'
+import { t } from '@/i18n'
 import { v2GetDevices, v2SubmitTask, v2GetTask } from '@/api/v2'
 import type { V2DeviceInfo, V2TaskInfo } from '@/api/v2/types'
 
@@ -18,90 +18,46 @@ const safeAreaTop = ref(0)
 const systemInfo = uni.getSystemInfoSync()
 safeAreaTop.value = systemInfo.statusBarHeight || 0
 
-// 模式: draw | write
 const mode = ref<'draw' | 'write'>('draw')
 const devices = ref<V2DeviceInfo[]>([])
 const selectedDeviceId = ref('')
 const prompt = ref('')
 const submitting = ref(false)
-
-// 任务追踪（本地缓存 + 当前会话）
 const tasks = ref<V2TaskInfo[]>([])
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
-onLoad((options: any) => {
-  if (options?.mode === 'write') {
-    mode.value = 'write'
-  } else {
-    mode.value = 'draw'
-  }
-})
-
-onShow(() => { loadDevices(); loadTasksFromCache() })
-
-onPullDownRefresh(() => {
-  Promise.all([loadDevices()]).finally(() => uni.stopPullDownRefresh())
-})
-
-onUnmounted(() => {
-  if (pollTimer.value) clearInterval(pollTimer.value)
-})
+onLoad((options: any) => { mode.value = options?.mode === 'write' ? 'write' : 'draw' })
+onShow(() => { loadDevices() })
+onUnmounted(() => { if (pollTimer.value) clearInterval(pollTimer.value) })
 
 async function loadDevices() {
   try {
     const res = await v2GetDevices()
     devices.value = res.rows || []
     const online = devices.value.find(d => d.status === 'online')
-    if (online) {
-      selectedDeviceId.value = online.deviceId
-    } else if (devices.value.length) {
-      selectedDeviceId.value = devices.value[0].deviceId
-    }
-  } catch (e) { console.error(e) }
-}
-
-function switchMode(m: 'draw' | 'write') {
-  mode.value = m
+    selectedDeviceId.value = online?.deviceId || devices.value[0]?.deviceId || ''
+  }
+  catch (e) { console.error(e) }
 }
 
 async function handleSubmit() {
-  if (!selectedDeviceId.value) {
-    uni.showToast({ title: '请先选择设备', icon: 'none' })
-    return
-  }
-  if (!prompt.value.trim()) {
-    uni.showToast({ title: '请输入提示词', icon: 'none' })
-    return
-  }
-
+  if (!selectedDeviceId.value) { uni.showToast({ title: t('create.pleaseSelectDevice'), icon: 'none' }); return }
+  if (!prompt.value.trim()) { uni.showToast({ title: t('create.pleaseEnterPrompt'), icon: 'none' }); return }
   submitting.value = true
   try {
     const capability = mode.value === 'draw' ? 'draw_generated' : 'write_text'
-    const res = await v2SubmitTask(
-      selectedDeviceId.value,
-      capability,
-      { prompt: prompt.value.trim() },
-    )
+    const res = await v2SubmitTask(selectedDeviceId.value, capability, { prompt: prompt.value.trim() })
     const newTask: V2TaskInfo = {
-      taskId: res.taskId || 'unknown',
-      status: 'pending',
-      deviceId: selectedDeviceId.value,
-      capability,
-      params: { prompt: prompt.value.trim() },
-      sent: res.sent,
-      queueDepth: res.queueDepth,
-      createdAt: new Date().toISOString(),
+      taskId: res.taskId || 'unknown', status: 'pending', deviceId: selectedDeviceId.value,
+      capability, params: { prompt: prompt.value.trim() }, createdAt: new Date().toISOString(),
     }
     tasks.value.unshift(newTask)
-    saveTasksToCache()
     prompt.value = ''
-    uni.showToast({ title: '任务已下发', icon: 'success' })
+    uni.showToast({ title: t('create.taskSubmitted'), icon: 'success' })
     startPolling(newTask.taskId)
-  } catch (e: any) {
-    uni.showToast({ title: `提交失败：${e.message || '未知错误'}`, icon: 'none' })
-  } finally {
-    submitting.value = false
   }
+  catch (e: any) { uni.showToast({ title: `${t('create.submitFailed')}: ${e.message || ''}`, icon: 'none' }) }
+  finally { submitting.value = false }
 }
 
 function startPolling(taskId: string) {
@@ -112,640 +68,172 @@ function startPolling(taskId: string) {
       const idx = tasks.value.findIndex(t => t.taskId === taskId)
       if (idx >= 0) {
         tasks.value[idx] = { ...tasks.value[idx], ...task }
-        saveTasksToCache()
-        if (task.status === 'completed' || task.status === 'failed' || task.status === 'error') {
+        if (['completed', 'failed', 'error'].includes(task.status)) {
           if (pollTimer.value) clearInterval(pollTimer.value)
           pollTimer.value = null
         }
       }
-    } catch (e) {
-      console.error('轮询任务状态失败', e)
     }
+    catch (e) { console.error('poll failed', e) }
   }, 3000)
 }
 
-// 本地缓存
-const TASK_CACHE_KEY = 'lima_recent_tasks'
-
-function saveTasksToCache() {
-  try {
-    // 只保存最近 20 条
-    const toSave = tasks.value.slice(0, 20)
-    uni.setStorageSync(TASK_CACHE_KEY, JSON.stringify(toSave))
-  } catch (e) { console.error(e) }
-}
-
-function loadTasksFromCache() {
-  try {
-    const raw = uni.getStorageSync(TASK_CACHE_KEY)
-    if (raw) {
-      const cached = JSON.parse(raw) as V2TaskInfo[]
-      // 合并缓存和当前内存中的任务（以内存优先）
-      const memoryIds = new Set(tasks.value.map(t => t.taskId))
-      const merged = [...tasks.value, ...cached.filter(c => !memoryIds.has(c.taskId))]
-      tasks.value = merged.slice(0, 20)
-    }
-  } catch (e) { console.error(e) }
-}
-
-function deleteTask(taskId: string) {
-  uni.showModal({
-    title: '删除任务',
-    content: '确定删除该任务记录？',
-    success: (res) => {
-      if (res.confirm) {
-        tasks.value = tasks.value.filter(t => t.taskId !== taskId)
-        saveTasksToCache()
-      }
-    },
-  })
-}
-
-function saveImageToAlbum(url: string) {
-  uni.downloadFile({
-    url,
-    success: (res) => {
-      if (res.statusCode === 200) {
-        uni.saveImageToPhotosAlbum({
-          filePath: res.tempFilePath,
-          success: () => uni.showToast({ title: '已保存到相册', icon: 'success' }),
-          fail: () => uni.showToast({ title: '保存失败', icon: 'none' }),
-        })
-      }
-    },
-    fail: () => uni.showToast({ title: '下载失败', icon: 'none' }),
-  })
-}
-
-function getDeviceIcon(model?: string) {
-  if (model?.includes('draw')) return '🎨'
-  if (model?.includes('write')) return '📝'
-  return '🤖'
-}
-
-function getModeLabel() {
-  return mode.value === 'draw' ? 'AI 绘图' : 'AI 写字'
-}
-
-function getPlaceholder() {
-  return mode.value === 'draw'
-    ? '例如：一只在星云中飞翔的凤凰，赛博朋克风格'
-    : '例如：欢迎参加 LiMa 星云发布会，科技感字体'
-}
-
-function getStatusLabel(status: string) {
-  const map: Record<string, string> = {
-    pending: '等待中',
-    queued: '排队中',
-    running: '执行中',
-    completed: '已完成',
-    failed: '失败',
-    error: '出错',
-    approved: '已批准',
-    waiting_approval: '待审批',
-  }
-  return map[status] || status
-}
-
+function getStatusLabel(status: string) { return t(`create.status.${status}` as any) || status }
 function getStatusColor(status: string) {
-  const map: Record<string, string> = {
-    pending: '#f59e0b',
-    queued: '#f59e0b',
-    running: '#3b82f6',
-    completed: '#34d399',
-    failed: '#ef4444',
-    error: '#ef4444',
-    approved: '#3b82f6',
-    waiting_approval: '#f59e0b',
-  }
-  return map[status] || '#8b95a8'
+  const map: Record<string, string> = { pending: '#f59e0b', queued: '#f59e0b', running: '#336cff', completed: '#07c160', failed: '#ff4d4f', error: '#ff4d4f' }
+  return map[status] || '#9d9ea3'
 }
-
-function previewImage(url: string) {
-  uni.previewImage({ urls: [url], current: url })
+function getProgressPercent(status: string) {
+  const map: Record<string, number> = { pending: 10, queued: 30, running: 60, completed: 100, failed: 100, error: 100 }
+  return map[status] ?? 10
 }
-
+function previewImage(url: string) { uni.previewImage({ urls: [url], current: url }) }
 function formatTime(iso?: string) {
   if (!iso) return ''
   const d = new Date(iso)
-  const h = String(d.getHours()).padStart(2, '0')
-  const m = String(d.getMinutes()).padStart(2, '0')
-  return `${h}:${m}`
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-
 function navigateBack() { uni.navigateBack() }
 </script>
 
 <template>
   <view class="create-page" :style="{ paddingTop: safeAreaTop + 'px' }">
-    <!-- 导航栏 -->
     <view class="create-nav">
       <view class="nav-content">
         <view class="nav-back" @click="navigateBack">
-          <text class="back-icon">‹</text>
+          <wd-icon name="arrow-left" size="20" color="#1d1d1f" />
         </view>
-        <text class="nav-title">AI 创作</text>
+        <text class="nav-title">{{ t('create.title') }}</text>
         <view class="nav-placeholder" />
       </view>
     </view>
 
-    <!-- 模式切换 -->
     <view class="mode-tabs">
-      <view
-        class="mode-tab"
-        :class="{ active: mode === 'draw' }"
-        @click="switchMode('draw')"
-      >
-        <text class="tab-icon">🎨</text>
-        <text class="tab-label">AI 绘图</text>
+      <view class="mode-tab" :class="{ active: mode === 'draw' }" @click="mode = 'draw'">
+        <wd-icon name="photo" size="28" :color="mode === 'draw' ? '#336cff' : '#9d9ea3'" />
+        <text class="tab-label">{{ t('create.drawTab') }}</text>
       </view>
-      <view
-        class="mode-tab"
-        :class="{ active: mode === 'write' }"
-        @click="switchMode('write')"
-      >
-        <text class="tab-icon">✍️</text>
-        <text class="tab-label">AI 写字</text>
+      <view class="mode-tab" :class="{ active: mode === 'write' }" @click="mode = 'write'">
+        <wd-icon name="edit-2" size="28" :color="mode === 'write' ? '#336cff' : '#9d9ea3'" />
+        <text class="tab-label">{{ t('create.writeTab') }}</text>
       </view>
     </view>
 
-    <!-- 设备选择 -->
     <view class="section">
-      <text class="section-title">选择设备</text>
-      <view v-if="!devices.length" class="empty-tip">
-        <text>暂无设备，请先添加设备</text>
-      </view>
+      <text class="section-title">{{ t('create.selectDevice') }}</text>
+      <view v-if="!devices.length" class="empty-tip">{{ t('create.noDevices') }}</view>
       <scroll-view v-else scroll-x class="device-scroll">
         <view class="device-list">
-          <view
-            v-for="d in devices"
-            :key="d.deviceId"
-            class="device-chip"
-            :class="{ selected: selectedDeviceId === d.deviceId }"
-            @click="selectedDeviceId = d.deviceId"
-          >
-            <text class="chip-icon">{{ getDeviceIcon(d.model) }}</text>
+          <view v-for="d in devices" :key="d.deviceId" class="device-chip" :class="{ selected: selectedDeviceId === d.deviceId }" @click="selectedDeviceId = d.deviceId">
+            <wd-icon name="phone" size="20" :color="selectedDeviceId === d.deviceId ? '#336cff' : '#666'" />
             <view class="chip-info">
-              <text class="chip-name">{{ d.model || '设备' }}</text>
-              <text class="chip-status" :class="d.status">{{ d.status === 'online' ? '● 在线' : '● 离线' }}</text>
+              <text class="chip-name">{{ d.model || 'Device' }}</text>
+              <text class="chip-status" :class="d.status">{{ d.status === 'online' ? `● ${t('create.device.online')}` : `● ${t('create.device.offline')}` }}</text>
             </view>
           </view>
         </view>
       </scroll-view>
     </view>
 
-    <!-- 提示词输入 -->
     <view class="section">
-      <text class="section-title">{{ getModeLabel() }}提示词</text>
+      <text class="section-title">{{ t('create.promptTitle') }}</text>
       <view class="prompt-box">
-        <textarea
-          v-model="prompt"
-          class="prompt-textarea"
-          :placeholder="getPlaceholder()"
-          placeholder-class="prompt-placeholder"
-          maxlength="500"
-          :disabled="submitting"
-        />
+        <textarea v-model="prompt" class="prompt-textarea" :placeholder="mode === 'draw' ? t('create.drawPlaceholder') : t('create.writePlaceholder')" placeholder-class="prompt-placeholder" maxlength="500" :disabled="submitting" />
         <text class="prompt-count">{{ prompt.length }}/500</text>
       </view>
     </view>
 
-    <!-- 提交按钮 -->
     <view class="submit-section">
-      <view
-        class="submit-btn"
-        :class="{ disabled: !selectedDeviceId || !prompt.trim() || submitting }"
-        @click="handleSubmit"
-      >
-        <text v-if="submitting" class="submit-text">提交中...</text>
-        <text v-else class="submit-text">
-          {{ mode === 'draw' ? '🎨 开始绘图' : '✍️ 开始写字' }}
-        </text>
+      <view class="submit-btn" :class="{ disabled: !selectedDeviceId || !prompt.trim() || submitting }" @click="handleSubmit">
+        <text class="submit-text">{{ submitting ? t('create.submitting') : (mode === 'draw' ? t('create.submitDraw') : t('create.submitWrite')) }}</text>
       </view>
     </view>
 
-    <!-- 任务追踪 -->
     <view v-if="tasks.length" class="section tasks-section">
-      <text class="section-title">任务追踪</text>
+      <text class="section-title">{{ t('create.taskTracking') }}</text>
       <view class="task-list">
-        <view
-          v-for="task in tasks"
-          :key="task.taskId"
-          class="task-card"
-        >
+        <view v-for="task in tasks" :key="task.taskId" class="task-card">
           <view class="task-header">
-            <view class="task-meta">
-              <text class="task-capability">{{ task.capability === 'draw' || task.capability === 'draw_generated' ? '🎨 绘图' : '✍️ 写字' }}</text>
-              <text class="task-time">{{ formatTime(task.createdAt) }}</text>
-            </view>
+            <text class="task-cap">{{ task.capability === 'draw_generated' ? t('create.drawTab') : t('create.writeTab') }}</text>
             <view class="task-status" :style="{ color: getStatusColor(task.status) }">
-              <text class="status-dot" :style="{ background: getStatusColor(task.status) }" />
+              <view class="status-dot" :style="{ background: getStatusColor(task.status) }" />
               <text>{{ getStatusLabel(task.status) }}</text>
             </view>
           </view>
-
-          <!-- 提示词 -->
-          <text class="task-prompt">{{ task.params?.prompt || task.params?.text || '' }}</text>
-
-          <!-- 进度条 -->
-          <view v-if="task.status !== 'completed' && task.status !== 'failed' && task.status !== 'error'" class="task-progress">
+          <text class="task-prompt">{{ task.params?.prompt || '' }}</text>
+          <view v-if="!['completed', 'failed', 'error'].includes(task.status)" class="task-progress">
             <view class="progress-bar">
-              <view
-                class="progress-fill"
-                :style="{
-                  width: task.status === 'running' ? '60%' : task.status === 'queued' ? '30%' : '10%',
-                  background: getStatusColor(task.status)
-                }"
-              />
+              <view class="progress-fill" :style="{ width: getProgressPercent(task.status) + '%', background: getStatusColor(task.status) }" />
             </view>
           </view>
-
-          <!-- 结果图片 -->
           <view v-if="task.imageUrl" class="task-result">
-            <image
-              class="result-image"
-              :src="task.imageUrl"
-              mode="aspectFill"
-              @click="previewImage(task.imageUrl!)"
-            />
-            <view class="result-actions">
-              <text class="result-tip">点击图片预览</text>
-              <text class="save-btn" @click="saveImageToAlbum(task.imageUrl!)">保存到相册</text>
-            </view>
+            <image class="result-image" :src="task.imageUrl" mode="aspectFill" @click="previewImage(task.imageUrl!)" />
+            <text class="result-tip">{{ t('create.clickToPreview') }}</text>
           </view>
-
-          <!-- 错误信息 -->
           <text v-if="task.error" class="task-error">{{ task.error }}</text>
-
-          <!-- 操作栏 -->
-          <view class="task-actions">
-            <text class="task-delete" @click="deleteTask(task.taskId)">删除记录</text>
-          </view>
         </view>
       </view>
     </view>
 
-    <!-- 底部留白 -->
     <view style="height: 40rpx;" />
   </view>
 </template>
 
 <style lang="scss" scoped>
-.create-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #07070f 0%, #0a0a14 100%);
-}
-
-/* 导航栏 */
+.create-page { min-height: 100vh; background: #f5f5f7; }
 .create-nav {
-  background: rgba(7, 7, 15, 0.95);
-  backdrop-filter: blur(20rpx);
-  border-bottom: 1rpx solid rgba(255, 255, 255, 0.04);
-
-  .nav-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 88rpx;
-    padding: 0 24rpx;
-  }
-
-  .nav-back {
-    width: 60rpx;
-    display: flex;
-    align-items: center;
-
-    .back-icon {
-      font-size: 48rpx;
-      color: #f0f4f8;
-      line-height: 1;
-    }
-  }
-
-  .nav-title {
-    font-size: 34rpx;
-    font-weight: 600;
-    color: #f0f4f8;
-  }
-
-  .nav-placeholder {
-    width: 60rpx;
-  }
+  background: #fff; border-bottom: 1rpx solid #eee;
+  .nav-content { display: flex; align-items: center; justify-content: space-between; height: 88rpx; padding: 0 24rpx; }
+  .nav-back { width: 60rpx; display: flex; align-items: center; }
+  .nav-title { font-size: 34rpx; font-weight: 600; color: #1d1d1f; }
+  .nav-placeholder { width: 60rpx; }
 }
-
-/* 模式切换 */
-.mode-tabs {
-  display: flex;
-  gap: 20rpx;
-  padding: 32rpx;
-}
-
+.mode-tabs { display: flex; gap: 20rpx; padding: 24rpx; }
 .mode-tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12rpx;
-  padding: 28rpx 0;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1rpx solid rgba(255, 255, 255, 0.04);
-  border-radius: 24rpx;
-  transition: all 0.3s ease;
-
-  &:active {
-    transform: scale(0.97);
-  }
-
-  &.active {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.1));
-    border-color: rgba(59, 130, 246, 0.3);
-  }
-
-  .tab-icon {
-    font-size: 48rpx;
-  }
-
-  .tab-label {
-    font-size: 28rpx;
-    font-weight: 600;
-    color: #f0f4f8;
-  }
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12rpx;
+  padding: 24rpx 0; background: #fff; border-radius: 20rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+  &:active { transform: scale(0.97); }
+  &.active { background: #eef3ff; box-shadow: 0 0 0 2rpx #336cff; }
+  .tab-label { font-size: 26rpx; font-weight: 600; color: #1d1d1f; }
 }
-
-/* 区域 */
-.section {
-  padding: 0 32rpx;
-  margin-bottom: 32rpx;
-
-  .section-title {
-    display: block;
-    font-size: 30rpx;
-    font-weight: 600;
-    color: #f0f4f8;
-    margin-bottom: 20rpx;
-  }
-}
-
-.empty-tip {
-  padding: 40rpx 0;
-  text-align: center;
-  color: #5a6372;
-  font-size: 28rpx;
-}
-
-/* 设备选择 */
-.device-scroll {
-  white-space: nowrap;
-}
-
-.device-list {
-  display: inline-flex;
-  gap: 16rpx;
-  padding-bottom: 8rpx;
-}
-
+.section { padding: 0 24rpx; margin-bottom: 24rpx; }
+.section-title { display: block; font-size: 28rpx; font-weight: 600; color: #1d1d1f; margin-bottom: 16rpx; }
+.empty-tip { padding: 32rpx 0; text-align: center; color: #9d9ea3; font-size: 28rpx; }
+.device-scroll { white-space: nowrap; }
+.device-list { display: inline-flex; gap: 16rpx; padding-bottom: 8rpx; }
 .device-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 16rpx;
-  padding: 20rpx 28rpx;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1rpx solid rgba(255, 255, 255, 0.04);
-  border-radius: 20rpx;
-  transition: all 0.3s ease;
-
-  &:active {
-    transform: scale(0.97);
-  }
-
-  &.selected {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.1));
-    border-color: rgba(59, 130, 246, 0.3);
-  }
-
-  .chip-icon {
-    font-size: 40rpx;
-  }
-
-  .chip-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4rpx;
-
-    .chip-name {
-      font-size: 28rpx;
-      font-weight: 600;
-      color: #f0f4f8;
-    }
-
-    .chip-status {
-      font-size: 22rpx;
-
-      &.online { color: #34d399; }
-      &.offline { color: #5a6372; }
-    }
-  }
+  display: inline-flex; align-items: center; gap: 12rpx; padding: 16rpx 24rpx;
+  background: #fff; border-radius: 16rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+  &:active { transform: scale(0.97); }
+  &.selected { background: #eef3ff; box-shadow: 0 0 0 2rpx #336cff; }
+  .chip-info { display: flex; flex-direction: column; gap: 2rpx; }
+  .chip-name { font-size: 26rpx; font-weight: 600; color: #1d1d1f; }
+  .chip-status { font-size: 22rpx; &.online { color: #07c160; } &.offline { color: #9d9ea3; } }
 }
-
-/* 提示词输入 */
-.prompt-box {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1rpx solid rgba(255, 255, 255, 0.04);
-  border-radius: 24rpx;
-  padding: 24rpx;
-  position: relative;
-}
-
-.prompt-textarea {
-  width: 100%;
-  height: 200rpx;
-  font-size: 30rpx;
-  color: #f0f4f8;
-  line-height: 1.6;
-}
-
-.prompt-placeholder {
-  color: #5a6372;
-}
-
-.prompt-count {
-  position: absolute;
-  bottom: 16rpx;
-  right: 24rpx;
-  font-size: 22rpx;
-  color: #3a4252;
-}
-
-/* 提交区 */
-.submit-section {
-  padding: 0 32rpx;
-  margin-top: 40rpx;
-}
-
+.prompt-box { background: #fff; border-radius: 20rpx; padding: 20rpx; position: relative; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); }
+.prompt-textarea { width: 100%; height: 200rpx; font-size: 28rpx; color: #1d1d1f; line-height: 1.6; }
+.prompt-placeholder { color: #9d9ea3; }
+.prompt-count { position: absolute; bottom: 12rpx; right: 20rpx; font-size: 22rpx; color: #c7c7cc; }
+.submit-section { padding: 0 24rpx; margin-top: 32rpx; }
 .submit-btn {
-  width: 100%;
-  padding: 28rpx 0;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  border-radius: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-
-  &:active {
-    transform: scale(0.98);
-    opacity: 0.9;
-  }
-
-  &.disabled {
-    opacity: 0.4;
-  }
-
-  .submit-text {
-    font-size: 32rpx;
-    font-weight: 600;
-    color: #fff;
-  }
+  width: 100%; padding: 28rpx 0; background: #336cff; border-radius: 20rpx;
+  display: flex; align-items: center; justify-content: center;
+  &:active { opacity: 0.9; }
+  &.disabled { opacity: 0.4; }
+  .submit-text { font-size: 32rpx; font-weight: 600; color: #fff; }
 }
-
-/* 任务追踪 */
-.tasks-section {
-  margin-top: 40rpx;
-}
-
-.task-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx;
-}
-
-.task-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1rpx solid rgba(255, 255, 255, 0.04);
-  border-radius: 24rpx;
-  padding: 28rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.task-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.task-meta {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-}
-
-.task-capability {
-  font-size: 26rpx;
-  color: #f0f4f8;
-  font-weight: 600;
-}
-
-.task-time {
-  font-size: 22rpx;
-  color: #5a6372;
-}
-
-.task-status {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-}
-
-.status-dot {
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-}
-
-.task-prompt {
-  font-size: 28rpx;
-  color: #c0c8d8;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.task-progress {
-  margin-top: 4rpx;
-}
-
-.progress-bar {
-  height: 6rpx;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 3rpx;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 3rpx;
-  transition: width 0.5s ease;
-}
-
-.task-result {
-  margin-top: 8rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.result-image {
-  width: 100%;
-  height: 320rpx;
-  border-radius: 16rpx;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.result-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.result-tip {
-  font-size: 22rpx;
-  color: #5a6372;
-}
-
-.save-btn {
-  font-size: 24rpx;
-  color: #3b82f6;
-  padding: 6rpx 16rpx;
-  background: rgba(59, 130, 246, 0.08);
-  border-radius: 8rpx;
-
-  &:active {
-    opacity: 0.7;
-  }
-}
-
-.task-error {
-  font-size: 24rpx;
-  color: #ef4444;
-  margin-top: 4rpx;
-}
-
-.task-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 4rpx;
-}
-
-.task-delete {
-  font-size: 24rpx;
-  color: #5a6372;
-  padding: 8rpx 16rpx;
-
-  &:active {
-    color: #ef4444;
-  }
-}
+.tasks-section { margin-top: 32rpx; }
+.task-list { display: flex; flex-direction: column; gap: 16rpx; }
+.task-card { background: #fff; border-radius: 20rpx; padding: 24rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 12rpx; }
+.task-header { display: flex; justify-content: space-between; align-items: center; }
+.task-cap { font-size: 26rpx; color: #1d1d1f; font-weight: 600; }
+.task-status { display: flex; align-items: center; gap: 8rpx; font-size: 24rpx; font-weight: 600; }
+.status-dot { width: 12rpx; height: 12rpx; border-radius: 50%; }
+.task-prompt { font-size: 26rpx; color: #65686f; line-height: 1.5; word-break: break-word; }
+.progress-bar { height: 8rpx; background: #edf1f7; border-radius: 4rpx; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4rpx; transition: width 0.5s ease; }
+.task-result { display: flex; flex-direction: column; gap: 8rpx; }
+.result-image { width: 100%; height: 320rpx; border-radius: 16rpx; background: #f5f5f7; }
+.result-tip { font-size: 22rpx; color: #9d9ea3; text-align: center; }
+.task-error { font-size: 24rpx; color: #ff4d4f; }
 </style>
