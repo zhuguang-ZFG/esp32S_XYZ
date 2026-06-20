@@ -1,4 +1,4 @@
-import type { V2BindResponse, V2DeletionResponse, V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceSupplyUpdateRequest, V2DeviceTransferRequest, V2DeviceTransferResponse, V2LoginResponse, V2PendingVoiceTaskResponse, V2SelfCheckHistoryResponse, V2SubmitTaskResponse } from './types'
+import type { V2BindResponse, V2DeletionResponse, V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceSupplyUpdateRequest, V2DeviceTransferRequest, V2DeviceTransferResponse, V2LoginResponse, V2PendingVoiceTaskResponse, V2SelfCheckHistoryResponse, V2SubmitTaskResponse, V2TaskInfo, V2TaskListResponse } from './types'
 import { http } from '@/http/request/alova'
 
 const appPrefix = '/device/v1/app'
@@ -34,6 +34,22 @@ export function v2SubmitTask(deviceId: string, capability: string, params?: Reco
     { capability, requestId, params, source: 'client' },
     { meta: { ignoreAuth: false, toast: false } },
   )
+}
+
+export async function v2GetTask(taskId: string) {
+  const res = await http.Get<Record<string, any>>(
+    `${appPrefix}/tasks/${taskId}`,
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+  return toTaskInfo(res)
+}
+
+export async function v2ListTasks(deviceId: string, status = '', limit = 20) {
+  const res = await http.Get<V2TaskListResponse>(
+    `${appPrefix}/tasks`,
+    { params: { deviceId, status, limit }, meta: { ignoreAuth: false, toast: false } },
+  )
+  return { tasks: (res.tasks || []).map(toTaskInfo), count: res.count }
 }
 
 export async function v2ListPendingVoiceTasks(deviceId: string) {
@@ -214,4 +230,23 @@ function createTaskRequestId(capability: string) {
   const safeCapability = capability.replace(/[^a-zA-Z0-9_-]/g, '_') || 'task'
   const randomPart = Math.random().toString(36).slice(2, 10)
   return `client-${safeCapability}-${Date.now().toString(36)}-${randomPart}`
+}
+
+function toTaskInfo(raw: Record<string, any>): V2TaskInfo {
+  const params = raw.params || raw.task?.params || {}
+  const result = raw.result || raw.task?.result || {}
+  return {
+    taskId: String(raw.taskId || raw.id || raw.task_id || ''),
+    status: String(raw.status || raw.taskState || 'unknown'),
+    deviceId: String(raw.deviceId || raw.device_id || ''),
+    capability: String(raw.capability || raw.app_capability || params.source_capability || ''),
+    params,
+    sent: Boolean(raw.sent),
+    queueDepth: Number(raw.queueDepth || raw.queue_depth || 0),
+    createdAt: String(raw.createdAt || raw.created_at || ''),
+    updatedAt: String(raw.updatedAt || raw.updated_at || ''),
+    result,
+    imageUrl: String(result.imageUrl || result.image_url || params.imageUrl || ''),
+    error: String(raw.error || result.error || ''),
+  }
 }

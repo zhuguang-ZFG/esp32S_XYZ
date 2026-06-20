@@ -9,9 +9,9 @@
 
 <script lang="ts" setup>
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { ref } from 'vue'
-import { v2GetDevices, v2SubmitTask } from '@/api/v2'
-import type { V2DeviceInfo } from '@/api/v2/types'
+import { ref, onUnmounted } from 'vue'
+import { v2GetDevices, v2SubmitTask, v2GetTask } from '@/api/v2'
+import type { V2DeviceInfo, V2TaskInfo } from '@/api/v2/types'
 
 const safeAreaTop = ref(0)
 const systemInfo = uni.getSystemInfoSync()
@@ -23,7 +23,10 @@ const devices = ref<V2DeviceInfo[]>([])
 const selectedDeviceId = ref('')
 const prompt = ref('')
 const submitting = ref(false)
-const taskStatus = ref('')
+
+// 任务追踪
+const tasks = ref<V2TaskInfo[]>([])
+const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 onLoad((options: any) => {
   if (options?.mode === 'write') {
@@ -35,11 +38,14 @@ onLoad((options: any) => {
 
 onShow(() => { loadDevices() })
 
+onUnmounted(() => {
+  if (pollTimer.value) clearInterval(pollTimer.value)
+})
+
 async function loadDevices() {
   try {
     const res = await v2GetDevices()
     devices.value = res.rows || []
-    // 默认选第一个在线设备
     const online = devices.value.find(d => d.status === 'online')
     if (online) {
       selectedDeviceId.value = online.deviceId
@@ -51,7 +57,6 @@ async function loadDevices() {
 
 function switchMode(m: 'draw' | 'write') {
   mode.value = m
-  taskStatus.value = ''
 }
 
 async function handleSubmit() {
@@ -65,7 +70,6 @@ async function handleSubmit() {
   }
 
   submitting.value = true
-  taskStatus.value = '提交中...'
   try {
     const capability = mode.value === 'draw' ? 'draw' : 'write'
     const res = await v2SubmitTask(
@@ -73,13 +77,45 @@ async function handleSubmit() {
       capability,
       { prompt: prompt.value.trim() },
     )
-    taskStatus.value = `任务已下发：${res.taskId || 'OK'}`
+    const newTask: V2TaskInfo = {
+      taskId: res.taskId || 'unknown',
+      status: 'pending',
+      deviceId: selectedDeviceId.value,
+      capability,
+      params: { prompt: prompt.value.trim() },
+      sent: res.sent,
+      queueDepth: res.queueDepth,
+      createdAt: new Date().toISOString(),
+    }
+    tasks.value.unshift(newTask)
     prompt.value = ''
+    uni.showToast({ title: '任务已下发', icon: 'success' })
+    startPolling(newTask.taskId)
   } catch (e: any) {
-    taskStatus.value = `提交失败：${e.message || '未知错误'}`
+    uni.showToast({ title: `提交失败：${e.message || '未知错误'}`, icon: 'none' })
   } finally {
     submitting.value = false
   }
+}
+
+function startPolling(taskId: string) {
+  if (pollTimer.value) clearInterval(pollTimer.value)
+  pollTimer.value = setInterval(async () => {
+    try {
+      const task = await v2GetTask(taskId)
+      const idx = tasks.value.findIndex(t => t.taskId === taskId)
+      if (idx >= 0) {
+        tasks.value[idx] = { ...tasks.value[idx], ...task }
+        // 如果任务完成或失败，停止轮询
+        if (task.status === 'completed' || task.status === 'failed' || task.status === 'error') {
+          if (pollTimer.value) clearInterval(pollTimer.value)
+          pollTimer.value = null
+        }
+      }
+    } catch (e) {
+      console.error('轮询任务状态失败', e)
+    }
+  }, 3000)
 }
 
 function getDeviceIcon(model?: string) {
@@ -96,6 +132,46 @@ function getPlaceholder() {
   return mode.value === 'draw'
     ? '例如：一只在星云中飞翔的凤凰，赛博朋克风格'
     : '例如：欢迎参加 LiMa 星云发布会，科技感字体'
+}
+
+function getStatusLabel(status: string) {
+  const map: Record<string, string> = {
+    pending: '等待中',
+    queued: '排队中',
+    running: '执行中',
+    completed: '已完成',
+    failed: '失败',
+    error: '出错',
+    approved: '已批准',
+    waiting_approval: '待审批',
+  }
+  return map[status] || status
+}
+
+function getStatusColor(status: string) {
+  const map: Record<string, string> = {
+    pending: '#f59e0b',
+    queued: '#f59e0b',
+    running: '#3b82f6',
+    completed: '#34d399',
+    failed: '#ef4444',
+    error: '#ef4444',
+    approved: '#3b82f6',
+    waiting_approval: '#f59e0b',
+  }
+  return map[status] || '#8b95a8'
+}
+
+function previewImage(url: string) {
+  uni.previewImage({ urls: [url], current: url })
+}
+
+function formatTime(iso?: string) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
 }
 </script>
 
@@ -185,7 +261,59 @@ function getPlaceholder() {
           {{ mode === 'draw' ? '🎨 开始绘图' : '✍️ 开始写字' }}
         </text>
       </view>
-      <text v-if="taskStatus" class="status-text">{{ taskStatus }}</text>
+    </view>
+
+    <!-- 任务追踪 -->
+    <view v-if="tasks.length" class="section tasks-section">
+      <text class="section-title">任务追踪</text>
+      <view class="task-list">
+        <view
+          v-for="task in tasks"
+          :key="task.taskId"
+          class="task-card"
+        >
+          <view class="task-header">
+            <view class="task-meta">
+              <text class="task-capability">{{ task.capability === 'draw' || task.capability === 'draw_generated' ? '🎨 绘图' : '✍️ 写字' }}</text>
+              <text class="task-time">{{ formatTime(task.createdAt) }}</text>
+            </view>
+            <view class="task-status" :style="{ color: getStatusColor(task.status) }">
+              <text class="status-dot" :style="{ background: getStatusColor(task.status) }" />
+              <text>{{ getStatusLabel(task.status) }}</text>
+            </view>
+          </view>
+
+          <!-- 提示词 -->
+          <text class="task-prompt">{{ task.params?.prompt || task.params?.text || '' }}</text>
+
+          <!-- 进度条 -->
+          <view v-if="task.status !== 'completed' && task.status !== 'failed' && task.status !== 'error'" class="task-progress">
+            <view class="progress-bar">
+              <view
+                class="progress-fill"
+                :style="{
+                  width: task.status === 'running' ? '60%' : task.status === 'queued' ? '30%' : '10%',
+                  background: getStatusColor(task.status)
+                }"
+              />
+            </view>
+          </view>
+
+          <!-- 结果图片 -->
+          <view v-if="task.imageUrl" class="task-result">
+            <image
+              class="result-image"
+              :src="task.imageUrl"
+              mode="aspectFill"
+              @click="previewImage(task.imageUrl!)"
+            />
+            <text class="result-tip">点击图片预览</text>
+          </view>
+
+          <!-- 错误信息 -->
+          <text v-if="task.error" class="task-error">{{ task.error }}</text>
+        </view>
+      </view>
     </view>
 
     <!-- 底部留白 -->
@@ -411,11 +539,111 @@ function getPlaceholder() {
   }
 }
 
-.status-text {
-  display: block;
-  text-align: center;
-  margin-top: 20rpx;
+/* 任务追踪 */
+.tasks-section {
+  margin-top: 40rpx;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.task-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid rgba(255, 255, 255, 0.04);
+  border-radius: 24rpx;
+  padding: 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.task-capability {
   font-size: 26rpx;
-  color: #8b95a8;
+  color: #f0f4f8;
+  font-weight: 600;
+}
+
+.task-time {
+  font-size: 22rpx;
+  color: #5a6372;
+}
+
+.task-status {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+}
+
+.task-prompt {
+  font-size: 28rpx;
+  color: #c0c8d8;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.task-progress {
+  margin-top: 4rpx;
+}
+
+.progress-bar {
+  height: 6rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3rpx;
+  transition: width 0.5s ease;
+}
+
+.task-result {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.result-image {
+  width: 100%;
+  height: 320rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.result-tip {
+  font-size: 22rpx;
+  color: #5a6372;
+  text-align: center;
+}
+
+.task-error {
+  font-size: 24rpx;
+  color: #ef4444;
+  margin-top: 4rpx;
 }
 </style>

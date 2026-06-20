@@ -10,12 +10,13 @@
 <script lang="ts" setup>
 import { onLoad } from '@dcloudio/uni-app'
 import { nextTick, ref } from 'vue'
-import { chatCompletion, type ChatMessage } from '@/api/chat/chat'
+import { chatCompletionStream, type ChatMessage } from '@/api/chat/chat'
 
 interface DisplayMessage {
   role: 'user' | 'assistant'
   content: string
   time: string
+  streaming?: boolean
 }
 
 const messages = ref<DisplayMessage[]>([])
@@ -23,17 +24,18 @@ const inputText = ref('')
 const sending = ref(false)
 const scrollToView = ref('')
 
+let abortController: { abort: () => void } | null = null
+
 onLoad(() => {
-  // 欢迎消息
   messages.value.push({
     role: 'assistant',
-    content: '你好！我是 LiMa 星云 AI 助手。你可以问我任何问题，我会尽力帮你解答。',
+    content: '你好！我是 LiMa 星云 AI 助手。你可以问我任何问题，我会实时为你解答。',
     time: formatTime(new Date()),
   })
   scrollToBottom()
 })
 
-async function handleSend() {
+function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value) return
 
@@ -47,27 +49,49 @@ async function handleSend() {
   scrollToBottom()
 
   sending.value = true
-  try {
-    const chatMessages: ChatMessage[] = messages.value.map(m => ({
-      role: m.role,
-      content: m.content,
-    }))
-    const reply = await chatCompletion(chatMessages)
-    messages.value.push({
-      role: 'assistant',
-      content: reply || '（无响应）',
-      time: formatTime(new Date()),
-    })
+
+  // 添加 AI 空占位，用于流式填充
+  const aiIndex = messages.value.length
+  messages.value.push({
+    role: 'assistant',
+    content: '',
+    time: formatTime(new Date()),
+    streaming: true,
+  })
+  scrollToBottom()
+
+  const chatMessages: ChatMessage[] = messages.value
+    .filter(m => !m.streaming && m.content)
+    .map(m => ({ role: m.role, content: m.content }))
+
+  abortController = chatCompletionStream(chatMessages, (chunk, done) => {
+    const msg = messages.value[aiIndex]
+    if (msg) {
+      msg.content += chunk
+      msg.streaming = !done
+      if (done) {
+        msg.time = formatTime(new Date())
+      }
+    }
     scrollToBottom()
-  } catch (e: any) {
-    messages.value.push({
-      role: 'assistant',
-      content: `抱歉，请求出错了：${e.message || '未知错误'}`,
-      time: formatTime(new Date()),
-    })
-    scrollToBottom()
-  } finally {
+
+    if (done) {
+      sending.value = false
+      abortController = null
+    }
+  })
+}
+
+function handleStop() {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
     sending.value = false
+    const lastMsg = messages.value[messages.value.length - 1]
+    if (lastMsg && lastMsg.streaming) {
+      lastMsg.streaming = false
+      lastMsg.time = formatTime(new Date())
+    }
   }
 }
 
@@ -75,6 +99,13 @@ function scrollToBottom() {
   nextTick(() => {
     const id = `msg-${messages.value.length - 1}`
     scrollToView.value = id
+    // 二次滚动确保到底
+    setTimeout(() => {
+      scrollToView.value = ''
+      nextTick(() => {
+        scrollToView.value = id
+      })
+    }, 50)
   })
 }
 
@@ -104,6 +135,7 @@ function formatTime(d: Date) {
       scroll-y
       :scroll-into-view="scrollToView"
       scroll-with-animation
+      :scroll-animation-duration="200"
     >
       <view class="chat-list">
         <view
@@ -113,20 +145,14 @@ function formatTime(d: Date) {
           class="msg-row"
           :class="msg.role"
         >
-          <view class="msg-bubble">
+          <view class="msg-bubble" :class="{ streaming: msg.streaming }">
             <text class="msg-content">{{ msg.content }}</text>
             <text class="msg-time">{{ msg.time }}</text>
-          </view>
-        </view>
-        <view v-if="sending" class="msg-row assistant">
-          <view class="msg-bubble typing">
-            <text class="typing-dot">●</text>
-            <text class="typing-dot">●</text>
-            <text class="typing-dot">●</text>
+            <view v-if="msg.streaming" class="typing-cursor" />
           </view>
         </view>
       </view>
-      <view style="height: 20rpx;" />
+      <view style="height: 40rpx;" />
     </scroll-view>
 
     <!-- 输入区 -->
@@ -143,11 +169,19 @@ function formatTime(d: Date) {
         />
       </view>
       <view
+        v-if="!sending"
         class="send-btn"
-        :class="{ disabled: !inputText.trim() || sending }"
+        :class="{ disabled: !inputText.trim() }"
         @click="handleSend"
       >
         <text class="send-icon">➤</text>
+      </view>
+      <view
+        v-else
+        class="stop-btn"
+        @click="handleStop"
+      >
+        <view class="stop-square" />
       </view>
     </view>
   </view>
@@ -242,12 +276,14 @@ function formatTime(d: Date) {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
+  position: relative;
 
   .msg-content {
     font-size: 30rpx;
     color: #f0f4f8;
     line-height: 1.6;
     word-break: break-word;
+    white-space: pre-wrap;
   }
 
   .msg-time {
@@ -256,25 +292,26 @@ function formatTime(d: Date) {
     align-self: flex-end;
   }
 
-  &.typing {
-    flex-direction: row;
-    gap: 12rpx;
-    padding: 24rpx 32rpx;
-
-    .typing-dot {
-      font-size: 20rpx;
-      color: #8b95a8;
-      animation: bounce 1.4s infinite ease-in-out both;
-
-      &:nth-child(1) { animation-delay: -0.32s; }
-      &:nth-child(2) { animation-delay: -0.16s; }
-    }
+  &.streaming .msg-content {
+    padding-right: 8rpx;
   }
 }
 
-@keyframes bounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-  40% { transform: scale(1); opacity: 1; }
+/* 打字光标 */
+.typing-cursor {
+  position: absolute;
+  right: 20rpx;
+  bottom: 20rpx;
+  width: 4rpx;
+  height: 28rpx;
+  background: #3b82f6;
+  animation: blink 1s infinite;
+  border-radius: 2rpx;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 /* 输入区 */
@@ -332,6 +369,29 @@ function formatTime(d: Date) {
     font-size: 28rpx;
     color: #fff;
     margin-left: 4rpx;
+  }
+}
+
+.stop-btn {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: rgba(255, 80, 80, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+
+  &:active {
+    opacity: 0.8;
+    transform: scale(0.95);
+  }
+
+  .stop-square {
+    width: 24rpx;
+    height: 24rpx;
+    background: #fff;
+    border-radius: 4rpx;
   }
 }
 </style>

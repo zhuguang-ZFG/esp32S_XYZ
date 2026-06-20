@@ -47,7 +47,7 @@ function goSettings() {
 }
 function goDigitalHuman() {
   const url = getEnvBaseUrl().replace(/\/$/, '') + '/digital-human'
-  uni.navigateTo({ url: `/pages-sub/demo/index?url=${encodeURIComponent(url)}` })
+  uni.navigateTo({ url: `/pages-sub/demo/index?url=${encodeURIComponent(url)}&title=${encodeURIComponent('数字人')}` })
 }
 function goLogout() {
   uni.showModal({

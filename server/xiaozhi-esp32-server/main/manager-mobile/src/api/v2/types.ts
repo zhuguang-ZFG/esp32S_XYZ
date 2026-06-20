@@ -53,6 +53,26 @@ export interface V2DeviceTransferResponse {
   targetAccountId: string
   status: 'pending' | 'accepted' | 'cancelled'
 }
+export interface V2TaskInfo {
+  taskId: string
+  status: string
+  deviceId: string
+  capability?: string
+  params?: Record<string, any>
+  sent?: boolean
+  queueDepth?: number
+  createdAt?: string
+  updatedAt?: string
+  result?: Record<string, any>
+  imageUrl?: string
+  error?: string
+}
+
+export interface V2TaskListResponse {
+  tasks: V2TaskInfo[]
+  count: number
+}
+
 export interface V2DeletionResponse {
   status: string
   affectedRows: number
