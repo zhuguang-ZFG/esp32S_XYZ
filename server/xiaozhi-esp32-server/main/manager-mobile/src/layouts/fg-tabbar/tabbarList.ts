@@ -28,12 +28,19 @@ export const selectedTabbarStrategy = TABBAR_MAP.NATIVE_TABBAR
 // selectedTabbarStrategy==NO_TABBAR(0) 时，tabbarList 不生效
 export const tabbarList: FgTabBarItem[] = [
   {
-    iconPath: 'static/tabbar/robot.png',
-    selectedIconPath: 'static/tabbar/robot_activate.png',
+    iconPath: 'static/tabbar/home.png',
+    selectedIconPath: 'static/tabbar/homeHL.png',
     pagePath: 'pages/v2/device-list/index',
     text: '首页',
     icon: 'home',
-    // 选用 UI 框架自带的 icon 时，iconType 为 uiLib
+    iconType: 'uiLib',
+  },
+  {
+    iconPath: 'static/tabbar/robot.png',
+    selectedIconPath: 'static/tabbar/robot_activate.png',
+    pagePath: 'pages/index/index',
+    text: '智能体',
+    icon: 'robot',
     iconType: 'uiLib',
   },
   {

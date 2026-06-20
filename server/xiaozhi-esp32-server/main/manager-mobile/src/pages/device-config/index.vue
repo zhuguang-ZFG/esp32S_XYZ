@@ -96,14 +96,14 @@ onMounted(() => {
         <view class="flex items-center justify-between gap-[20rpx]">
           <view class="flex-1">
             <text class="block text-[26rpx] text-[#232338] font-medium">
-              配网需要蓝牙和 Wi-Fi 权限
+              {{ t('deviceConfig.permissionNotice') }}
             </text>
             <text class="mt-[6rpx] block text-[22rpx] text-[#65686f] leading-[1.5]">
-              未授权时可进入权限页查看兜底提示。
+              {{ t('deviceConfig.permissionNoticeSub') }}
             </text>
           </view>
           <wd-button type="text" size="small" @click="openPrivacyPermissions">
-            权限设置
+            {{ t('deviceConfig.permissionSettings') }}
           </wd-button>
         </view>
       </view>

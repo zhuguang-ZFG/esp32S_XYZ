@@ -1,3 +1,13 @@
+<route lang="jsonc" type="home">
+{
+  "layout": "tabbar",
+  "style": {
+    "navigationStyle": "custom",
+    "navigationBarTitleText": "我的设备"
+  }
+}
+</route>
+
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
@@ -109,7 +119,15 @@ function openDevice(deviceId: string) {
     </wd-cell>
   </wd-cell-group>
 
-  <wd-status-tip v-if="!loading && !devices.length" image="content" :tip="t('v2.deviceList.empty')" />
+  <view v-if="!loading && !devices.length" class="flex flex-col items-center justify-center py-[120rpx]">
+    <wd-icon name="notification" custom-class="text-[120rpx] text-[#d9d9d9] mb-[32rpx]" />
+    <text class="mb-[16rpx] text-[32rpx] text-[#666] font-medium">
+      {{ t('v2.deviceList.empty') }}
+    </text>
+    <wd-button type="primary" round custom-class="!mt-[24rpx]" @click="showBind = true; bindSn = ''; bindCode = ''">
+      {{ t('v2.deviceList.addDevice') }}
+    </wd-button>
+  </view>
 
   <wd-cell-group v-if="!loading && devices.length" border custom-class="!mt-[20rpx]">
     <wd-cell

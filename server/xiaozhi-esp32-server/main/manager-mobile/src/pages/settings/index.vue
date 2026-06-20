@@ -289,18 +289,18 @@ function handleAccountDeletion() {
     return
   }
   uni.showModal({
-    title: 'Delete account',
-    content: 'This will soft-delete your account, unlink devices, delete members, and anonymize voiceprints. This action requires a second confirmation.',
-    confirmText: 'Continue',
+    title: t('settings.deleteConfirmTitle'),
+    content: t('settings.deleteConfirmContent'),
+    confirmText: t('settings.deleteConfirmContinue'),
     cancelText: t('common.cancel'),
     success: (first) => {
       if (!first.confirm) {
         return
       }
       uni.showModal({
-        title: 'Confirm deletion',
-        content: 'After deletion you will be signed out on this device.',
-        confirmText: 'Delete',
+        title: t('settings.deleteSecondConfirmTitle'),
+        content: t('settings.deleteSecondConfirmContent'),
+        confirmText: t('settings.deleteSecondConfirmAction'),
         cancelText: t('common.cancel'),
         success: async (second) => {
           if (!second.confirm) {
@@ -318,14 +318,14 @@ async function submitAccountDeletion() {
   try {
     const response = await v2DeleteAccount()
     clearAllCacheAfterUrlChange()
-    toast.success(`Account deleted, retained ${response.auditRetentionDays} days`)
+    toast.success(t('settings.accountDeleted', { days: response.auditRetentionDays }))
     setTimeout(() => {
       uni.reLaunch({ url: '/pages/v2/login/index' })
     }, 800)
   }
   catch (error) {
     console.error('delete account failed:', error)
-    toast.error('Account deletion failed')
+    toast.error(t('settings.deleteFailed'))
   }
   finally {
     accountDeleteLoading.value = false
@@ -462,7 +462,7 @@ onMounted(async () => {
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
           <text class="text-[32rpx] text-[#232338] font-bold">
-            隐私与权限
+            {{ t('settings.privacyTitle') }}
           </text>
         </view>
 
@@ -476,10 +476,10 @@ onMounted(async () => {
           >
             <view>
               <text class="text-[28rpx] text-[#232338] font-medium">
-                隐私协议与系统授权
+                {{ t('settings.privacyAuth') }}
               </text>
               <text class="mt-[4rpx] block text-[24rpx] text-[#9d9ea3]">
-                单独管理麦克风、蓝牙、Wi-Fi 权限
+                {{ t('settings.privacyDesc') }}
               </text>
             </view>
             <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#9d9ea3]" />
@@ -491,7 +491,7 @@ onMounted(async () => {
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
           <text class="text-[32rpx] text-[#232338] font-bold">
-            Account deletion
+            {{ t('settings.accountDeletion') }}
           </text>
         </view>
 
@@ -502,10 +502,10 @@ onMounted(async () => {
           <view class="flex items-center justify-between gap-[24rpx]">
             <view class="min-w-0 flex-1">
               <text class="text-[28rpx] text-[#232338] font-medium">
-                Delete current account
+                {{ t('settings.accountDeletionTitle') }}
               </text>
               <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a] leading-[34rpx]">
-                Soft-delete account data, unlink devices, and anonymize voiceprints.
+                {{ t('settings.accountDeletionDesc') }}
               </text>
             </view>
             <wd-button
@@ -514,7 +514,7 @@ onMounted(async () => {
               custom-class="h-[72rpx] rounded-[16rpx] px-[28rpx] text-[24rpx] font-semibold"
               @click="handleAccountDeletion"
             >
-              Delete
+              {{ t('settings.delete') }}
             </wd-button>
           </view>
         </view>

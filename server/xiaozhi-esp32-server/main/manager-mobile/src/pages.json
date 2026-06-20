@@ -26,11 +26,19 @@
     "spacing": "3px",
     "list": [
       {
-        "iconPath": "static/tabbar/robot.png",
-        "selectedIconPath": "static/tabbar/robot_activate.png",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/homeHL.png",
         "pagePath": "pages/v2/device-list/index",
         "text": "首页",
         "icon": "home",
+        "iconType": "uiLib"
+      },
+      {
+        "iconPath": "static/tabbar/robot.png",
+        "selectedIconPath": "static/tabbar/robot_activate.png",
+        "pagePath": "pages/index/index",
+        "text": "智能体",
+        "icon": "robot",
         "iconType": "uiLib"
       },
       {
@@ -53,12 +61,20 @@
   },
   "pages": [
     {
-      "path": "pages/index/index",
+      "path": "pages/v2/device-list/index",
       "type": "home",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "我的设备"
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "type": "page",
       "layout": "tabbar",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "首页"
+        "navigationBarTitleText": "智能体"
       }
     },
     {
@@ -121,6 +137,7 @@
     {
       "path": "pages/device-config/index",
       "type": "page",
+      "layout": "tabbar",
       "style": {
         "navigationBarTitleText": "设备配置",
         "navigationStyle": "custom"
@@ -213,10 +230,6 @@
     },
     {
       "path": "pages/v2/device-detail/index",
-      "type": "page"
-    },
-    {
-      "path": "pages/v2/device-list/index",
       "type": "page"
     },
     {

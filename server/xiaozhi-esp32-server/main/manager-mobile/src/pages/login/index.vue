@@ -234,7 +234,7 @@ async function handleLogin() {
 
     // 跳转到主页
     setTimeout(() => {
-      uni.reLaunch({
+      uni.switchTab({
         url: '/pages/index/index',
       })
     }, 1000)
