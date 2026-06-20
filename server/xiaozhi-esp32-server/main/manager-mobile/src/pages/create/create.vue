@@ -94,6 +94,58 @@ function formatTime(iso?: string) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 function navigateBack() { uni.navigateBack() }
+
+// 图片加载错误
+const imageErrorMap = ref<Record<string, boolean>>({})
+function onImageError(taskId: string) { imageErrorMap.value[taskId] = true }
+
+// 保存图片到相册
+function saveImageToAlbum(url: string) {
+  uni.downloadFile({
+    url,
+    success: (res) => {
+      if (res.statusCode === 200) {
+        uni.saveImageToPhotosAlbum({
+          filePath: res.tempFilePath,
+          success: () => uni.showToast({ title: t('create.savedToAlbum'), icon: 'success' }),
+          fail: () => uni.showToast({ title: t('create.saveFailed'), icon: 'none' }),
+        })
+      } else {
+        uni.showToast({ title: t('create.downloadFailed'), icon: 'none' })
+      }
+    },
+    fail: () => uni.showToast({ title: t('create.downloadFailed'), icon: 'none' }),
+  })
+}
+
+// 删除单个任务
+function deleteTask(taskId: string) {
+  uni.showModal({
+    title: t('create.deleteConfirmTitle'),
+    content: t('create.deleteConfirmContent'),
+    success: (res) => {
+      if (res.confirm) {
+        tasks.value = tasks.value.filter(t => t.taskId !== taskId)
+        uni.showToast({ title: t('create.deleted'), icon: 'success' })
+      }
+    },
+  })
+}
+
+// 清空全部任务
+function clearAllTasks() {
+  if (!tasks.value.length) return
+  uni.showModal({
+    title: t('create.clearConfirmTitle'),
+    content: t('create.clearConfirmContent'),
+    success: (res) => {
+      if (res.confirm) {
+        tasks.value = []
+        uni.showToast({ title: t('create.cleared'), icon: 'success' })
+      }
+    },
+  })
+}
 </script>
 
 <template>
@@ -150,7 +202,10 @@ function navigateBack() { uni.navigateBack() }
     </view>
 
     <view v-if="tasks.length" class="section tasks-section">
-      <text class="section-title">{{ t('create.taskTracking') }}</text>
+      <view class="section-header-row">
+        <text class="section-title">{{ t('create.taskTracking') }}</text>
+        <text class="clear-btn" @click="clearAllTasks">{{ t('create.clearAll') }}</text>
+      </view>
       <view class="task-list">
         <view v-for="task in tasks" :key="task.taskId" class="task-card">
           <view class="task-header">
@@ -167,10 +222,28 @@ function navigateBack() { uni.navigateBack() }
             </view>
           </view>
           <view v-if="task.imageUrl" class="task-result">
-            <image class="result-image" :src="task.imageUrl" mode="aspectFill" @click="previewImage(task.imageUrl!)" />
-            <text class="result-tip">{{ t('create.clickToPreview') }}</text>
+            <view class="image-wrapper">
+              <image
+                class="result-image"
+                :src="task.imageUrl"
+                mode="aspectFill"
+                @click="previewImage(task.imageUrl!)"
+                @error="onImageError(task.taskId)"
+              />
+              <view v-if="imageErrorMap[task.taskId]" class="image-error-overlay">
+                <text class="image-error-icon">🖼️</text>
+                <text class="image-error-text">{{ t('create.imageLoadFailed') }}</text>
+              </view>
+            </view>
+            <view class="result-actions">
+              <text class="result-tip">{{ t('create.clickToPreview') }}</text>
+              <text class="save-btn" @click="saveImageToAlbum(task.imageUrl!)">{{ t('create.saveToAlbum') }}</text>
+            </view>
           </view>
           <text v-if="task.error" class="task-error">{{ task.error }}</text>
+          <view class="task-actions-bar">
+            <text class="task-delete-btn" @click="deleteTask(task.taskId)">{{ t('create.deleteTask') }}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -233,7 +306,60 @@ function navigateBack() { uni.navigateBack() }
 .progress-bar { height: 8rpx; background: #edf1f7; border-radius: 4rpx; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 4rpx; transition: width 0.5s ease; }
 .task-result { display: flex; flex-direction: column; gap: 8rpx; }
+.image-wrapper { position: relative; width: 100%; }
 .result-image { width: 100%; height: 320rpx; border-radius: 16rpx; background: #f5f5f7; }
 .result-tip { font-size: 22rpx; color: #9d9ea3; text-align: center; }
 .task-error { font-size: 24rpx; color: #ff4d4f; }
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+.clear-btn {
+  font-size: 26rpx;
+  color: #ff4d4f;
+  padding: 8rpx 16rpx;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.save-btn {
+  font-size: 24rpx;
+  color: #336cff;
+  padding: 6rpx 16rpx;
+  background: rgba(51, 108, 255, 0.08);
+  border-radius: 8rpx;
+}
+
+.image-error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  background: #f5f5f7;
+  border-radius: 16rpx;
+}
+.image-error-icon { font-size: 48rpx; }
+.image-error-text { font-size: 26rpx; color: #9d9ea3; }
+
+.task-actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1rpx solid #f0f0f0;
+  padding-top: 16rpx;
+  margin-top: 4rpx;
+}
+.task-delete-btn {
+  font-size: 24rpx;
+  color: #9d9ea3;
+  padding: 8rpx 16rpx;
+}
 </style>

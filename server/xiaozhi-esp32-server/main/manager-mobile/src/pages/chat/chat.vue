@@ -10,8 +10,9 @@
 <script lang="ts" setup>
 import { onLoad } from '@dcloudio/uni-app'
 import { nextTick, ref } from 'vue'
-import { chatCompletionStream, type ChatMessage } from '@/api/chat/chat'
 import { t } from '@/i18n'
+import { chatCompletionStream, type ChatMessage } from '@/api/chat/chat'
+import { markdownToHtml, hasMarkdown, stripMarkdown } from '@/utils/markdown'
 
 interface DisplayMessage {
   role: 'user' | 'assistant'
@@ -19,6 +20,9 @@ interface DisplayMessage {
   time: string
   streaming?: boolean
 }
+
+const CHAT_HISTORY_KEY = 'lima_chat_history'
+const MAX_HISTORY = 100
 
 const messages = ref<DisplayMessage[]>([])
 const inputText = ref('')
@@ -28,13 +32,35 @@ const scrollToView = ref('')
 let abortController: { abort: () => void } | null = null
 
 onLoad(() => {
-  messages.value.push({
-    role: 'assistant',
-    content: t('chat.welcome'),
-    time: formatTime(new Date()),
-  })
+  loadHistory()
+  if (!messages.value.length) {
+    messages.value.push({
+      role: 'assistant',
+      content: t('chat.welcome'),
+      time: formatTime(new Date()),
+    })
+  }
   scrollToBottom()
 })
+
+function loadHistory() {
+  try {
+    const raw = uni.getStorageSync(CHAT_HISTORY_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as DisplayMessage[]
+      messages.value = parsed.filter(m => m.role && m.content).slice(-MAX_HISTORY)
+    }
+  } catch (e) { console.error('load chat history failed', e) }
+}
+
+function saveHistory() {
+  try {
+    const toSave = messages.value
+      .filter(m => !m.streaming && m.content.trim())
+      .slice(-MAX_HISTORY)
+    uni.setStorageSync(CHAT_HISTORY_KEY, JSON.stringify(toSave))
+  } catch (e) { console.error('save chat history failed', e) }
+}
 
 function handleSend() {
   const text = inputText.value.trim()
@@ -43,6 +69,8 @@ function handleSend() {
   messages.value.push({ role: 'user', content: text, time: formatTime(new Date()) })
   inputText.value = ''
   scrollToBottom()
+  saveHistory()
+
   sending.value = true
 
   const aiIndex = messages.value.length
@@ -61,7 +89,11 @@ function handleSend() {
       if (done) msg.time = formatTime(new Date())
     }
     scrollToBottom()
-    if (done) { sending.value = false; abortController = null }
+    if (done) {
+      sending.value = false
+      abortController = null
+      saveHistory()
+    }
   })
 }
 
@@ -72,6 +104,7 @@ function handleStop() {
     sending.value = false
     const last = messages.value[messages.value.length - 1]
     if (last && last.streaming) { last.streaming = false; last.time = formatTime(new Date()) }
+    saveHistory()
   }
 }
 
@@ -88,26 +121,130 @@ function formatTime(d: Date) {
 }
 
 function navigateBack() { uni.navigateBack() }
+
+// 获取 AI 消息渲染 HTML
+function getAiHtml(content: string): string {
+  if (!content) return ''
+  if (hasMarkdown(content)) return markdownToHtml(content)
+  return content.replace(/\n/g, '<br>')
+}
+
+// 长按消息菜单
+function onLongPressMessage(msg: DisplayMessage, index: number) {
+  const actions = [t('chat.copy')]
+  if (msg.role === 'assistant' && index > 0) actions.push(t('chat.regenerate'))
+
+  uni.showActionSheet({
+    itemList: actions,
+    success: (res) => {
+      if (res.tapIndex === 0) {
+        const text = stripMarkdown(msg.content)
+        uni.setClipboardData({ data: text, success: () => uni.showToast({ title: t('chat.copied'), icon: 'success' }) })
+      } else if (res.tapIndex === 1) {
+        regenerate(index)
+      }
+    },
+  })
+}
+
+// 重新生成
+function regenerate(aiIndex: number) {
+  if (sending.value) return
+  const userIndex = aiIndex - 1
+  if (userIndex < 0 || messages.value[userIndex]?.role !== 'user') return
+
+  messages.value.splice(aiIndex)
+  sending.value = true
+  messages.value.push({ role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
+  const newAiIndex = messages.value.length - 1
+  scrollToBottom()
+
+  const chatMessages: ChatMessage[] = messages.value
+    .filter((m, i) => i < aiIndex && m.content)
+    .map(m => ({ role: m.role, content: m.content }))
+
+  abortController = chatCompletionStream(chatMessages, (chunk, done) => {
+    const msg = messages.value[newAiIndex]
+    if (msg) {
+      msg.content += chunk
+      msg.streaming = !done
+      if (done) msg.time = formatTime(new Date())
+    }
+    scrollToBottom()
+    if (done) {
+      sending.value = false
+      abortController = null
+      saveHistory()
+    }
+  })
+}
+
+// 复制回复
+function copyReply(content: string) {
+  const text = stripMarkdown(content)
+  uni.setClipboardData({ data: text, success: () => uni.showToast({ title: t('chat.copied'), icon: 'success' }) })
+}
+
+// 清空历史
+function clearHistory() {
+  uni.showModal({
+    title: t('chat.clearTitle'),
+    content: t('chat.clearConfirm'),
+    success: (res) => {
+      if (res.confirm) {
+        messages.value = [{
+          role: 'assistant',
+          content: t('chat.welcome'),
+          time: formatTime(new Date()),
+        }]
+        saveHistory()
+      }
+    },
+  })
+}
 </script>
 
 <template>
   <view class="chat-page">
+    <!-- 导航栏 -->
     <view class="chat-nav" :style="{ paddingTop: (uni.getSystemInfoSync().statusBarHeight || 0) + 'px' }">
       <view class="nav-content">
         <view class="nav-back" @click="navigateBack">
           <wd-icon name="arrow-left" size="20" color="#1d1d1f" />
         </view>
         <text class="nav-title">{{ t('chat.title') }}</text>
-        <view class="nav-placeholder" />
+        <view class="nav-action" @click="clearHistory">
+          <wd-icon name="delete" size="18" color="#999" />
+        </view>
       </view>
     </view>
 
+    <!-- 消息列表 -->
     <scroll-view class="chat-scroll" scroll-y :scroll-into-view="scrollToView" scroll-with-animation :scroll-animation-duration="200">
       <view class="chat-list">
-        <view v-for="(msg, index) in messages" :id="`msg-${index}`" :key="index" class="msg-row" :class="msg.role">
-          <view class="msg-bubble" :class="{ streaming: msg.streaming }">
+        <view
+          v-for="(msg, index) in messages"
+          :id="`msg-${index}`"
+          :key="index"
+          class="msg-row"
+          :class="msg.role"
+          @longpress="onLongPressMessage(msg, index)"
+        >
+          <!-- 用户消息 -->
+          <view v-if="msg.role === 'user'" class="msg-bubble user">
             <text class="msg-content">{{ msg.content }}</text>
             <text class="msg-time">{{ msg.time }}</text>
+          </view>
+
+          <!-- AI 消息 -->
+          <view v-else class="msg-bubble assistant">
+            <rich-text class="msg-rich-text" :nodes="getAiHtml(msg.content)" />
+            <view class="msg-footer">
+              <text class="msg-time">{{ msg.time }}</text>
+              <view v-if="!msg.streaming" class="msg-actions">
+                <text class="action-btn" @click="copyReply(msg.content)">{{ t('chat.copy') }}</text>
+              </view>
+            </view>
             <view v-if="msg.streaming" class="typing-cursor" />
           </view>
         </view>
@@ -115,6 +252,7 @@ function navigateBack() { uni.navigateBack() }
       <view style="height: 40rpx;" />
     </scroll-view>
 
+    <!-- 输入区 -->
     <view class="chat-input-bar">
       <view class="input-box">
         <input
@@ -170,7 +308,12 @@ function navigateBack() { uni.navigateBack() }
     color: #1d1d1f;
   }
 
-  .nav-placeholder { width: 60rpx; }
+  .nav-action {
+    width: 60rpx;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
 }
 
 .chat-scroll { flex: 1; overflow: hidden; }
@@ -187,21 +330,26 @@ function navigateBack() { uni.navigateBack() }
 
   &.user {
     justify-content: flex-end;
-    .msg-bubble { background: #336cff; border-bottom-right-radius: 4rpx; }
+    .msg-bubble {
+      background: #336cff;
+      border-bottom-right-radius: 4rpx;
+    }
     .msg-content { color: #fff; }
     .msg-time { color: rgba(255, 255, 255, 0.6); }
   }
 
   &.assistant {
     justify-content: flex-start;
-    .msg-bubble { background: #fff; box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04); border-bottom-left-radius: 4rpx; }
-    .msg-content { color: #1d1d1f; }
-    .msg-time { color: #9d9ea3; }
+    .msg-bubble {
+      background: #fff;
+      box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+      border-bottom-left-radius: 4rpx;
+    }
   }
 }
 
 .msg-bubble {
-  max-width: 70%;
+  max-width: 75%;
   padding: 20rpx 28rpx;
   border-radius: 24rpx;
   display: flex;
@@ -210,8 +358,116 @@ function navigateBack() { uni.navigateBack() }
   position: relative;
 }
 
-.msg-content { font-size: 30rpx; line-height: 1.6; word-break: break-word; white-space: pre-wrap; }
-.msg-time { font-size: 20rpx; align-self: flex-end; }
+.msg-content {
+  font-size: 30rpx;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.msg-time {
+  font-size: 20rpx;
+  align-self: flex-end;
+}
+
+/* rich-text 渲染（浅色主题） */
+.msg-rich-text {
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #1d1d1f;
+
+  :deep(pre) {
+    background: #1e1e2e;
+    border: 1rpx solid rgba(255, 255, 255, 0.06);
+    border-radius: 12rpx;
+    padding: 20rpx;
+    margin: 12rpx 0;
+    overflow-x: auto;
+    font-family: monospace;
+    font-size: 26rpx;
+    color: #e0e6ed;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  :deep(code) {
+    font-family: monospace;
+    font-size: 26rpx;
+  }
+
+  :deep(.inline-code) {
+    background: rgba(51, 108, 255, 0.1);
+    padding: 2rpx 10rpx;
+    border-radius: 6rpx;
+    color: #336cff;
+    font-size: 26rpx;
+  }
+
+  :deep(strong) {
+    font-weight: 700;
+    color: #1d1d1f;
+  }
+
+  :deep(em) {
+    font-style: italic;
+    color: #65686f;
+  }
+
+  :deep(blockquote) {
+    border-left: 4rpx solid #336cff;
+    padding-left: 20rpx;
+    margin: 12rpx 0;
+    color: #65686f;
+  }
+
+  :deep(ul), :deep(ol) {
+    padding-left: 32rpx;
+    margin: 8rpx 0;
+  }
+
+  :deep(li) {
+    margin: 4rpx 0;
+  }
+
+  :deep(a) {
+    color: #336cff;
+    text-decoration: underline;
+  }
+
+  :deep(br) {
+    display: block;
+    content: '';
+    margin-bottom: 4rpx;
+  }
+}
+
+/* 消息底部操作 */
+.msg-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+
+  .msg-time {
+    font-size: 20rpx;
+    color: #9d9ea3;
+  }
+
+  .msg-actions {
+    display: flex;
+    gap: 16rpx;
+  }
+
+  .action-btn {
+    font-size: 22rpx;
+    color: #336cff;
+    padding: 4rpx 12rpx;
+    background: rgba(51, 108, 255, 0.08);
+    border-radius: 8rpx;
+
+    &:active { opacity: 0.7; }
+  }
+}
 
 .typing-cursor {
   position: absolute;

@@ -61,12 +61,12 @@
   },
   "pages": [
     {
-      "path": "pages/index/index",
+      "path": "pages/v2/device-list/index",
       "type": "home",
       "layout": "tabbar",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "LiMa 星云"
+        "navigationBarTitleText": "我的设备"
       }
     },
     {
@@ -160,6 +160,15 @@
       }
     },
     {
+      "path": "pages/index/index",
+      "type": "page",
+      "layout": "tabbar",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "LiMa 星云"
+      }
+    },
+    {
       "path": "pages/login/index",
       "type": "page",
       "layout": "default",
@@ -246,10 +255,6 @@
     },
     {
       "path": "pages/v2/device-detail/index",
-      "type": "page"
-    },
-    {
-      "path": "pages/v2/device-list/index",
       "type": "page"
     },
     {

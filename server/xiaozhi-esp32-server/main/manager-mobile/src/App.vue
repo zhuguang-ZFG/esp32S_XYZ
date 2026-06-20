@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { onHide, onLaunch, onShow } from '@dcloudio/uni-app'
-import { watch, onMounted } from 'vue'
+import { watch, onMounted, ref } from 'vue'
 import { usePageAuth } from '@/hooks/usePageAuth'
 import { useConfigStore } from '@/store'
 import { t } from '@/i18n'
 import { useLangStore } from '@/store/lang'
 import { applyM6PendingTabBarBadge } from '@/utils'
 import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only'
+
+const isOnline = ref(true)
 
 usePageAuth()
 
@@ -24,6 +26,18 @@ onLaunch(() => {
   // 获取公共配置
   configStore.fetchPublicConfig().catch((error) => {
     console.error('获取公共配置失败:', error)
+  })
+  // 监听网络状态
+  uni.onNetworkStatusChange((res) => {
+    isOnline.value = res.isConnected
+    if (!res.isConnected) {
+      uni.showToast({ title: t('common.networkOffline'), icon: 'none', duration: 3000 })
+    }
+  })
+  uni.getNetworkType({
+    success: (res) => {
+      isOnline.value = res.networkType !== 'none'
+    },
   })
 })
 onShow(() => {
