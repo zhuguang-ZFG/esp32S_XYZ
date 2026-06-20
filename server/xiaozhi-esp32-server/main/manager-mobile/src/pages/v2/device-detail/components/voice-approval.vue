@@ -20,41 +20,42 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <wd-cell-group border custom-class="!mt-[20rpx]">
-    <wd-cell :title="t('v2.deviceDetail.pendingVoiceApprovals')" :label="`${pendingVoiceApprovalCount} ${t('v2.detail.voiceTasksWaiting')}`">
-      <template #value>
-        <view class="flex items-center gap-[12rpx]">
-          <wd-tag v-if="pendingVoiceApprovalCount" type="warning" size="mini">
-            {{ pendingVoiceApprovalBadgeText }}
-          </wd-tag>
-          <wd-button type="text" size="small" :loading="voiceApprovalLoading" @click="emit('refreshVoiceTasks')">
-            {{ t('v2.deviceDetail.refresh') }}
-          </wd-button>
-        </view>
-      </template>
-    </wd-cell>
+  <view class="bento-card">
+    <view class="voice-header">
+      <text class="bento-title">{{ t('v2.deviceDetail.pendingVoiceApprovals') }}</text>
+      <view class="header-right">
+        <wd-tag v-if="pendingVoiceApprovalCount" type="warning" size="small" round>
+          {{ pendingVoiceApprovalBadgeText }}
+        </wd-tag>
+        <wd-button type="text" size="small" :loading="voiceApprovalLoading" @click="emit('refreshVoiceTasks')">
+          {{ t('v2.deviceDetail.refresh') }}
+        </wd-button>
+      </view>
+    </view>
+    <text class="voice-subtitle">{{ pendingVoiceApprovalCount }} {{ t('v2.detail.voiceTasksWaiting') }}</text>
+
     <template v-if="pendingVoiceTasks.length">
       <view
         v-for="task in pendingVoiceTasks"
         :key="task.taskId"
-        class="mx-[30rpx] mb-[24rpx] rounded-[8rpx] bg-[#f5f7fb] p-[20rpx]"
+        class="task-card"
       >
-        <view class="flex items-center justify-between gap-[16rpx]">
-          <wd-text :text="task.capability" size="28rpx" color="#222" />
-          <wd-tag type="warning" size="mini">{{ task.status }}</wd-tag>
+        <view class="task-top">
+          <text class="task-capability">{{ task.capability }}</text>
+          <wd-tag type="warning" size="mini" round>{{ task.status }}</wd-tag>
         </view>
-        <wd-text :text="task.requestId || task.taskId" size="22rpx" color="#666" custom-class="!mt-[8rpx]" />
-        <wd-text v-if="task.paramsJson" :text="task.paramsJson.slice(0, 120)" size="22rpx" color="#666" custom-class="!mt-[8rpx]" />
-        <view v-if="task.constraintsJson" class="mt-[12rpx] flex flex-col gap-[8rpx]">
-          <wd-text :text="voiceprintApprovalLabel(task)" size="22rpx" color="#4b5563" />
-          <wd-tag v-if="voiceprintReenrollRequired(task)" type="warning" size="mini">
+        <text class="task-id">{{ task.requestId || task.taskId }}</text>
+        <text v-if="task.paramsJson" class="task-params">{{ task.paramsJson.slice(0, 120) }}</text>
+        <view v-if="task.constraintsJson" class="task-constraints">
+          <text class="constraint-text">{{ voiceprintApprovalLabel(task) }}</text>
+          <wd-tag v-if="voiceprintReenrollRequired(task)" type="warning" size="mini" round>
             {{ t('v2.detail.reenrollNeeded') }}
           </wd-tag>
-          <wd-tag v-if="voiceprintHasUnknownSpeaker(task)" type="danger" size="mini">
+          <wd-tag v-if="voiceprintHasUnknownSpeaker(task)" type="danger" size="mini" round>
             {{ t('v2.detail.unknownSpeaker') }}
           </wd-tag>
         </view>
-        <view class="mt-[16rpx] flex flex-wrap gap-[12rpx]">
+        <view class="task-actions">
           <wd-button type="success" round size="small" :loading="voiceApprovalLoading" @click="emit('approve', task.taskId)">
             {{ t('v2.deviceDetail.approve') }}
           </wd-button>
@@ -64,8 +65,102 @@ const emit = defineEmits<{
         </view>
       </view>
     </template>
-    <view v-else class="mx-[30rpx] mb-[24rpx] rounded-[8rpx] bg-[#f5f7fb] p-[20rpx]">
-      <wd-text :text="t('v2.deviceDetail.noPendingVoice')" size="24rpx" color="#666" />
+    <view v-else class="empty-state">
+      <text>{{ t('v2.deviceDetail.noPendingVoice') }}</text>
     </view>
-  </wd-cell-group>
+  </view>
 </template>
+
+<style lang="scss" scoped>
+.bento-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.bento-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.voice-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.voice-subtitle {
+  display: block;
+  font-size: 24rpx;
+  color: #65686f;
+  margin-bottom: 20rpx;
+}
+
+.task-card {
+  background: #f5f5f7;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.task-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+
+.task-capability {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #222;
+}
+
+.task-id {
+  display: block;
+  font-size: 22rpx;
+  color: #65686f;
+  margin-bottom: 4rpx;
+}
+
+.task-params {
+  display: block;
+  font-size: 22rpx;
+  color: #65686f;
+  margin-bottom: 8rpx;
+}
+
+.task-constraints {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+}
+
+.constraint-text {
+  font-size: 22rpx;
+  color: #4b5563;
+}
+
+.task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32rpx 0;
+  font-size: 24rpx;
+  color: #9d9ea3;
+}
+</style>

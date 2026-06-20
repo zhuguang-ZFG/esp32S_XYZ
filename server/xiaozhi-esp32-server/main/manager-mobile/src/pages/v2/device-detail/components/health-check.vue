@@ -16,52 +16,120 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <wd-cell-group border custom-class="!mt-[20rpx]">
-    <wd-cell :title="t('v2.detail.healthCheck')" :label="latestDiagnosticSummary">
-      <template #value>
-        <wd-tag
-          :type="latestDiagnosticStatus === 'pass' ? 'success' : latestDiagnosticStatus === 'fail' ? 'danger' : 'default'"
-          size="mini"
-        >
-          {{ latestDiagnosticStatus }}
-        </wd-tag>
-      </template>
-    </wd-cell>
-    <wd-cell :title="t('v2.detail.latestDiagnosis')" :value="latestDiagnosticAt || t('v2.detail.waitingResult')" />
-    <view v-if="selfCheckHistory.length" class="mx-[30rpx] mb-[24rpx]">
+  <view class="bento-card">
+    <view class="health-header">
+      <text class="bento-title">{{ t('v2.detail.healthCheck') }}</text>
+      <wd-tag
+        :type="latestDiagnosticStatus === 'pass' ? 'success' : latestDiagnosticStatus === 'fail' ? 'danger' : 'default'"
+        size="small" round
+      >
+        {{ latestDiagnosticStatus }}
+      </wd-tag>
+    </view>
+    <text class="summary-text">{{ latestDiagnosticSummary }}</text>
+    <text class="time-text">{{ t('v2.detail.latestDiagnosis') }}: {{ latestDiagnosticAt || t('v2.detail.waitingResult') }}</text>
+
+    <view v-if="selfCheckHistory.length" class="history-list">
       <view
         v-for="item in selfCheckHistory"
         :key="item.id"
-        class="mb-[12rpx] rounded-[8rpx] bg-[#f5f7fb] p-[16rpx]"
+        class="history-item"
       >
-        <view class="flex items-center justify-between gap-[16rpx]">
-          <text class="text-[24rpx] font-medium text-[#232338]">
-            {{ item.scope || item.checkId || 'self_check' }}
-          </text>
+        <view class="history-top">
+          <text class="history-scope">{{ item.scope || item.checkId || 'self_check' }}</text>
           <wd-tag
             :type="item.status === 'pass' ? 'success' : item.status === 'fail' ? 'danger' : 'default'"
-            size="mini"
+            size="mini" round
           >
             {{ item.status }}
           </wd-tag>
         </view>
-        <text class="mt-[6rpx] block text-[22rpx] text-[#65686f] leading-[1.4]">
-          {{ item.reportedAt ? new Date(item.reportedAt).toLocaleString() : '-' }}
-        </text>
-        <text class="mt-[6rpx] block text-[22rpx] text-[#65686f] leading-[1.4]">
-          {{ item.summary || item.checksJson || 'No summary' }}
-        </text>
+        <text class="history-time">{{ item.reportedAt ? new Date(item.reportedAt).toLocaleString() : '-' }}</text>
+        <text class="history-summary">{{ item.summary || item.checksJson || 'No summary' }}</text>
       </view>
     </view>
-    <view class="mx-[30rpx] mb-[24rpx]">
-      <wd-button
-        type="primary" block round size="large"
-        :loading="healthCheckLoading"
-        custom-class="!h-[88rpx] !text-[30rpx]"
-        @click="emit('runHealthCheck')"
-      >
-        {{ healthCheckLoading ? t('v2.detail.checking') : t('v2.detail.startHealthCheck') }}
-      </wd-button>
-    </view>
-  </wd-cell-group>
+
+    <wd-button
+      type="primary" block round size="large"
+      :loading="healthCheckLoading"
+      custom-class="!h-[88rpx] !text-[30rpx] !mt-[20rpx]"
+      @click="emit('runHealthCheck')"
+    >
+      {{ healthCheckLoading ? t('v2.detail.checking') : t('v2.detail.startHealthCheck') }}
+    </wd-button>
+  </view>
 </template>
+
+<style lang="scss" scoped>
+.bento-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.bento-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.health-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.summary-text {
+  display: block;
+  font-size: 24rpx;
+  color: #65686f;
+  margin-bottom: 8rpx;
+}
+
+.time-text {
+  display: block;
+  font-size: 22rpx;
+  color: #9d9ea3;
+  margin-bottom: 20rpx;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.history-item {
+  background: #f5f5f7;
+  border-radius: 16rpx;
+  padding: 16rpx;
+}
+
+.history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6rpx;
+}
+
+.history-scope {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #232338;
+}
+
+.history-time {
+  display: block;
+  font-size: 22rpx;
+  color: #65686f;
+  margin-bottom: 4rpx;
+}
+
+.history-summary {
+  display: block;
+  font-size: 22rpx;
+  color: #65686f;
+}
+</style>

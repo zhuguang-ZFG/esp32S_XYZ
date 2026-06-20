@@ -39,7 +39,6 @@ const transferAcceptId = ref('')
 const latestPhase = ref('—')
 const latestProgressPercent = ref<number | null>(null)
 const latestProgressLabel = ref('')
-const latestDeviceInfoTaskId = ref('')
 const latestDiagnosticStatus = ref('pending')
 const latestDiagnosticSummary = ref('No self-check result yet')
 const latestDiagnosticAt = ref('')
@@ -136,7 +135,7 @@ function applyDeviceInfoReply(event: any, payload: DeviceInfoReplyPayload) {
     status: deviceInfo.value?.status || 'online',
     lastSeenAt: event?.ts ? new Date(event.ts).toISOString() : new Date().toISOString(),
   }
-  latestDeviceInfoTaskId.value = event?.task_id || ''; infoLoading.value = false; clearInfoLoadingTimer()
+  infoLoading.value = false; clearInfoLoadingTimer()
   appendLog(`device_info_reply seq=${event?.seq || '-'} model=${payload?.model || '-'}`)
 }
 
@@ -178,7 +177,7 @@ async function handleWriteText() { const text = writeTextInput.value.trim(); if 
 async function submitDraw(params: Record<string, unknown>, label: string) { drawGeneratedLoading.value = true; try { const r = await v2SubmitTask(deviceId.value, 'draw_generated', params); latestPhase.value = r.status; latestProgressPercent.value = null; latestProgressLabel.value = ''; showSubmitToast('v2.detail.drawSubmitted'); appendLog(`${label}: ${r.taskId}`) } catch (e: any) { message.alert(taskSubmitErrorMessage(e)) } finally { drawGeneratedLoading.value = false } }
 async function handleDrawPrompt() { const p = drawPromptInput.value.trim(); if (!p) { message.alert(t('v2.detail.enterDrawPrompt')); return }; await submitDraw({ prompt: p }, 'draw_generated') }
 async function handleDrawStarter(id: string) { await submitDraw({ starter_id: id, use_starter_asset: true }, `draw_starter ${id}`) }
-async function handleRefreshInfo() { infoLoading.value = true; clearInfoLoadingTimer(); try { const r = await v2SubmitTask(deviceId.value, 'get_device_info'); latestPhase.value = r.status; latestDeviceInfoTaskId.value = r.taskId; showSubmitToast('v2.detail.infoSubmitted'); appendLog(`get_device_info: ${r.taskId}`); infoLoadingTimer = setTimeout(() => { infoLoading.value = false }, 12000) } catch (e: any) { infoLoading.value = false; message.alert(taskSubmitErrorMessage(e)) } }
+async function handleRefreshInfo() { infoLoading.value = true; clearInfoLoadingTimer(); try { const r = await v2SubmitTask(deviceId.value, 'get_device_info'); latestPhase.value = r.status; showSubmitToast('v2.detail.infoSubmitted'); appendLog(`get_device_info: ${r.taskId}`); infoLoadingTimer = setTimeout(() => { infoLoading.value = false }, 12000) } catch (e: any) { infoLoading.value = false; message.alert(taskSubmitErrorMessage(e)) } }
 async function handleHealthCheck() { healthCheckLoading.value = true; try { const r = await v2SubmitTask(deviceId.value, 'run_path', { path: healthCheckPath, feed: 900 }); latestPhase.value = r.status; latestProgressPercent.value = null; latestProgressLabel.value = ''; latestDiagnosticSummary.value = 'Manual run_path submitted'; showSubmitToast('v2.detail.healthCheckSubmitted'); appendLog(`health_check: ${r.taskId}`) } catch (e: any) { healthCheckLoading.value = false; message.alert(taskSubmitErrorMessage(e)) } }
 async function updatePaper(state: 'empty' | 'loaded' | 'unknown') { suppliesLoading.value = true; try { deviceSupplies.value = await v2UpdateDeviceSupplies(deviceId.value, { paperSlotState: state }); showSubmitToast(state === 'loaded' ? 'v2.detail.paperMarkedLoaded' : state === 'empty' ? 'v2.detail.paperMarkedEmpty' : 'v2.detail.paperMarkedUnknown'); appendLog(`supplies paper=${state}`) } catch (e: any) { message.alert(taskSubmitErrorMessage(e)) } finally { suppliesLoading.value = false } }
 async function markNewPen() { suppliesLoading.value = true; try { deviceSupplies.value = await v2UpdateDeviceSupplies(deviceId.value, { penInstalledAt: new Date().toISOString(), penInkPercentEst: 100, resetPenMileage: true }); showSubmitToast('v2.detail.penRecorded'); appendLog('supplies pen installed') } catch (e: any) { message.alert(taskSubmitErrorMessage(e)) } finally { suppliesLoading.value = false } }
@@ -186,6 +185,7 @@ async function handleRequestTransfer() { const target = transferTargetUnionid.va
 async function handleCancelTransfer() { const tid = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '') || null; if (!tid) { message.alert(t('v2.detail.enterTransferId')); return }; transferLoading.value = true; try { deviceTransfer.value = await v2CancelDeviceTransfer(tid); showSubmitToast('v2.detail.transferCancelled'); appendLog(`transfer cancelled`) } catch (e: any) { message.alert(taskSubmitErrorMessage(e)) } finally { transferLoading.value = false } }
 async function handleAcceptTransfer() { const tid = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '') || null; if (!tid) { message.alert(t('v2.detail.enterTransferId')); return }; transferLoading.value = true; try { deviceTransfer.value = await v2AcceptDeviceTransfer(tid); showSubmitToast('v2.detail.transferAccepted'); appendLog(`transfer accepted`) } catch (e: any) { message.alert(taskSubmitErrorMessage(e)) } finally { transferLoading.value = false } }
 
+function navigateBack() { uni.navigateBack() }
 function goToChatHistory() { uni.navigateTo({ url: '/pages/chat-history/index?agentId=default' }) }
 function goToVoiceprint() { uni.navigateTo({ url: '/pages/voiceprint/index?agentId=default' }) }
 function goToAgents() { uni.switchTab({ url: '/pages/index/index' }) }
@@ -197,41 +197,134 @@ onUnmounted(() => { clearInfoLoadingTimer() })
 
 <template>
   <wd-config-provider theme-color="#336cff" />
-  <wd-navbar :title="t('v2.deviceDetail.title')" left-arrow fixed placeholder safe-area-inset-top @click-left="uni.navigateBack()" />
+  <wd-navbar :title="t('v2.deviceDetail.title')" left-arrow fixed placeholder safe-area-inset-top @click-left="navigateBack" />
 
-  <device-info-card :device-info="deviceInfo" :device-id="deviceId" :connected="connected" :workspace-label="workspaceLabel" :info-loading="infoLoading" />
-  <supplies-panel :device-supplies="deviceSupplies" :paper-slot-state-label="paperSlotStateLabel" :pen-state-label="penStateLabel" v-model:supplies-loading="suppliesLoading" @update-paper="updatePaper" @new-pen="markNewPen" />
-  <transfer-panel :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" v-model:transfer-loading="transferLoading" v-model:transfer-target-unionid="transferTargetUnionid" v-model:transfer-accept-id="transferAcceptId" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />
-  <voice-approval :pending-voice-tasks="pendingVoiceTasks" :pending-voice-approval-count="pendingVoiceApprovalCount" :pending-voice-approval-badge-text="pendingVoiceApprovalBadgeText" :voiceprint-approval-label="voiceprintApprovalLabel" :voiceprint-reenroll-required="voiceprintReenrollRequired" :voiceprint-has-unknown-speaker="voiceprintHasUnknownSpeaker" v-model:voice-approval-loading="voiceApprovalLoading" @refresh-voice-tasks="loadPendingVoiceTasks" @approve="handleApproveVoiceTask" @reject="handleRejectVoiceTask" />
-  <task-status :latest-phase="latestPhase" :latest-progress-percent="latestProgressPercent" :latest-progress-label="latestProgressLabel" :phase-color="phaseColor" :progress-bar-style="progressBarStyle" />
-  <health-check :latest-diagnostic-status="latestDiagnosticStatus" :latest-diagnostic-summary="latestDiagnosticSummary" :latest-diagnostic-at="latestDiagnosticAt" :self-check-history="selfCheckHistory" v-model:health-check-loading="healthCheckLoading" @run-health-check="handleHealthCheck" />
+  <view class="bento-page">
+    <device-info-card :device-info="deviceInfo" :device-id="deviceId" :connected="connected" :workspace-label="workspaceLabel" :info-loading="infoLoading" />
+    <supplies-panel :device-supplies="deviceSupplies" :paper-slot-state-label="paperSlotStateLabel" :pen-state-label="penStateLabel" v-model:supplies-loading="suppliesLoading" @update-paper="updatePaper" @new-pen="markNewPen" />
 
-  <view class="mx-[20rpx] mt-[20rpx] flex gap-[20rpx]">
-    <wd-button type="primary" block round size="large" :loading="homeLoading" custom-class="!h-[96rpx] !text-[32rpx]" @click="handleHome">
-      {{ homeLoading ? t('v2.deviceDetail.homing') : t('v2.deviceDetail.homeButton') }}
-    </wd-button>
-    <wd-button type="info" block round size="large" :loading="infoLoading" custom-class="!h-[96rpx] !text-[32rpx]" @click="handleRefreshInfo">
-      {{ infoLoading ? t('v2.detail.querying') : t('v2.detail.refreshInfo') }}
-    </wd-button>
+    <!-- 主操作按钮 -->
+    <view class="bento-card action-row">
+      <wd-button type="primary" block round size="large" :loading="homeLoading" custom-class="action-btn" @click="handleHome">
+        {{ homeLoading ? t('v2.deviceDetail.homing') : t('v2.deviceDetail.homeButton') }}
+      </wd-button>
+      <wd-button type="info" block round size="large" :loading="infoLoading" custom-class="action-btn" @click="handleRefreshInfo">
+        {{ infoLoading ? t('v2.detail.querying') : t('v2.detail.refreshInfo') }}
+      </wd-button>
+    </view>
+
+    <task-status :latest-phase="latestPhase" :latest-progress-percent="latestProgressPercent" :latest-progress-label="latestProgressLabel" :phase-color="phaseColor" :progress-bar-style="progressBarStyle" />
+    <write-draw-panel :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
+    <health-check :latest-diagnostic-status="latestDiagnosticStatus" :latest-diagnostic-summary="latestDiagnosticSummary" :latest-diagnostic-at="latestDiagnosticAt" :self-check-history="selfCheckHistory" v-model:health-check-loading="healthCheckLoading" @run-health-check="handleHealthCheck" />
+    <transfer-panel :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" v-model:transfer-loading="transferLoading" v-model:transfer-target-unionid="transferTargetUnionid" v-model:transfer-accept-id="transferAcceptId" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />
+    <voice-approval :pending-voice-tasks="pendingVoiceTasks" :pending-voice-approval-count="pendingVoiceApprovalCount" :pending-voice-approval-badge-text="pendingVoiceApprovalBadgeText" :voiceprint-approval-label="voiceprintApprovalLabel" :voiceprint-reenroll-required="voiceprintReenrollRequired" :voiceprint-has-unknown-speaker="voiceprintHasUnknownSpeaker" v-model:voice-approval-loading="voiceApprovalLoading" @refresh-voice-tasks="loadPendingVoiceTasks" @approve="handleApproveVoiceTask" @reject="handleRejectVoiceTask" />
+
+    <!-- 快捷功能 -->
+    <view class="bento-card">
+      <view class="bento-title">{{ t('v2.detail.quickLinks') }}</view>
+      <view class="quick-links">
+        <view class="quick-link" @click="goToChatHistory">
+          <wd-icon name="chat" size="20" color="#336cff" />
+          <text>{{ t('v2.detail.chatHistory') }}</text>
+          <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
+        </view>
+        <view class="quick-link" @click="goToVoiceprint">
+          <wd-icon name="volume" size="20" color="#336cff" />
+          <text>{{ t('v2.detail.voiceprintMgmt') }}</text>
+          <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
+        </view>
+        <view class="quick-link" @click="goToAgents">
+          <wd-icon name="robot" size="20" color="#336cff" />
+          <text>{{ t('v2.detail.manageAgents') }}</text>
+          <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
+        </view>
+      </view>
+    </view>
+
+    <!-- WSS 日志 -->
+    <view class="bento-card">
+      <view class="flex items-center justify-between mb-[16rpx]">
+        <wd-tag :type="connected ? 'success' : 'default'" size="mini" round>
+          {{ connected ? t('v2.detail.wssSubscribed') : t('v2.detail.wssDisconnected') }}
+        </wd-tag>
+        <wd-button v-if="!connected" type="text" size="small" @click="wsConnect">
+          {{ t('v2.deviceDetail.connectAndSubscribe') }}
+        </wd-button>
+      </view>
+      <scroll-view scroll-y class="wss-log">
+        <wd-text v-for="(l, i) in logLines" :key="i" :text="l" size="20rpx" color="#666" custom-class="!leading-[36rpx]" />
+        <wd-text v-if="!logLines.length" :text="t('v2.detail.waitingEvents')" size="24rpx" color="#999" />
+      </scroll-view>
+    </view>
+
+    <view style="height: env(safe-area-inset-bottom);" />
   </view>
-
-  <write-draw-panel :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
-
-  <wd-cell-group border custom-class="!mt-[20rpx]" :title="t('v2.detail.quickLinks')">
-    <wd-cell :title="t('v2.detail.chatHistory')" is-link @click="goToChatHistory" />
-    <wd-cell :title="t('v2.detail.voiceprintMgmt')" is-link @click="goToVoiceprint" />
-    <wd-cell :title="t('v2.detail.manageAgents')" is-link @click="goToAgents" />
-  </wd-cell-group>
-
-  <wd-cell-group border custom-class="!mt-[20rpx]">
-    <wd-cell :title="connected ? t('v2.detail.wssSubscribed') : t('v2.detail.wssDisconnected')" center>
-      <template v-if="!connected" #value>
-        <wd-button type="text" size="small" @click="wsConnect">{{ t('v2.deviceDetail.connectAndSubscribe') }}</wd-button>
-      </template>
-    </wd-cell>
-  </wd-cell-group>
-  <scroll-view scroll-y class="bg-[#f5f5f5] rounded-[8rpx] mx-[20rpx] p-[16rpx]" style="max-height:300rpx">
-    <wd-text v-for="(l, i) in logLines" :key="i" :text="l" size="20rpx" color="#666" custom-class="!leading-[36rpx]" />
-    <wd-text v-if="!logLines.length" :text="t('v2.detail.waitingEvents')" size="24rpx" color="#999" />
-  </scroll-view>
 </template>
+
+<style lang="scss" scoped>
+.bento-page {
+  min-height: 100vh;
+  background: #f5f5f7;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.bento-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.bento-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 20rpx;
+}
+
+.action-row {
+  display: flex;
+  gap: 20rpx;
+
+  .action-btn {
+    flex: 1;
+    height: 96rpx !important;
+    font-size: 32rpx !important;
+  }
+}
+
+.quick-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.quick-link {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 12rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  color: #232338;
+  transition: background 0.15s ease;
+
+  &:active {
+    background: #f5f5f7;
+  }
+
+  & + & {
+    border-top: 1rpx solid #f0f0f0;
+  }
+}
+
+.wss-log {
+  max-height: 280rpx;
+  background: #f8f9fc;
+  border-radius: 16rpx;
+  padding: 16rpx;
+}
+</style>
