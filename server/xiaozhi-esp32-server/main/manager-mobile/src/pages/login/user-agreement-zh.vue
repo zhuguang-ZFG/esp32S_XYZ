@@ -38,7 +38,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx] text-center">
           <text class="text-[24rpx] text-[#666666]">
-            更新日期：2026年3月10日
+            更新日期：2026年6月21日
           </text>
         </view>
         <view class="mb-[32rpx]">
@@ -48,7 +48,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            欢迎您使用小智后端服务（以下简称"本服务"）。本服务旨在为小智AI硬件设备提供后端服务支持，包括但不限于智能语音交互、视觉理解、意图识别、对话记忆、知识库问答、设备管理、智能体管理等功能。本服务的运营方为本服务的实际部署者和管理者（以下简称"运营者"或"我们"）。
+            欢迎您使用LiMa 星云服务（以下简称"本服务"）。本服务旨在为LiMa AI 智能设备提供后端服务支持，包括但不限于智能语音交互、视觉理解、意图识别、对话记忆、知识库问答、设备管理、智能体管理等功能。本服务的运营方为本服务的实际部署者和管理者（以下简称"运营者"或"我们"）。
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
@@ -74,12 +74,12 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            小智后端服务：指小智后端服务及其部署运行的后端服务系统，包括但不限于智控台（管理后台）、API接口、WebSocket通信服务等。
+            LiMa 星云服务：指LiMa 星云服务及其部署运行的后端服务系统，包括但不限于LiMa 星云（管理后台）、API接口、WebSocket通信服务等。
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            智控台：指本服务提供的Web管理界面，用于设备管理、智能体配置、用户管理等功能。
+            LiMa 星云：指本服务提供的Web管理界面，用于设备管理、智能体配置、用户管理等功能。
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
@@ -105,7 +105,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            本协议是您与运营者之间关于使用本服务的法律协议。本协议适用于您通过智控台或其他方式使用本服务的全部行为。
+            本协议是您与运营者之间关于使用本服务的法律协议。本协议适用于您通过LiMa 星云或其他方式使用本服务的全部行为。
           </text>
         </view>
         <view class="mb-[40rpx] ml-[20rpx]">
@@ -141,7 +141,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            3.5 账号注销：如您需要注销账号，可通过智控台的账号设置功能进行操作，或联系运营者进行处理。账号注销后，相关数据将被删除且无法恢复，请谨慎操作。
+            3.5 账号注销：如您需要注销账号，可通过LiMa 星云的账号设置功能进行操作，或联系运营者进行处理。账号注销后，相关数据将被删除且无法恢复，请谨慎操作。
           </text>
         </view>
 
@@ -157,12 +157,12 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            4.2 智能体管理：您可通过智控台创建和配置智能体，包括设定角色模板、选择语言模型、配置语音参数、设置意图识别规则、管理知识库、开启对话记忆、配置智能体插件等。智能体的设定内容不得违反国家法律法规。
+            4.2 智能体管理：您可通过LiMa 星云创建和配置智能体，包括设定角色模板、选择语言模型、配置语音参数、设置意图识别规则、管理知识库、开启对话记忆、配置智能体插件等。智能体的设定内容不得违反国家法律法规。
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            4.3 设备管理：您可通过智控台绑定和管理您的硬件设备，进行设备配置、固件更新、OTA远程升级等操作。您应确保所管理的设备为您合法拥有或已获得授权。
+            4.3 设备管理：您可通过LiMa 星云绑定和管理您的硬件设备，进行设备配置、固件更新、OTA远程升级等操作。您应确保所管理的设备为您合法拥有或已获得授权。
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
@@ -177,7 +177,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            4.6 对话记忆：本服务可记录和存储您与智能体的交互历史摘要，以便在后续对话中提供更连贯、个性化的交互体验。您可在智控台管理或清除记忆数据。
+            4.6 对话记忆：本服务可记录和存储您与智能体的交互历史摘要，以便在后续对话中提供更连贯、个性化的交互体验。您可在LiMa 星云管理或清除记忆数据。
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">

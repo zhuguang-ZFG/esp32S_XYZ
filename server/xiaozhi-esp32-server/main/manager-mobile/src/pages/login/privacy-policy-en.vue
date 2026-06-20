@@ -38,7 +38,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx] text-center">
           <text class="text-[24rpx] text-[#666666]">
-            Last Updated: March 10, 2026
+            Last Updated: June 21, 2026
           </text>
         </view>
         <view class="mb-[32rpx]">
@@ -48,7 +48,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            Welcome to use the XiaoZhi Backend Service (hereinafter referred to as "the Service"). The operator of this Service is the actual deployer and administrator of the Service (hereinafter referred to as "Operator" or "we"). We fully understand the importance of your personal information and will do our best to protect your personal information security.
+            Welcome to use the LiMa Nebula Service (hereinafter referred to as "the Service"). The operator of this Service is the actual deployer and administrator of the Service (hereinafter referred to as "Operator" or "we"). We fully understand the importance of your personal information and will do our best to protect your personal information security.
           </text>
         </view>
         <view class="mb-[24rpx]">
@@ -58,7 +58,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            This Privacy Policy applies to our collection, storage, use, sharing, and protection of your personal information when you use the Service through the Admin Console (management backend), API interfaces, and other means.
+            This Privacy Policy applies to our collection, storage, use, sharing, and protection of your personal information when you use the Service through the LiMa Nebula (management backend), API interfaces, and other means.
           </text>
         </view>
         <view class="mb-[32rpx]">
@@ -273,12 +273,12 @@ function goBack() {
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            5.1 Query and Access: You can view and manage your personal information such as account information, device information, and Agent configuration through the Admin Console.
+            5.1 Query and Access: You can view and manage your personal information such as account information, device information, and Agent configuration through the LiMa Nebula.
           </text>
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            5.2 Correction and Modification: When you find that your personal information is incorrect, you can correct it through the Admin Console or contact the Operator for assistance.
+            5.2 Correction and Modification: When you find that your personal information is incorrect, you can correct it through the LiMa Nebula or contact the Operator for assistance.
           </text>
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
@@ -288,7 +288,7 @@ function goBack() {
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            5.4 Account Cancellation: You can cancel your account through the account settings in the Admin Console or contact the Operator for processing.
+            5.4 Account Cancellation: You can cancel your account through the account settings in the LiMa Nebula or contact the Operator for processing.
           </text>
         </view>
         <view class="mb-[40rpx] ml-[20rpx]">

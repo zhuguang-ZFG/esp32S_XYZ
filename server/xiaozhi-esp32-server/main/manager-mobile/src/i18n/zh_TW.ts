@@ -323,7 +323,7 @@ export default {
   'settings.restartLater': '稍後',
   // 關於我們
   'settings.aboutApp': '關於LiMa 星云',
-  'settings.aboutContent': 'LiMa 星云\n\n基於 Vue.js 3 + uni-app 構建的跨平台移動端管理應用，為小智ESP32智能硬體提供設備管理、智能體配置等功能。\n\n© 2025 深圳市动力巢科技有限公司 {version}',
+  'settings.aboutContent': 'LiMa 星云\n\n基於 Vue.js 3 + uni-app 構建的跨平台移動端管理應用，為 LiMa 星云智能硬體提供設備管理、智能體配置等功能。\n\n© 2025 donglicao.com {version}',
   'settings.restartSuccess': '已保存，可稍後手動重啟應用',
   'settings.serverUrlSavedAndCacheCleared': '服務端地址已保存，緩存已清除',
   'settings.resetToDefaultAndCacheCleared': '已恢復默認設置，緩存已清除',

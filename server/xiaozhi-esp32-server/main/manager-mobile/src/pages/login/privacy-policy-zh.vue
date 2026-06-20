@@ -38,7 +38,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx] text-center">
           <text class="text-[24rpx] text-[#666666]">
-            更新日期：2026年3月10日
+            更新日期：2026年6月21日
           </text>
         </view>
         <view class="mb-[32rpx]">
@@ -48,7 +48,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            欢迎您使用小智后端服务（以下简称"本服务"）。本服务的运营方为本服务的实际部署者和管理者（以下简称"运营者"或"我们"）。我们深知个人信息对您的重要性，将尽全力保护您的个人信息安全。
+            欢迎您使用LiMa 星云服务（以下简称"本服务"）。本服务的运营方为本服务的实际部署者和管理者（以下简称"运营者"或"我们"）。我们深知个人信息对您的重要性，将尽全力保护您的个人信息安全。
           </text>
         </view>
         <view class="mb-[24rpx]">
@@ -58,7 +58,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            本隐私政策适用于您通过智控台（管理后台）、API接口及其他方式使用本服务时，我们对您个人信息的收集、存储、使用、共享、保护等行为。
+            本隐私政策适用于您通过LiMa 星云（管理后台）、API接口及其他方式使用本服务时，我们对您个人信息的收集、存储、使用、共享、保护等行为。
           </text>
         </view>
         <view class="mb-[32rpx]">
@@ -273,12 +273,12 @@ function goBack() {
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            5.1 查询与访问：您可通过智控台查看和管理您的账号信息、设备信息、智能体配置等个人信息。
+            5.1 查询与访问：您可通过LiMa 星云查看和管理您的账号信息、设备信息、智能体配置等个人信息。
           </text>
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            5.2 更正与修改：当您发现个人信息有误时，您可通过智控台自行更正，或联系运营者协助处理。
+            5.2 更正与修改：当您发现个人信息有误时，您可通过LiMa 星云自行更正，或联系运营者协助处理。
           </text>
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
@@ -288,7 +288,7 @@ function goBack() {
         </view>
         <view class="mb-[16rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            5.4 账号注销：您可通过智控台的账号设置功能注销账号，或联系运营者进行处理。
+            5.4 账号注销：您可通过LiMa 星云的账号设置功能注销账号，或联系运营者进行处理。
           </text>
         </view>
         <view class="mb-[40rpx] ml-[20rpx]">

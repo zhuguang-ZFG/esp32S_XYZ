@@ -322,8 +322,8 @@ export default {
   'settings.restartNow': 'Reiniciar Agora',
   'settings.restartLater': 'Depois',
   // About us
-  'settings.aboutApp': 'Sobre o Console XiaoZhi',
-  'settings.aboutContent': 'Console XiaoZhi\n\nUm aplicativo móvel de gerenciamento multiplataforma construído com Vue.js 3 + uni-app, oferecendo gerenciamento de dispositivos, configuração de agentes e outras funcionalidades para o hardware inteligente xiaozhi ESP32.\n\n© 2025 xiaozhi-esp32-server {version}',
+  'settings.aboutApp': 'Sobre o LiMa Nebula',
+  'settings.aboutContent': 'LiMa Nebula\n\nUm aplicativo móvel de gerenciamento multiplataforma construído com Vue.js 3 + uni-app, oferecendo gerenciamento de dispositivos, configuração de agentes e outras funcionalidades para o hardware inteligente LiMa Nebula.\n\n© 2025 donglicao.com {version}',
   'settings.restartSuccess': 'Salvo, você pode reiniciar o app manualmente depois',
   'settings.serverUrlSavedAndCacheCleared': 'URL do servidor salva e cache limpo',
   'settings.resetToDefaultAndCacheCleared': 'Restaurado ao padrão e cache limpo',

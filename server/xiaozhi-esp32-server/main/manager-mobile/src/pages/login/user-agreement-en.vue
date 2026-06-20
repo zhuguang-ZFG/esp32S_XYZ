@@ -38,7 +38,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx] text-center">
           <text class="text-[24rpx] text-[#666666]">
-            Last Updated: March 10, 2026
+            Last Updated: June 21, 2026
           </text>
         </view>
         <view class="mb-[32rpx]">
@@ -48,7 +48,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            Welcome to use the XiaoZhi Backend Service (hereinafter referred to as "the Service"). The Service is designed to provide backend service support for XiaoZhi AI hardware devices, including but not limited to intelligent voice interaction, visual understanding, intent recognition, conversation memory, knowledge base Q&A, device management, and agent management. The operator of this Service is the actual deployer and administrator of the Service (hereinafter referred to as "Operator" or "we").
+            Welcome to use the LiMa Nebula Service (hereinafter referred to as "the Service"). The Service is designed to provide backend service support for LiMa AI smart devices, including but not limited to intelligent voice interaction, visual understanding, intent recognition, conversation memory, knowledge base Q&A, device management, and agent management. The operator of this Service is the actual deployer and administrator of the Service (hereinafter referred to as "Operator" or "we").
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
@@ -74,12 +74,12 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            XiaoZhi Backend Service: refers to the XiaoZhi Backend Service and its backend service system, including but not limited to the Admin Console (management backend), API interfaces, WebSocket communication services, etc.
+            LiMa Nebula Service: refers to the LiMa Nebula Service and its backend service system, including but not limited to the LiMa Nebula (management backend), API interfaces, WebSocket communication services, etc.
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            Admin Console: refers to the web management interface provided by the Service for device management, agent configuration, user management, and other functions.
+            LiMa Nebula: refers to the web management interface provided by the Service for device management, agent configuration, user management, and other functions.
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
@@ -105,7 +105,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            This Agreement is a legal agreement between you and the Operator regarding your use of the Service. This Agreement applies to all your actions when using the Service through the Admin Console or other means.
+            This Agreement is a legal agreement between you and the Operator regarding your use of the Service. This Agreement applies to all your actions when using the Service through the LiMa Nebula or other means.
           </text>
         </view>
         <view class="mb-[40rpx] ml-[20rpx]">
@@ -141,7 +141,7 @@ function goBack() {
         </view>
         <view class="mb-[40rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            3.5 Account Cancellation: If you need to cancel your account, you may do so through the account settings in the Admin Console or contact the Operator for processing. After account cancellation, related data will be deleted and cannot be recovered. Please proceed with caution.
+            3.5 Account Cancellation: If you need to cancel your account, you may do so through the account settings in the LiMa Nebula or contact the Operator for processing. After account cancellation, related data will be deleted and cannot be recovered. Please proceed with caution.
           </text>
         </view>
 
@@ -157,12 +157,12 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            4.2 Agent Management: You can create and configure Agents through the Admin Console, including setting role templates, selecting language models, configuring voice parameters, setting intent recognition rules, managing knowledge bases, enabling conversation memory, configuring Agent plugins, etc. The Agent settings shall not violate national laws and regulations.
+            4.2 Agent Management: You can create and configure Agents through the LiMa Nebula, including setting role templates, selecting language models, configuring voice parameters, setting intent recognition rules, managing knowledge bases, enabling conversation memory, configuring Agent plugins, etc. The Agent settings shall not violate national laws and regulations.
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            4.3 Device Management: You can bind and manage your hardware devices through the Admin Console, perform device configuration, firmware updates, OTA remote upgrades, etc. You shall ensure that the devices you manage are lawfully owned or authorized by you.
+            4.3 Device Management: You can bind and manage your hardware devices through the LiMa Nebula, perform device configuration, firmware updates, OTA remote upgrades, etc. You shall ensure that the devices you manage are lawfully owned or authorized by you.
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
@@ -177,7 +177,7 @@ function goBack() {
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
           <text class="text-[28rpx] text-[#333333] leading-[1.8]">
-            4.6 Conversation Memory: The Service can record and store summaries of your interaction history with the Agent to provide more coherent and personalized interaction experiences in subsequent conversations. You can manage or clear memory data in the Admin Console.
+            4.6 Conversation Memory: The Service can record and store summaries of your interaction history with the Agent to provide more coherent and personalized interaction experiences in subsequent conversations. You can manage or clear memory data in the LiMa Nebula.
           </text>
         </view>
         <view class="mb-[24rpx] ml-[20rpx]">
