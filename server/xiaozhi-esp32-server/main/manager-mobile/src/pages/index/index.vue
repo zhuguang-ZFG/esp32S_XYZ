@@ -1,425 +1,307 @@
-<!-- 智能体管理 tab 页面 -->
 <route lang="jsonc" type="page">
 {
   "layout": "tabbar",
   "style": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "智能体"
+    "navigationBarTitleText": "LiMa 星云"
   }
 }
 </route>
 
 <script lang="ts" setup>
-import type { Agent } from '@/api/agent/types'
-import { onMounted, ref } from 'vue'
-// 在组件挂载后设置导航栏标题
-import { useMessage } from 'wot-design-uni/components/wd-message-box'
-import useZPaging from 'z-paging/components/z-paging/js/hooks/useZPaging.js'
-import { createAgent, deleteAgent, getAgentList } from '@/api/agent/agent'
+import { onShow, ref } from 'vue'
 import { t } from '@/i18n'
-import { toast } from '@/utils/toast'
+import { v2GetDevices } from '@/api/v2'
+import type { V2DeviceInfo } from '@/api/v2/types'
 
-defineOptions({
-  name: 'Home',
-})
+defineOptions({ name: 'NebulaCenter' })
 
-// 获取屏幕边界到安全区域距离
-let safeAreaInsets: any
-let systemInfo: any
+const safeAreaTop = ref(0)
+const devices = ref<V2DeviceInfo[]>([])
+const loading = ref(false)
 
-// #ifdef MP-WEIXIN
-// 微信小程序使用新的API
-systemInfo = uni.getWindowInfo()
-safeAreaInsets = systemInfo.safeArea
-  ? {
-      top: systemInfo.safeArea.top,
-      right: systemInfo.windowWidth - systemInfo.safeArea.right,
-      bottom: systemInfo.windowHeight - systemInfo.safeArea.bottom,
-      left: systemInfo.safeArea.left,
-    }
-  : null
-// #endif
+// 获取安全区域顶部
+const systemInfo = uni.getSystemInfoSync()
+safeAreaTop.value = systemInfo.statusBarHeight || 0
 
-// #ifndef MP-WEIXIN
-// 其他平台继续使用uni API
-systemInfo = uni.getSystemInfoSync()
-safeAreaInsets = systemInfo.safeAreaInsets
-// #endif
+onShow(() => { loadDevices() })
 
-// 智能体数据
-const agentList = ref<Agent[]>([])
-const pagingRef = ref()
-useZPaging(pagingRef)
-// 消息组件
-const message = useMessage()
-
-// z-paging查询列表数据
-async function queryList(pageNo: number, pageSize: number) {
+async function loadDevices() {
+  loading.value = true
   try {
-    console.log('z-paging获取智能体列表')
-
-    const response = await getAgentList()
-
-    // 更新本地列表
-    agentList.value = response
-
-    // 直接返回全部数据，不需要分页处理
-    pagingRef.value.complete(response)
-  }
-  catch (error) {
-    console.error('获取智能体列表失败:', error)
-    // 告知z-paging数据加载失败
-    pagingRef.value.complete(false)
-  }
+    const res = await v2GetDevices()
+    devices.value = res.rows || []
+  } catch (e) { console.error(e) }
+  finally { loading.value = false }
 }
 
-// 创建智能体
-async function handleCreateAgent(agentName: string) {
-  try {
-    await createAgent({ agentName: agentName.trim() })
-    // 创建成功后刷新列表
-    pagingRef.value.reload()
-    toast.success(`${t('home.agentName')}"${agentName}"${t('message.saveSuccess')}`)
-  }
-  catch (error: any) {
-    console.error('创建智能体失败:', error)
-    const errorMessage = error?.message || t('message.saveFail')
-    toast.error(errorMessage)
-  }
+// 核心能力跳转
+function goChat() {
+  uni.showToast({ title: 'AI 对话即将上线', icon: 'none' })
+}
+function goDraw() {
+  uni.showToast({ title: 'AI 绘图即将上线', icon: 'none' })
+}
+function goWrite() {
+  uni.showToast({ title: 'AI 写字即将上线', icon: 'none' })
+}
+function goDigitalHuman() {
+  // 打开数字人 Web 页面
+  uni.navigateTo({ url: '/pages-sub/demo/index' })
 }
 
-// 删除智能体
-async function handleDeleteAgent(agent: Agent) {
-  try {
-    await deleteAgent(agent.id)
-    // 删除成功后刷新列表
-    pagingRef.value.reload()
-    toast.success(`${t('home.agentName')}${t('message.deleteSuccess')}`)
-  }
-  catch (error: any) {
-    console.error('删除智能体失败:', error)
-    const errorMessage = error?.message || t('message.deleteFail')
-    toast.error(errorMessage)
-  }
+// 设备相关
+function goDevices() {
+  uni.switchTab({ url: '/pages/v2/device-list/index' })
 }
-
-// 进入编辑页面
-function goToEditAgent(agent: Agent) {
-  // 传递智能体ID到编辑页面
-  uni.navigateTo({
-    url: `/pages/agent/index?agentId=${agent.id}`,
-  })
+function goDeviceDetail(deviceId: string) {
+  uni.navigateTo({ url: `/pages/v2/device-detail/index?deviceId=${deviceId}` })
 }
-
-// 点击卡片进入编辑
-function handleCardClick(agent: Agent) {
-  goToEditAgent(agent)
+function goAddDevice() {
+  uni.switchTab({ url: '/pages/v2/device-list/index' })
 }
-
-// 打开创建对话框
-function openCreateDialog() {
-  message
-    .prompt({
-      title: t('home.dialogTitle'),
-      msg: '',
-      inputPlaceholder: t('home.inputPlaceholder'),
-      inputValue: '',
-      inputPattern: /^.{1,64}$/i,
-      inputError: t('home.createError'),
-      confirmButtonText: t('home.createNow'),
-      cancelButtonText: t('common.cancel'),
-    })
-    .then(async (result: any) => {
-      if (result.value && String(result.value).trim()) {
-        await handleCreateAgent(String(result.value).trim())
-      }
-    })
-    .catch(() => {
-      // 用户取消操作
-    })
+function goConfig() {
+  uni.switchTab({ url: '/pages/device-config/index' })
 }
-
-// 格式化时间
-function formatTime(timeStr: string) {
-  const date = new Date(timeStr)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-
-  if (diff < 60000)
-    return t('home.justNow')
-  if (diff < 3600000)
-    return `${Math.floor(diff / 60000)}${t('home.minutesAgo')}`
-  if (diff < 86400000)
-    return `${Math.floor(diff / 3600000)}${t('home.hoursAgo')}`
-  return `${Math.floor(diff / 86400000)}${t('home.daysAgo')}`
+function goSettings() {
+  uni.switchTab({ url: '/pages/settings/index' })
 }
-
-// 页面显示时刷新列表
-onShow(() => {
-  console.log('首页 onShow，刷新智能体列表')
-  if (pagingRef.value) {
-    pagingRef.value.refresh()
-  }
-})
-
-onMounted(() => {
-  uni.setNavigationBarTitle({
-    title: t('home.pageTitle'),
-  })
-})
 </script>
 
 <template>
-  <z-paging
-    ref="pagingRef" v-model="agentList" :refresher-enabled="true" :auto-show-back-to-top="true"
-    :loading-more-enabled="false" :show-loading-more="false" :hide-empty-view="false" :empty-view-text="t('home.emptyState')"
-    empty-view-img="" :refresher-threshold="80" :back-to-top-style="{
-      backgroundColor: '#0a0a14',
-      borderRadius: '50%',
-      border: '1rpx solid rgba(255,255,255,0.06)',
-      width: '56px',
-      height: '56px',
-    }" @query="queryList"
-  >
-    <!-- 固定在顶部的星云横幅区域 -->
-    <template #top>
-      <view class="nebula-banner" :style="{ paddingTop: `${safeAreaInsets?.top + 80}rpx` }">
-        <view class="banner-content">
-          <view class="welcome-info">
-            <text class="greeting">
-              {{ t('home.greeting') }}
-            </text>
-            <text class="subtitle">
-              {{ t('home.subtitle') }} <text class="highlight">
-                {{ t('home.wonderfulDay') }}
-              </text>
-            </text>
-          </view>
-          <view class="star-decoration">
-            <view class="star" />
-            <view class="star star-2" />
-            <view class="star star-3" />
-          </view>
-        </view>
+  <view class="nebula-center" :style="{ paddingTop: safeAreaTop + 'px' }">
+    <!-- 深空横幅 -->
+    <view class="nebula-hero">
+      <view class="hero-stars">
+        <view class="star s1" />
+        <view class="star s2" />
+        <view class="star s3" />
+        <view class="star s4" />
+        <view class="star s5" />
       </view>
-
-      <!-- 内容区域开始标识 -->
-      <view class="content-section-header" />
-    </template>
-
-    <!-- 智能体卡片列表 -->
-    <view class="agent-list">
-      <view v-for="agent in agentList" :key="agent.id" class="agent-item">
-        <wd-swipe-action>
-          <view class="nebula-card agent-card" @click="handleCardClick(agent)">
-            <view class="card-content">
-              <view class="card-main">
-                <view class="agent-title">
-                  <text class="agent-name">
-                    {{ agent.agentName }}
-                  </text>
-                </view>
-
-                <view class="model-info">
-                  <text class="model-text">
-                    {{ t('home.languageModel') }}： {{ agent.llmModelName }}
-                  </text>
-                  <text class="model-text">
-                    {{ t('home.voiceModel') }}： {{ agent.ttsModelName }} ({{ agent.ttsVoiceName }})
-                  </text>
-                </view>
-
-                <view class="stats-row">
-                  <view class="stat-chip">
-                    <wd-icon name="phone" custom-class="chip-icon" />
-                    <text class="chip-text">
-                      {{ t('home.deviceManagement') }}({{ agent.deviceCount }})
-                    </text>
-                  </view>
-                  <view v-if="agent.lastConnectedAt" class="stat-chip">
-                    <wd-icon name="time" custom-class="chip-icon" />
-                    <text class="chip-text">
-                      {{ t('home.lastConversation') }}{{ formatTime(agent.lastConnectedAt) }}
-                    </text>
-                  </view>
-                  <text v-if="agent.tags" class="flex-1 truncate text-right text-[22rpx] text-[#5a6372]">
-                    {{ agent.tags.map(tag => tag.tagName).join(',') }}
-                  </text>
-                </view>
-              </view>
-
-              <wd-icon name="arrow-right" custom-class="arrow-icon" />
-            </view>
-          </view>
-
-          <template #right>
-            <view class="swipe-actions">
-              <view class="action-btn delete-btn" @click.stop="handleDeleteAgent(agent)">
-                <wd-icon name="delete" />
-                <text>{{ t('home.delete') }}</text>
-              </view>
-            </view>
-          </template>
-        </wd-swipe-action>
+      <view class="hero-glow" />
+      <view class="hero-content">
+        <text class="hero-title">LiMa 星云</text>
+        <text class="hero-subtitle">AI 智能设备星云系统</text>
       </view>
     </view>
 
-    <!-- 自定义空状态 -->
-    <template #empty>
-      <view class="empty-state">
-        <wd-icon name="robot" custom-class="empty-icon" />
-        <text class="empty-text">
-          {{ t('home.emptyState') }}
-        </text>
-        <text class="empty-desc">
-          {{ t('home.createFirstAgent') }}
-        </text>
+    <!-- 核心能力 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">✨ 核心能力</text>
       </view>
-    </template>
+      <view class="cap-grid">
+        <view class="cap-card" @click="goChat">
+          <view class="cap-icon chat">💬</view>
+          <text class="cap-name">AI 对话</text>
+          <text class="cap-desc">实时智能交流</text>
+        </view>
+        <view class="cap-card" @click="goDraw">
+          <view class="cap-icon draw">🎨</view>
+          <text class="cap-name">AI 绘图</text>
+          <text class="cap-desc">文字驱动创作</text>
+        </view>
+        <view class="cap-card" @click="goWrite">
+          <view class="cap-icon write">✍️</view>
+          <text class="cap-name">AI 写字</text>
+          <text class="cap-desc">文案驱动书写</text>
+        </view>
+        <view class="cap-card" @click="goDigitalHuman">
+          <view class="cap-icon human">👤</view>
+          <text class="cap-name">数字人</text>
+          <text class="cap-desc">2D 语音交互</text>
+        </view>
+      </view>
+    </view>
 
-    <!-- FAB 新增按钮 -->
-    <wd-fab type="primary" icon="add" :draggable="true" :expandable="false" @click="openCreateDialog" />
+    <!-- 我的设备 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">🔧 我的设备</text>
+        <text class="section-more" @click="goDevices">查看全部 ></text>
+      </view>
+      <view v-if="loading" class="loading-tip">加载中...</view>
+      <view v-else-if="!devices.length" class="empty-tip">
+        <text>暂无设备</text>
+        <text class="empty-sub">点击添加设备开始使用</text>
+      </view>
+      <view v-else class="device-list">
+        <view
+          v-for="d in devices" :key="d.deviceId"
+          class="device-card"
+          @click="goDeviceDetail(d.deviceId)"
+        >
+          <view class="device-icon">{{ d.model?.includes('draw') ? '🎨' : d.model?.includes('write') ? '📝' : '🤖' }}</view>
+          <view class="device-info">
+            <text class="device-name">{{ d.model || '智能设备' }}</text>
+            <text class="device-id">{{ d.deviceId }}</text>
+          </view>
+          <view class="device-meta">
+            <text :class="['device-status', d.status === 'online' ? 'online' : 'offline']">
+              {{ d.status === 'online' ? '● 在线' : '● 离线' }}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
 
-    <!-- MessageBox 组件 -->
-    <wd-message-box />
-  </z-paging>
+    <!-- 快捷操作 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">⚡ 快捷操作</text>
+      </view>
+      <view class="quick-actions">
+        <view class="quick-btn" @click="goAddDevice">
+          <text class="quick-icon">➕</text>
+          <text class="quick-text">添加设备</text>
+        </view>
+        <view class="quick-btn" @click="goConfig">
+          <text class="quick-icon">📡</text>
+          <text class="quick-text">配网</text>
+        </view>
+        <view class="quick-btn" @click="goSettings">
+          <text class="quick-icon">⚙️</text>
+          <text class="quick-text">系统设置</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部留白 -->
+    <view style="height: 40rpx;" />
+  </view>
 </template>
 
 <style lang="scss" scoped>
-.nebula-banner {
-  background: linear-gradient(145deg, #0a0a14, #07070f, #0d0d1a, #07070f);
+.nebula-center {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #07070f 0%, #0a0a14 40%, #0d0d1a 100%);
   position: relative;
-  padding: 40rpx 40rpx 80rpx 40rpx;
-  overflow: hidden;
 
   &::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background:
-      radial-gradient(ellipse 300rpx 200rpx at 80% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 200rpx 150rpx at 20% 60%, rgba(139, 92, 246, 0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 150rpx 100rpx at 60% 80%, rgba(6, 182, 212, 0.04) 0%, transparent 70%);
+    position: fixed;
+    inset: 0;
     pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 600rpx 400rpx at 20% 10%, rgba(59, 130, 246, 0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 500rpx 350rpx at 80% 40%, rgba(139, 92, 246, 0.03) 0%, transparent 70%),
+      radial-gradient(ellipse 400rpx 300rpx at 50% 70%, rgba(6, 182, 212, 0.02) 0%, transparent 70%);
   }
+}
 
-  .banner-content {
-    position: relative;
-    z-index: 2;
-  }
+// ─── 深空横幅 ───
+.nebula-hero {
+  position: relative;
+  padding: 60rpx 40rpx 80rpx;
+  overflow: hidden;
+  z-index: 1;
 
-  .welcome-info {
-    .greeting {
-      display: block;
-      font-size: 48rpx;
-      font-weight: 700;
-      color: #f0f4f8;
-      margin-bottom: 16rpx;
-      text-shadow: 0 2rpx 8rpx rgba(59, 130, 246, 0.2);
-    }
-
-    .subtitle {
-      display: block;
-      font-size: 32rpx;
-      color: rgba(240, 244, 248, 0.8);
-      margin-bottom: 12rpx;
-      font-weight: 500;
-
-      .highlight {
-        color: #60a5fa;
-        font-weight: 600;
-      }
-    }
-  }
-
-  .star-decoration {
+  .hero-stars {
     position: absolute;
-    top: 0;
-    right: -60rpx;
-    width: 300rpx;
-    height: 100%;
-    opacity: 0.6;
+    inset: 0;
     pointer-events: none;
 
     .star {
       position: absolute;
-      width: 6rpx;
-      height: 6rpx;
+      width: 4rpx;
+      height: 4rpx;
       background: #60a5fa;
       border-radius: 50%;
-      box-shadow: 0 0 20rpx 4rpx rgba(96, 165, 250, 0.4);
-      animation: twinkle 3s ease-in-out infinite;
+      box-shadow: 0 0 16rpx 2rpx rgba(96, 165, 250, 0.5);
+      animation: twinkle 2.5s ease-in-out infinite;
 
-      &.star-2 {
-        top: 30%;
-        right: 40%;
-        animation-delay: -1s;
-        background: #8b5cf6;
-        box-shadow: 0 0 20rpx 4rpx rgba(139, 92, 246, 0.4);
-      }
+      &.s1 { top: 20%; right: 15%; animation-delay: 0s; }
+      &.s2 { top: 35%; right: 30%; animation-delay: -0.5s; background: #8b5cf6; box-shadow: 0 0 16rpx 2rpx rgba(139, 92, 246, 0.5); }
+      &.s3 { top: 15%; right: 45%; animation-delay: -1s; background: #06b6d4; box-shadow: 0 0 16rpx 2rpx rgba(6, 182, 212, 0.5); }
+      &.s4 { top: 50%; right: 10%; animation-delay: -1.5s; }
+      &.s5 { top: 40%; right: 50%; animation-delay: -2s; background: #f59e0b; box-shadow: 0 0 16rpx 2rpx rgba(245, 158, 11, 0.4); }
+    }
+  }
 
-      &.star-3 {
-        top: 60%;
-        right: 20%;
-        animation-delay: -2s;
-        background: #06b6d4;
-        box-shadow: 0 0 20rpx 4rpx rgba(6, 182, 212, 0.4);
-      }
+  .hero-glow {
+    position: absolute;
+    top: -100rpx;
+    right: -100rpx;
+    width: 400rpx;
+    height: 400rpx;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+
+    .hero-title {
+      display: block;
+      font-size: 56rpx;
+      font-weight: 800;
+      color: #f0f4f8;
+      letter-spacing: 4rpx;
+      text-shadow: 0 2rpx 12rpx rgba(59, 130, 246, 0.3);
+      margin-bottom: 12rpx;
+    }
+
+    .hero-subtitle {
+      display: block;
+      font-size: 28rpx;
+      color: #8b95a8;
+      font-weight: 400;
     }
   }
 }
 
 @keyframes twinkle {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.5);
-  }
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.8); }
 }
 
-// 内容区域开始标识，创建深色背景过渡
-.content-section-header {
-  background: #07070f;
-  border-radius: 32rpx 32rpx 0 0;
-  margin-top: -32rpx;
-  height: 32rpx;
+// ─── 通用区域 ───
+.section {
   position: relative;
   z-index: 1;
+  padding: 0 32rpx;
+  margin-bottom: 40rpx;
 }
 
-// z-paging内容区域样式
-:deep(.z-paging-content) {
-  background: #07070f;
-  padding: 0 0 40rpx 0;
-}
-
-.agent-list {
+.section-header {
   display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-  padding: 0 20rpx;
-}
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
 
-.agent-item {
-  :deep(.wd-swipe-action) {
-    border-radius: 16rpx;
-    overflow: hidden;
-    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.2);
-    border: 1rpx solid rgba(255, 255, 255, 0.04);
+  .section-title {
+    font-size: 32rpx;
+    font-weight: 700;
+    color: #f0f4f8;
+  }
+
+  .section-more {
+    font-size: 26rpx;
+    color: #3b82f6;
   }
 }
 
-.agent-card {
+// ─── 核心能力网格 ───
+.cap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+}
+
+.cap-card {
   background: rgba(255, 255, 255, 0.03);
-  padding: 24rpx;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border: 1rpx solid rgba(255, 255, 255, 0.04);
+  border-radius: 24rpx;
+  padding: 28rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12rpx;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 
@@ -427,167 +309,159 @@ onMounted(() => {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 16rpx;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, transparent 50%, rgba(139, 92, 246, 0.04) 100%);
+    border-radius: 24rpx;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, transparent 60%, rgba(139, 92, 246, 0.04) 100%);
     pointer-events: none;
   }
+
+  &:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .cap-icon {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 20rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36rpx;
+    position: relative;
+    z-index: 1;
+
+    &.chat { background: rgba(59, 130, 246, 0.15); }
+    &.draw { background: rgba(139, 92, 246, 0.15); }
+    &.write { background: rgba(6, 182, 212, 0.15); }
+    &.human { background: rgba(245, 158, 11, 0.15); }
+  }
+
+  .cap-name {
+    font-size: 28rpx;
+    font-weight: 600;
+    color: #f0f4f8;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cap-desc {
+    font-size: 22rpx;
+    color: #5a6372;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// ─── 设备列表 ───
+.loading-tip, .empty-tip {
+  text-align: center;
+  padding: 40rpx 0;
+  color: #5a6372;
+  font-size: 28rpx;
+}
+.empty-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+
+  .empty-sub {
+    font-size: 24rpx;
+    color: #3a4252;
+  }
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.device-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid rgba(255, 255, 255, 0.04);
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+  transition: all 0.3s ease;
 
   &:active {
     background: rgba(255, 255, 255, 0.06);
   }
 
-  .card-content {
+  .device-icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 16rpx;
+    background: rgba(59, 130, 246, 0.1);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    position: relative;
-    z-index: 1;
+    justify-content: center;
+    font-size: 32rpx;
+    flex-shrink: 0;
   }
 
-  .card-main {
+  .device-info {
     flex: 1;
-    width: 100%;
-  }
-
-  .agent-title {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12rpx;
+    flex-direction: column;
+    gap: 4rpx;
 
-    .agent-name {
-      font-size: 32rpx;
+    .device-name {
+      font-size: 30rpx;
       font-weight: 600;
       color: #f0f4f8;
     }
+
+    .device-id {
+      font-size: 22rpx;
+      color: #5a6372;
+    }
   }
 
-  .model-info {
-    margin-bottom: 16rpx;
+  .device-meta {
+    flex-shrink: 0;
 
-    .model-text {
-      display: block;
+    .device-status {
       font-size: 24rpx;
-      color: #8b95a8;
-      line-height: 1.5;
-      margin-bottom: 4rpx;
+      font-weight: 500;
 
-      &:last-child {
-        margin-bottom: 0;
-      }
+      &.online { color: #34d399; }
+      &.offline { color: #5a6372; }
     }
-  }
-
-  .stats-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12rpx;
-    flex-wrap: wrap;
-
-    .stat-chip {
-      display: flex;
-      align-items: center;
-      padding: 6rpx 12rpx;
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 20rpx;
-      border: 1rpx solid rgba(255, 255, 255, 0.04);
-
-      :deep(.chip-icon) {
-        font-size: 20rpx;
-        color: #8b95a8;
-        margin-right: 6rpx;
-      }
-
-      .chip-text {
-        font-size: 22rpx;
-        color: #8b95a8;
-      }
-    }
-  }
-
-  :deep(.arrow-icon) {
-    font-size: 24rpx;
-    color: #5a6372;
-    margin-left: 16rpx;
   }
 }
 
-.swipe-actions {
+// ─── 快捷操作 ───
+.quick-actions {
   display: flex;
-  height: 100%;
-
-  .action-btn {
-    width: 120rpx;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8rpx;
-    color: #ffffff;
-    font-size: 24rpx;
-    font-weight: 500;
-    transition: all 0.3s ease;
-
-    &.delete-btn {
-      background: #ff4d4f;
-
-      &:active {
-        background: #d9363e;
-      }
-    }
-
-    :deep(.wd-icon) {
-      font-size: 32rpx;
-    }
-  }
+  gap: 16rpx;
 }
 
-.empty-state {
+.quick-btn {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 100rpx 40rpx;
-  text-align: center;
+  gap: 12rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid rgba(255, 255, 255, 0.04);
+  border-radius: 20rpx;
+  padding: 28rpx 0;
+  transition: all 0.3s ease;
 
-  :deep(.empty-icon) {
-    font-size: 120rpx;
-    color: #3a4252;
-    margin-bottom: 32rpx;
+  &:active {
+    background: rgba(255, 255, 255, 0.06);
   }
 
-  .empty-text {
-    font-size: 32rpx;
+  .quick-icon {
+    font-size: 40rpx;
+  }
+
+  .quick-text {
+    font-size: 24rpx;
     color: #8b95a8;
-    margin-bottom: 16rpx;
-    font-weight: 500;
   }
-
-  .empty-desc {
-    font-size: 26rpx;
-    color: #5a6372;
-    line-height: 1.5;
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-.filter-actions {
-  padding: 32rpx;
-  text-align: center;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.04);
 }
 </style>

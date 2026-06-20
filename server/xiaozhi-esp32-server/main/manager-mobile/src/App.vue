@@ -38,34 +38,36 @@ onShow(() => {
 // 动态更新tabBar文本
 function updateTabBarText() {
   try {
-    // 设置首页tabBar文本
+    // index 0: 星云（首页控制中心）
     uni.setTabBarItem({
       index: 0,
-      text: t('tabBar.home'),
+      text: '星云',
       success: () => {},
-      fail: (err) => {
-        console.log('设置首页tabBar文本失败:', err)
-      }
+      fail: (err) => { console.log('设置星云tabBar文本失败:', err) }
     })
 
-    // 设置配网tabBar文本
+    // index 1: 设备
     uni.setTabBarItem({
       index: 1,
-      text: t('tabBar.deviceConfig'),
+      text: '设备',
       success: () => {},
-      fail: (err) => {
-        console.log('设置配网tabBar文本失败:', err)
-      }
+      fail: (err) => { console.log('设置设备tabBar文本失败:', err) }
     })
 
-    // 设置系统tabBar文本
+    // index 2: 配网
     uni.setTabBarItem({
       index: 2,
+      text: t('tabBar.deviceConfig'),
+      success: () => {},
+      fail: (err) => { console.log('设置配网tabBar文本失败:', err) }
+    })
+
+    // index 3: 系统
+    uni.setTabBarItem({
+      index: 3,
       text: t('tabBar.settings'),
       success: () => {},
-      fail: (err) => {
-        console.log('设置系统tabBar文本失败:', err)
-      }
+      fail: (err) => { console.log('设置系统tabBar文本失败:', err) }
     })
   } catch (error) {
     console.log('更新tabBar文本时出错:', error)
