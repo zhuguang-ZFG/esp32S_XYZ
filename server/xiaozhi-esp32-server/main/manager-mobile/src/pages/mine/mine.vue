@@ -38,13 +38,13 @@ async function loadDevices() {
 }
 
 function goDevices() {
-  uni.navigateTo({ url: '/pages/v2/device-list/index' })
+  uni.switchTab({ url: '/pages/v2/device-list/index' })
 }
 function goConfig() {
-  uni.navigateTo({ url: '/pages/device-config/index' })
+  uni.switchTab({ url: '/pages/device-config/index' })
 }
 function goSettings() {
-  uni.navigateTo({ url: '/pages/settings/index' })
+  uni.switchTab({ url: '/pages/settings/index' })
 }
 function goDigitalHuman() {
   const url = getEnvBaseUrl().replace(/\/$/, '') + '/digital-human'

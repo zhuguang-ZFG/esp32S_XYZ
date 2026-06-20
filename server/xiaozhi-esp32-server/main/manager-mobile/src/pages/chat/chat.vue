@@ -114,6 +114,8 @@ function formatTime(d: Date) {
   const m = String(d.getMinutes()).padStart(2, '0')
   return `${h}:${m}`
 }
+
+function navigateBack() { uni.navigateBack() }
 </script>
 
 <template>
@@ -121,7 +123,7 @@ function formatTime(d: Date) {
     <!-- 导航栏 -->
     <view class="chat-nav" :style="{ paddingTop: (uni.getSystemInfoSync().statusBarHeight || 0) + 'px' }">
       <view class="nav-content">
-        <view class="nav-back" @click="uni.navigateBack()">
+        <view class="nav-back" @click="navigateBack">
           <text class="back-icon">‹</text>
         </view>
         <text class="nav-title">AI 对话</text>

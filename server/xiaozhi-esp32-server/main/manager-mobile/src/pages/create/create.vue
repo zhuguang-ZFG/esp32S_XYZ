@@ -71,7 +71,7 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    const capability = mode.value === 'draw' ? 'draw' : 'write'
+    const capability = mode.value === 'draw' ? 'draw_generated' : 'write_text'
     const res = await v2SubmitTask(
       selectedDeviceId.value,
       capability,
@@ -173,6 +173,8 @@ function formatTime(iso?: string) {
   const m = String(d.getMinutes()).padStart(2, '0')
   return `${h}:${m}`
 }
+
+function navigateBack() { uni.navigateBack() }
 </script>
 
 <template>
@@ -180,7 +182,7 @@ function formatTime(iso?: string) {
     <!-- 导航栏 -->
     <view class="create-nav">
       <view class="nav-content">
-        <view class="nav-back" @click="uni.navigateBack()">
+        <view class="nav-back" @click="navigateBack">
           <text class="back-icon">‹</text>
         </view>
         <text class="nav-title">AI 创作</text>
