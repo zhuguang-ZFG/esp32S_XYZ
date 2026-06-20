@@ -632,6 +632,23 @@ export default {
   // TabBar
   'tabBar.agent': '智能体',
 
+  // Device list page
+  'v2.deviceList.online': '在线',
+  'v2.deviceList.offline': '离线',
+  'v2.deviceList.device': '设备',
+  'v2.deviceList.fromAccount': '来自账户',
+  'v2.deviceList.bindFailed': '绑定失败',
+  'v2.deviceList.transferAccepted': '转赠已接受',
+  'v2.deviceList.transferFailed': '接受转赠失败',
+  'v2.deviceList.quickDraw': '绘图',
+  'v2.deviceList.quickWrite': '写字',
+  'v2.deviceList.quickHome': '归零',
+  'v2.deviceList.quickPause': '暂停',
+  'v2.deviceList.taskSubmitted': '已下发',
+  'v2.deviceList.taskFailed': '失败',
+  'v2.deviceList.quickDrawPrompt': '快速绘图',
+  'v2.deviceList.quickWriteText': '快速写字',
+
   // Mine page
   'mine.title': '我的',
   'mine.userDefault': 'LiMa 用户',

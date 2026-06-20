@@ -631,6 +631,23 @@ export default {
   // TabBar
   'tabBar.agent': 'Agents',
 
+  // Device list page
+  'v2.deviceList.online': 'Online',
+  'v2.deviceList.offline': 'Offline',
+  'v2.deviceList.device': 'Device',
+  'v2.deviceList.fromAccount': 'From account',
+  'v2.deviceList.bindFailed': 'Bind failed',
+  'v2.deviceList.transferAccepted': 'Transfer accepted',
+  'v2.deviceList.transferFailed': 'Accept transfer failed',
+  'v2.deviceList.quickDraw': 'Draw',
+  'v2.deviceList.quickWrite': 'Write',
+  'v2.deviceList.quickHome': 'Home',
+  'v2.deviceList.quickPause': 'Pause',
+  'v2.deviceList.taskSubmitted': 'Submitted',
+  'v2.deviceList.taskFailed': 'Failed',
+  'v2.deviceList.quickDrawPrompt': 'Quick draw',
+  'v2.deviceList.quickWriteText': 'Quick write',
+
   // Mine page
   'mine.title': 'My',
   'mine.userDefault': 'LiMa User',
