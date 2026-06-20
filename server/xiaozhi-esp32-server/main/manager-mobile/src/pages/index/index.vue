@@ -37,17 +37,16 @@ async function loadDevices() {
 
 // 核心能力跳转
 function goChat() {
-  uni.showToast({ title: 'AI 对话即将上线', icon: 'none' })
+  uni.navigateTo({ url: '/pages/chat/chat' })
 }
 function goDraw() {
-  uni.showToast({ title: 'AI 绘图即将上线', icon: 'none' })
+  uni.navigateTo({ url: '/pages/create/create?mode=draw' })
 }
 function goWrite() {
-  uni.showToast({ title: 'AI 写字即将上线', icon: 'none' })
+  uni.navigateTo({ url: '/pages/create/create?mode=write' })
 }
 function goDigitalHuman() {
-  // 打开数字人 Web 页面
-  uni.navigateTo({ url: '/pages-sub/demo/index' })
+  uni.showToast({ title: '数字人即将上线', icon: 'none' })
 }
 
 // 设备相关
