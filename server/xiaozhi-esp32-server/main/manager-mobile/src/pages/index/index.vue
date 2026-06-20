@@ -9,7 +9,8 @@
 </route>
 
 <script lang="ts" setup>
-import { onShow, ref } from 'vue'
+import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { t } from '@/i18n'
 import { v2GetDevices } from '@/api/v2'
 import type { V2DeviceInfo } from '@/api/v2/types'
