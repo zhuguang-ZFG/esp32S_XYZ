@@ -3,38 +3,67 @@
   "layout": "tabbar",
   "style": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "LiMa 星云"
+    "navigationBarTitleText": "LiMa 星云",
+    "enablePullDownRefresh": true
   }
 }
 </route>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
-import { t } from '@/i18n'
+import { ref, computed } from 'vue'
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { v2GetDevices } from '@/api/v2'
+import { getEnvBaseUrl } from '@/utils'
 import type { V2DeviceInfo } from '@/api/v2/types'
+
+interface RecentTask {
+  taskId: string
+  capability: string
+  status: string
+  prompt: string
+  createdAt: string
+}
 
 defineOptions({ name: 'NebulaCenter' })
 
 const safeAreaTop = ref(0)
 const devices = ref<V2DeviceInfo[]>([])
 const loading = ref(false)
+const recentTasks = ref<RecentTask[]>([])
 
-// 获取安全区域顶部
 const systemInfo = uni.getSystemInfoSync()
 safeAreaTop.value = systemInfo.statusBarHeight || 0
 
-onShow(() => { loadDevices() })
+onShow(() => { loadPageData() })
+
+onPullDownRefresh(() => {
+  loadPageData().finally(() => uni.stopPullDownRefresh())
+})
+
+async function loadPageData() {
+  loading.value = true
+  await Promise.all([loadDevices(), loadRecentTasks()])
+  loading.value = false
+}
 
 async function loadDevices() {
-  loading.value = true
   try {
     const res = await v2GetDevices()
     devices.value = res.rows || []
   } catch (e) { console.error(e) }
-  finally { loading.value = false }
 }
+
+function loadRecentTasks() {
+  try {
+    const raw = uni.getStorageSync('lima_recent_tasks')
+    if (raw) {
+      recentTasks.value = JSON.parse(raw).slice(0, 3)
+    }
+  } catch (e) { console.error(e) }
+}
+
+const onlineCount = computed(() => devices.value.filter(d => d.status === 'online').length)
+const totalCount = computed(() => devices.value.length)
 
 // 核心能力跳转
 function goChat() {
@@ -47,7 +76,8 @@ function goWrite() {
   uni.navigateTo({ url: '/pages/create/create?mode=write' })
 }
 function goDigitalHuman() {
-  uni.showToast({ title: '数字人即将上线', icon: 'none' })
+  const url = getEnvBaseUrl().replace(/\/$/, '') + '/digital-human'
+  uni.navigateTo({ url: `/pages-sub/demo/index?url=${encodeURIComponent(url)}&title=${encodeURIComponent('数字人')}` })
 }
 
 // 设备相关
@@ -57,14 +87,46 @@ function goDevices() {
 function goDeviceDetail(deviceId: string) {
   uni.navigateTo({ url: `/pages/v2/device-detail/index?deviceId=${deviceId}` })
 }
-function goAddDevice() {
-  uni.switchTab({ url: '/pages/v2/device-list/index' })
+function goCreate() {
+  uni.navigateTo({ url: '/pages/create/create' })
 }
-function goConfig() {
-  uni.switchTab({ url: '/pages/device-config/index' })
+
+function getDeviceIcon(model?: string) {
+  if (model?.includes('draw')) return '🎨'
+  if (model?.includes('write')) return '✍️'
+  return '🤖'
 }
-function goSettings() {
-  uni.switchTab({ url: '/pages/settings/index' })
+
+function getStatusColor(status: string) {
+  const map: Record<string, string> = {
+    pending: '#f59e0b',
+    queued: '#f59e0b',
+    running: '#3b82f6',
+    completed: '#34d399',
+    failed: '#ef4444',
+    error: '#ef4444',
+  }
+  return map[status] || '#8b95a8'
+}
+
+function getStatusLabel(status: string) {
+  const map: Record<string, string> = {
+    pending: '等待',
+    queued: '排队',
+    running: '执行',
+    completed: '完成',
+    failed: '失败',
+    error: '出错',
+  }
+  return map[status] || status
+}
+
+function formatTaskTime(iso?: string) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
 }
 </script>
 
@@ -83,6 +145,34 @@ function goSettings() {
       <view class="hero-content">
         <text class="hero-title">LiMa 星云</text>
         <text class="hero-subtitle">AI 智能设备星云系统</text>
+      </view>
+    </view>
+
+    <!-- 统计概览 -->
+    <view class="stats-bar">
+      <view class="stat-item" @click="goDevices">
+        <view class="stat-ring">
+          <text class="stat-num">{{ totalCount }}</text>
+          <text class="stat-label">设备</text>
+        </view>
+      </view>
+      <view class="stat-item" @click="goDevices">
+        <view class="stat-ring online">
+          <text class="stat-num" style="color: #34d399;">{{ onlineCount }}</text>
+          <text class="stat-label">在线</text>
+        </view>
+      </view>
+      <view class="stat-item" @click="goCreate">
+        <view class="stat-ring">
+          <text class="stat-num">{{ recentTasks.length }}</text>
+          <text class="stat-label">任务</text>
+        </view>
+      </view>
+      <view class="stat-item" @click="goChat">
+        <view class="stat-ring">
+          <text class="stat-num">AI</text>
+          <text class="stat-label">对话</text>
+        </view>
       </view>
     </view>
 
@@ -121,7 +211,16 @@ function goSettings() {
         <text class="section-title">🔧 我的设备</text>
         <text class="section-more" @click="goDevices">查看全部 ></text>
       </view>
-      <view v-if="loading" class="loading-tip">加载中...</view>
+      <view v-if="loading" class="skeleton-device">
+        <view v-for="i in 2" :key="i" class="skeleton-card">
+          <view class="skeleton-icon" />
+          <view class="skeleton-info">
+            <view class="skeleton-line" />
+            <view class="skeleton-line short" />
+          </view>
+          <view class="skeleton-status" />
+        </view>
+      </view>
       <view v-else-if="!devices.length" class="empty-tip">
         <text>暂无设备</text>
         <text class="empty-sub">点击添加设备开始使用</text>
@@ -132,7 +231,7 @@ function goSettings() {
           class="device-card"
           @click="goDeviceDetail(d.deviceId)"
         >
-          <view class="device-icon">{{ d.model?.includes('draw') ? '🎨' : d.model?.includes('write') ? '📝' : '🤖' }}</view>
+          <view class="device-icon">{{ getDeviceIcon(d.model) }}</view>
           <view class="device-info">
             <text class="device-name">{{ d.model || '智能设备' }}</text>
             <text class="device-id">{{ d.deviceId }}</text>
@@ -146,23 +245,55 @@ function goSettings() {
       </view>
     </view>
 
+    <!-- 最近任务 -->
+    <view v-if="recentTasks.length" class="section">
+      <view class="section-header">
+        <text class="section-title">📋 最近任务</text>
+        <text class="section-more" @click="goCreate">查看全部 ></text>
+      </view>
+      <view class="task-list">
+        <view
+          v-for="task in recentTasks"
+          :key="task.taskId"
+          class="task-item"
+          @click="goCreate"
+        >
+          <view class="task-icon">
+            {{ task.capability.includes('draw') ? '🎨' : '✍️' }}
+          </view>
+          <view class="task-info">
+            <text class="task-prompt" style="font-size: 28rpx; color: #f0f4f8;">
+              {{ task.prompt || '无提示词' }}
+            </text>
+            <view class="task-meta-row">
+              <text class="task-status" :style="{ color: getStatusColor(task.status) }">
+                {{ getStatusLabel(task.status) }}
+              </text>
+              <text class="task-time">{{ formatTaskTime(task.createdAt) }}</text>
+            </view>
+          </view>
+          <text class="task-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 快捷操作 -->
     <view class="section">
       <view class="section-header">
         <text class="section-title">⚡ 快捷操作</text>
       </view>
       <view class="quick-actions">
-        <view class="quick-btn" @click="goAddDevice">
+        <view class="quick-btn" @click="goDevices">
           <text class="quick-icon">➕</text>
           <text class="quick-text">添加设备</text>
         </view>
-        <view class="quick-btn" @click="goConfig">
-          <text class="quick-icon">📡</text>
-          <text class="quick-text">配网</text>
+        <view class="quick-btn" @click="goCreate">
+          <text class="quick-icon">🎨</text>
+          <text class="quick-text">AI 创作</text>
         </view>
-        <view class="quick-btn" @click="goSettings">
-          <text class="quick-icon">⚙️</text>
-          <text class="quick-text">系统设置</text>
+        <view class="quick-btn" @click="goChat">
+          <text class="quick-icon">💬</text>
+          <text class="quick-text">AI 对话</text>
         </view>
       </view>
     </view>
@@ -259,6 +390,58 @@ function goSettings() {
   50% { opacity: 1; transform: scale(1.8); }
 }
 
+// ─── 统计栏 ───
+.stats-bar {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 32rpx;
+  margin-bottom: 40rpx;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-ring {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2rpx solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.95);
+    background: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+
+  &.online {
+    border-color: rgba(52, 211, 153, 0.3);
+    background: rgba(52, 211, 153, 0.05);
+  }
+
+  .stat-num {
+    font-size: 36rpx;
+    font-weight: 800;
+    color: #f0f4f8;
+  }
+
+  .stat-label {
+    font-size: 22rpx;
+    color: #8b95a8;
+  }
+}
+
 // ─── 通用区域 ───
 .section {
   position: relative;
@@ -352,6 +535,63 @@ function goSettings() {
   }
 }
 
+// ─── 骨架屏 ───
+.skeleton-device {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.skeleton-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+
+  .skeleton-icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 16rpx;
+    background: rgba(255, 255, 255, 0.05);
+    animation: shimmer 1.5s infinite;
+  }
+
+  .skeleton-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+  }
+
+  .skeleton-line {
+    height: 24rpx;
+    width: 60%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6rpx;
+    animation: shimmer 1.5s infinite;
+
+    &.short {
+      width: 40%;
+    }
+  }
+
+  .skeleton-status {
+    width: 80rpx;
+    height: 28rpx;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 14rpx;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
 // ─── 设备列表 ───
 .loading-tip, .empty-tip {
   text-align: center;
@@ -430,6 +670,71 @@ function goSettings() {
       &.online { color: #34d399; }
       &.offline { color: #5a6372; }
     }
+  }
+}
+
+// ─── 最近任务 ───
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid rgba(255, 255, 255, 0.04);
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+  transition: all 0.3s ease;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .task-icon {
+    font-size: 36rpx;
+    flex-shrink: 0;
+  }
+
+  .task-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    overflow: hidden;
+  }
+
+  .task-prompt {
+    font-size: 28rpx;
+    color: #f0f4f8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .task-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+
+    .task-status {
+      font-size: 22rpx;
+      font-weight: 600;
+    }
+
+    .task-time {
+      font-size: 22rpx;
+      color: #5a6372;
+    }
+  }
+
+  .task-arrow {
+    font-size: 36rpx;
+    color: #5a6372;
+    flex-shrink: 0;
   }
 }
 

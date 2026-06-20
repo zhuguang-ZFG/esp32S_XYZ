@@ -2,13 +2,14 @@
 {
   "style": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "AI 创作"
+    "navigationBarTitleText": "AI 创作",
+    "enablePullDownRefresh": true
   }
 }
 </route>
 
 <script lang="ts" setup>
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { ref, onUnmounted } from 'vue'
 import { v2GetDevices, v2SubmitTask, v2GetTask } from '@/api/v2'
 import type { V2DeviceInfo, V2TaskInfo } from '@/api/v2/types'
@@ -24,7 +25,7 @@ const selectedDeviceId = ref('')
 const prompt = ref('')
 const submitting = ref(false)
 
-// 任务追踪
+// 任务追踪（本地缓存 + 当前会话）
 const tasks = ref<V2TaskInfo[]>([])
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
@@ -36,7 +37,11 @@ onLoad((options: any) => {
   }
 })
 
-onShow(() => { loadDevices() })
+onShow(() => { loadDevices(); loadTasksFromCache() })
+
+onPullDownRefresh(() => {
+  Promise.all([loadDevices()]).finally(() => uni.stopPullDownRefresh())
+})
 
 onUnmounted(() => {
   if (pollTimer.value) clearInterval(pollTimer.value)
@@ -88,6 +93,7 @@ async function handleSubmit() {
       createdAt: new Date().toISOString(),
     }
     tasks.value.unshift(newTask)
+    saveTasksToCache()
     prompt.value = ''
     uni.showToast({ title: '任务已下发', icon: 'success' })
     startPolling(newTask.taskId)
@@ -106,7 +112,7 @@ function startPolling(taskId: string) {
       const idx = tasks.value.findIndex(t => t.taskId === taskId)
       if (idx >= 0) {
         tasks.value[idx] = { ...tasks.value[idx], ...task }
-        // 如果任务完成或失败，停止轮询
+        saveTasksToCache()
         if (task.status === 'completed' || task.status === 'failed' || task.status === 'error') {
           if (pollTimer.value) clearInterval(pollTimer.value)
           pollTimer.value = null
@@ -116,6 +122,59 @@ function startPolling(taskId: string) {
       console.error('轮询任务状态失败', e)
     }
   }, 3000)
+}
+
+// 本地缓存
+const TASK_CACHE_KEY = 'lima_recent_tasks'
+
+function saveTasksToCache() {
+  try {
+    // 只保存最近 20 条
+    const toSave = tasks.value.slice(0, 20)
+    uni.setStorageSync(TASK_CACHE_KEY, JSON.stringify(toSave))
+  } catch (e) { console.error(e) }
+}
+
+function loadTasksFromCache() {
+  try {
+    const raw = uni.getStorageSync(TASK_CACHE_KEY)
+    if (raw) {
+      const cached = JSON.parse(raw) as V2TaskInfo[]
+      // 合并缓存和当前内存中的任务（以内存优先）
+      const memoryIds = new Set(tasks.value.map(t => t.taskId))
+      const merged = [...tasks.value, ...cached.filter(c => !memoryIds.has(c.taskId))]
+      tasks.value = merged.slice(0, 20)
+    }
+  } catch (e) { console.error(e) }
+}
+
+function deleteTask(taskId: string) {
+  uni.showModal({
+    title: '删除任务',
+    content: '确定删除该任务记录？',
+    success: (res) => {
+      if (res.confirm) {
+        tasks.value = tasks.value.filter(t => t.taskId !== taskId)
+        saveTasksToCache()
+      }
+    },
+  })
+}
+
+function saveImageToAlbum(url: string) {
+  uni.downloadFile({
+    url,
+    success: (res) => {
+      if (res.statusCode === 200) {
+        uni.saveImageToPhotosAlbum({
+          filePath: res.tempFilePath,
+          success: () => uni.showToast({ title: '已保存到相册', icon: 'success' }),
+          fail: () => uni.showToast({ title: '保存失败', icon: 'none' }),
+        })
+      }
+    },
+    fail: () => uni.showToast({ title: '下载失败', icon: 'none' }),
+  })
 }
 
 function getDeviceIcon(model?: string) {
@@ -309,11 +368,19 @@ function navigateBack() { uni.navigateBack() }
               mode="aspectFill"
               @click="previewImage(task.imageUrl!)"
             />
-            <text class="result-tip">点击图片预览</text>
+            <view class="result-actions">
+              <text class="result-tip">点击图片预览</text>
+              <text class="save-btn" @click="saveImageToAlbum(task.imageUrl!)">保存到相册</text>
+            </view>
           </view>
 
           <!-- 错误信息 -->
           <text v-if="task.error" class="task-error">{{ task.error }}</text>
+
+          <!-- 操作栏 -->
+          <view class="task-actions">
+            <text class="task-delete" @click="deleteTask(task.taskId)">删除记录</text>
+          </view>
         </view>
       </view>
     </view>
@@ -627,7 +694,7 @@ function navigateBack() { uni.navigateBack() }
   margin-top: 8rpx;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: 12rpx;
 }
 
 .result-image {
@@ -637,15 +704,48 @@ function navigateBack() { uni.navigateBack() }
   background: rgba(255, 255, 255, 0.03);
 }
 
+.result-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .result-tip {
   font-size: 22rpx;
   color: #5a6372;
-  text-align: center;
+}
+
+.save-btn {
+  font-size: 24rpx;
+  color: #3b82f6;
+  padding: 6rpx 16rpx;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 8rpx;
+
+  &:active {
+    opacity: 0.7;
+  }
 }
 
 .task-error {
   font-size: 24rpx;
   color: #ef4444;
   margin-top: 4rpx;
+}
+
+.task-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4rpx;
+}
+
+.task-delete {
+  font-size: 24rpx;
+  color: #5a6372;
+  padding: 8rpx 16rpx;
+
+  &:active {
+    color: #ef4444;
+  }
 }
 </style>
