@@ -1,10 +1,10 @@
 {
   "globalStyle": {
     "navigationStyle": "default",
-    "navigationBarTitleText": "小智",
-    "navigationBarBackgroundColor": "#f8f8f8",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#FFFFFF"
+    "navigationBarTitleText": "LiMa 星云",
+    "navigationBarBackgroundColor": "#07070f",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#07070f"
   },
   "easycom": {
     "autoscan": true,
@@ -16,9 +16,9 @@
   },
   "tabBar": {
     "custom": false,
-    "color": "#e6e6e6",
-    "selectedColor": "#667dea",
-    "backgroundColor": "#fff",
+    "color": "#5a6372",
+    "selectedColor": "#3b82f6",
+    "backgroundColor": "#0a0a14",
     "borderStyle": "black",
     "height": "50px",
     "fontSize": "10px",
@@ -29,7 +29,7 @@
         "iconPath": "static/tabbar/home.png",
         "selectedIconPath": "static/tabbar/homeHL.png",
         "pagePath": "pages/v2/device-list/index",
-        "text": "首页",
+        "text": "星云",
         "icon": "home",
         "iconType": "uiLib"
       },
@@ -63,18 +63,10 @@
     {
       "path": "pages/v2/device-list/index",
       "type": "home",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "我的设备"
-      }
-    },
-    {
-      "path": "pages/index/index",
-      "type": "page",
       "layout": "tabbar",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "智能体"
+        "navigationBarTitleText": "我的设备"
       }
     },
     {
@@ -137,7 +129,6 @@
     {
       "path": "pages/device-config/index",
       "type": "page",
-      "layout": "tabbar",
       "style": {
         "navigationBarTitleText": "设备配置",
         "navigationStyle": "custom"
@@ -150,6 +141,15 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "ForgotPassword"
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "type": "page",
+      "layout": "tabbar",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "智能体"
       }
     },
     {

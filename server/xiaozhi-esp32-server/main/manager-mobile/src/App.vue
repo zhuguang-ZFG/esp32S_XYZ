@@ -15,6 +15,12 @@ const langStore = useLangStore()
 
 onLaunch(() => {
   console.log('App Launch')
+  // 设置全局深色背景
+  uni.setBackgroundColor({
+    backgroundColor: '#07070f',
+    backgroundColorTop: '#07070f',
+    backgroundColorBottom: '#07070f',
+  })
   // 获取公共配置
   configStore.fetchPublicConfig().catch((error) => {
     console.error('获取公共配置失败:', error)

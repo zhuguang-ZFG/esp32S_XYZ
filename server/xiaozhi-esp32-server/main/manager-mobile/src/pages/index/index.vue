@@ -174,15 +174,16 @@ onMounted(() => {
     ref="pagingRef" v-model="agentList" :refresher-enabled="true" :auto-show-back-to-top="true"
     :loading-more-enabled="false" :show-loading-more="false" :hide-empty-view="false" :empty-view-text="t('home.emptyState')"
     empty-view-img="" :refresher-threshold="80" :back-to-top-style="{
-      backgroundColor: '#fff',
+      backgroundColor: '#0a0a14',
       borderRadius: '50%',
+      border: '1rpx solid rgba(255,255,255,0.06)',
       width: '56px',
       height: '56px',
     }" @query="queryList"
   >
-    <!-- 固定在顶部的横幅区域 -->
+    <!-- 固定在顶部的星云横幅区域 -->
     <template #top>
-      <view class="banner-section" :style="{ paddingTop: `${safeAreaInsets?.top + 100}rpx` }">
+      <view class="nebula-banner" :style="{ paddingTop: `${safeAreaInsets?.top + 80}rpx` }">
         <view class="banner-content">
           <view class="welcome-info">
             <text class="greeting">
@@ -194,10 +195,10 @@ onMounted(() => {
               </text>
             </text>
           </view>
-          <view class="wave-decoration">
-            <!-- 添加波浪装饰 -->
-            <view class="wave" />
-            <view class="wave wave-2" />
+          <view class="star-decoration">
+            <view class="star" />
+            <view class="star star-2" />
+            <view class="star star-3" />
           </view>
         </view>
       </view>
@@ -210,7 +211,7 @@ onMounted(() => {
     <view class="agent-list">
       <view v-for="agent in agentList" :key="agent.id" class="agent-item">
         <wd-swipe-action>
-          <view class="simple-card" @click="handleCardClick(agent)">
+          <view class="nebula-card agent-card" @click="handleCardClick(agent)">
             <view class="card-content">
               <view class="card-main">
                 <view class="agent-title">
@@ -241,7 +242,7 @@ onMounted(() => {
                       {{ t('home.lastConversation') }}{{ formatTime(agent.lastConnectedAt) }}
                     </text>
                   </view>
-                  <text v-if="agent.tags" class="flex-1 truncate text-right text-[22rpx] text-[#666]">
+                  <text v-if="agent.tags" class="flex-1 truncate text-right text-[22rpx] text-[#5a6372]">
                     {{ agent.tags.map(tag => tag.tagName).join(',') }}
                   </text>
                 </view>
@@ -285,34 +286,29 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.banner-section {
-  background: linear-gradient(145deg, #9ebbfc, #6baaff, #9ebbfc, #f5f8fd);
+.nebula-banner {
+  background: linear-gradient(145deg, #0a0a14, #07070f, #0d0d1a, #07070f);
   position: relative;
   padding: 40rpx 40rpx 80rpx 40rpx;
   overflow: hidden;
 
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(ellipse 300rpx 200rpx at 80% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 200rpx 150rpx at 20% 60%, rgba(139, 92, 246, 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 150rpx 100rpx at 60% 80%, rgba(6, 182, 212, 0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
   .banner-content {
     position: relative;
     z-index: 2;
-  }
-
-  .header-actions {
-    position: absolute;
-    top: -50rpx;
-    right: 0;
-    display: flex;
-    gap: 32rpx;
-
-    .filter-icon,
-    .setting-icon {
-      color: white;
-      cursor: pointer;
-      transition: opacity 0.2s ease;
-
-      &:active {
-        opacity: 0.7;
-      }
-    }
   }
 
   .welcome-info {
@@ -320,73 +316,76 @@ onMounted(() => {
       display: block;
       font-size: 48rpx;
       font-weight: 700;
-      color: #ffffff;
+      color: #f0f4f8;
       margin-bottom: 16rpx;
-      text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+      text-shadow: 0 2rpx 8rpx rgba(59, 130, 246, 0.2);
     }
 
     .subtitle {
       display: block;
       font-size: 32rpx;
-      color: rgba(255, 255, 255, 0.9);
+      color: rgba(240, 244, 248, 0.8);
       margin-bottom: 12rpx;
       font-weight: 500;
 
       .highlight {
-        color: #ffd700;
+        color: #60a5fa;
         font-weight: 600;
       }
     }
-
-    .english-subtitle {
-      display: block;
-      font-size: 24rpx;
-      color: rgba(255, 255, 255, 0.7);
-      font-style: italic;
-    }
   }
 
-  .wave-decoration {
+  .star-decoration {
     position: absolute;
     top: 0;
-    right: -100rpx;
-    width: 400rpx;
+    right: -60rpx;
+    width: 300rpx;
     height: 100%;
-    opacity: 0.1;
+    opacity: 0.6;
     pointer-events: none;
 
-    .wave {
+    .star {
       position: absolute;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+      width: 6rpx;
+      height: 6rpx;
+      background: #60a5fa;
       border-radius: 50%;
-      animation: float 6s ease-in-out infinite;
+      box-shadow: 0 0 20rpx 4rpx rgba(96, 165, 250, 0.4);
+      animation: twinkle 3s ease-in-out infinite;
 
-      &.wave-2 {
-        top: 20%;
+      &.star-2 {
+        top: 30%;
+        right: 40%;
+        animation-delay: -1s;
+        background: #8b5cf6;
+        box-shadow: 0 0 20rpx 4rpx rgba(139, 92, 246, 0.4);
+      }
+
+      &.star-3 {
+        top: 60%;
         right: 20%;
-        animation-delay: -3s;
-        opacity: 0.5;
+        animation-delay: -2s;
+        background: #06b6d4;
+        box-shadow: 0 0 20rpx 4rpx rgba(6, 182, 212, 0.4);
       }
     }
   }
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px) rotate(0deg);
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
   }
-
   50% {
-    transform: translateY(-30rpx) rotate(180deg);
+    opacity: 1;
+    transform: scale(1.5);
   }
 }
 
-// 内容区域开始标识，创建白色背景过渡
+// 内容区域开始标识，创建深色背景过渡
 .content-section-header {
-  background: #ffffff;
+  background: #07070f;
   border-radius: 32rpx 32rpx 0 0;
   margin-top: -32rpx;
   height: 32rpx;
@@ -396,7 +395,7 @@ onMounted(() => {
 
 // z-paging内容区域样式
 :deep(.z-paging-content) {
-  background: #ffffff;
+  background: #07070f;
   padding: 0 0 40rpx 0;
 }
 
@@ -411,25 +410,38 @@ onMounted(() => {
   :deep(.wd-swipe-action) {
     border-radius: 16rpx;
     overflow: hidden;
-    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-    border: 1rpx solid #f0f0f0;
+    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.2);
+    border: 1rpx solid rgba(255, 255, 255, 0.04);
   }
 }
 
-.simple-card {
-  background: #ffffff;
+.agent-card {
+  background: rgba(255, 255, 255, 0.03);
   padding: 24rpx;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16rpx;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, transparent 50%, rgba(139, 92, 246, 0.04) 100%);
+    pointer-events: none;
+  }
 
   &:active {
-    background: #f8f9fa;
+    background: rgba(255, 255, 255, 0.06);
   }
 
   .card-content {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative;
+    z-index: 1;
   }
 
   .card-main {
@@ -446,7 +458,7 @@ onMounted(() => {
     .agent-name {
       font-size: 32rpx;
       font-weight: 600;
-      color: #1a1a1a;
+      color: #f0f4f8;
     }
   }
 
@@ -456,7 +468,7 @@ onMounted(() => {
     .model-text {
       display: block;
       font-size: 24rpx;
-      color: #666666;
+      color: #8b95a8;
       line-height: 1.5;
       margin-bottom: 4rpx;
 
@@ -477,26 +489,26 @@ onMounted(() => {
       display: flex;
       align-items: center;
       padding: 6rpx 12rpx;
-      background: #f8f9fa;
+      background: rgba(255, 255, 255, 0.04);
       border-radius: 20rpx;
-      border: 1rpx solid #eaeaea;
+      border: 1rpx solid rgba(255, 255, 255, 0.04);
 
       :deep(.chip-icon) {
         font-size: 20rpx;
-        color: #666666;
+        color: #8b95a8;
         margin-right: 6rpx;
       }
 
       .chip-text {
         font-size: 22rpx;
-        color: #666666;
+        color: #8b95a8;
       }
     }
   }
 
   :deep(.arrow-icon) {
     font-size: 24rpx;
-    color: #c7c7cc;
+    color: #5a6372;
     margin-left: 16rpx;
   }
 }
@@ -516,14 +528,6 @@ onMounted(() => {
     font-size: 24rpx;
     font-weight: 500;
     transition: all 0.3s ease;
-
-    &.edit-btn {
-      background: #1890ff;
-
-      &:active {
-        background: #096dd9;
-      }
-    }
 
     &.delete-btn {
       background: #ff4d4f;
@@ -549,20 +553,20 @@ onMounted(() => {
 
   :deep(.empty-icon) {
     font-size: 120rpx;
-    color: #d9d9d9;
+    color: #3a4252;
     margin-bottom: 32rpx;
   }
 
   .empty-text {
     font-size: 32rpx;
-    color: #666666;
+    color: #8b95a8;
     margin-bottom: 16rpx;
     font-weight: 500;
   }
 
   .empty-desc {
     font-size: 26rpx;
-    color: #999999;
+    color: #5a6372;
     line-height: 1.5;
   }
 }
@@ -584,6 +588,6 @@ onMounted(() => {
 .filter-actions {
   padding: 32rpx;
   text-align: center;
-  border-top: 1rpx solid #eeeeee;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.04);
 }
 </style>

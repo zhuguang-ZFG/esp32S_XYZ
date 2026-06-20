@@ -1,7 +1,7 @@
 // 简体中文语言包
 export default {
   // TabBar
-  'tabBar.home': '首页',
+  'tabBar.home': '星云',
   'tabBar.deviceConfig': '配网',
   'tabBar.settings': '系统',
   // 设置页面标题
@@ -59,9 +59,9 @@ export default {
   'home.agentName': '智能体',
   'home.modelInfo': '模型信息',
   'home.lastActive': '最近活跃',
-  'home.greeting': '你好，小智',
-  'home.subtitle': '让我们度过',
-  'home.wonderfulDay': '美好的一天！',
+  'home.greeting': '你好，LiMa 星云',
+  'home.subtitle': '欢迎来到',
+  'home.wonderfulDay': '星云智能体平台',
   'home.emptyState': '暂无智能体',
   'home.deviceManagement': '设备管理',
   'home.lastConversation': '最近对话：',
@@ -301,8 +301,8 @@ export default {
   'settings.restartNow': '立即重启',
   'settings.restartLater': '稍后',
   // 关于我们
-  'settings.aboutApp': '关于小智智控台',
-  'settings.aboutContent': '小智智控台\n\n基于 Vue.js 3 + uni-app 构建的跨平台移动端管理应用，为小智ESP32智能硬件提供设备管理、智能体配置等功能。\n\n© 2025 xiaozhi-esp32-server {version}',
+  'settings.aboutApp': '关于 LiMa 星云',
+  'settings.aboutContent': 'LiMa 星云 — AI 智能设备星云系统\n\n基于 Vue.js 3 + uni-app 构建的跨平台移动端管理应用，为 LiMa 星云智能硬件提供设备管理、智能体配置等功能。\n\n© 2025 深圳市动力巢科技有限公司 {version}',
   'settings.restartSuccess': '已保存，可稍后手动重启应用',
   'settings.serverUrlSavedAndCacheCleared': '服务端地址已保存，缓存已清除',
   'settings.resetToDefaultAndCacheCleared': '已恢复默认设置，缓存已清除',

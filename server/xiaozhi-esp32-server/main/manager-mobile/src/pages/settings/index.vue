@@ -347,38 +347,41 @@ onMounted(async () => {
 </script>
 
 <template>
-  <view class="min-h-screen bg-[#f5f7fb]">
-    <wd-navbar :title="t('settings.title')" placeholder safe-area-inset-top fixed />
+  <view class="min-h-screen" style="background: #07070f;">
+    <wd-navbar :title="t('settings.title')" placeholder safe-area-inset-top fixed
+      custom-class="!bg-[#07070f]"
+      title-class="!text-[#f0f4f8]"
+    />
 
     <view class="p-[24rpx]">
       <!-- 网络设置 - 仅在非小程序环境显示 -->
       <view v-if="!isMp" class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#232338] font-bold">
+          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('settings.networkSettings') }}
           </text>
         </view>
 
         <view
-          class="overflow-hidden border border-[#eeeeee] rounded-[24rpx] bg-[#fbfbfb] p-[32rpx]"
-          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+          class="overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
+          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
         >
           <view class="mb-[24rpx]">
-            <text class="text-[28rpx] text-[#232338] font-semibold">
+            <text class="text-[28rpx] text-[#f0f4f8] font-semibold">
               {{ t('settings.serverApiUrl') }}
             </text>
-            <text class="mt-[8rpx] block text-[24rpx] text-[#9d9ea3]">
+            <text class="mt-[8rpx] block text-[24rpx] text-[#5a6372]">
               {{ t('settings.modifyWillClearCache') }}
             </text>
           </view>
 
           <view class="mb-[24rpx]">
-            <view class="w-full overflow-hidden border border-[#eeeeee] rounded-[16rpx] bg-[#f5f7fb]">
+            <view class="w-full overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[16rpx]" style="background: #0a0a14;">
               <wd-input
                 v-model="baseUrlInput" type="text" clearable :maxlength="200"
                 :placeholder="t('settings.enterServerUrl')"
                 custom-class="!border-none !bg-transparent h-[64rpx] px-[24rpx] items-center"
-                input-class="text-[28rpx] text-[#232338]" @input="validateUrl" @blur="validateUrl"
+                input-class="text-[28rpx] text-[#f0f4f8]" @input="validateUrl" @blur="validateUrl"
               />
             </view>
             <text v-if="urlError" class="mt-[8rpx] block text-[24rpx] text-[#ff4d4f]">
@@ -389,14 +392,14 @@ onMounted(async () => {
           <view class="flex gap-[16rpx]">
             <wd-button
               type="primary"
-              custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold bg-[#336cff] border-none shadow-[0_4rpx_16rpx_rgba(51,108,255,0.3)] active:shadow-[0_2rpx_8rpx_rgba(51,108,255,0.4)] active:scale-98"
+              custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-none"
               @click="saveServerBaseUrl"
             >
               {{ t('settings.saveSettings') }}
             </wd-button>
             <wd-button
               type="default"
-              custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold bg-white border-[#eeeeee] text-[#65686f] active:bg-[#f5f7fb]"
+              custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-[rgba(255,255,255,0.04)] text-[#8b95a8]"
               @click="resetServerBaseUrl"
             >
               {{ t('settings.resetDefault') }}
@@ -408,47 +411,50 @@ onMounted(async () => {
       <!-- 缓存管理 -->
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#232338] font-bold">
+          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('settings.cacheManagement') }}
           </text>
         </view>
 
         <view
-          class="border border-[#eeeeee] rounded-[24rpx] bg-[#fbfbfb] p-[32rpx]"
-          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
+          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
         >
           <view class="space-y-[16rpx]">
             <!-- 缓存信息展示，参考插件样式 -->
             <view
-              class="flex items-center justify-between border border-[#eeeeee] rounded-[16rpx] bg-[#f5f7fb] p-[24rpx] transition-all active:bg-[#eef3ff]"
+              class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+              style="background: #0a0a14;"
             >
               <view>
-                <text class="text-[28rpx] text-[#232338] font-medium">
+                <text class="text-[28rpx] text-[#f0f4f8] font-medium">
                   {{ t('settings.totalCacheSize') }}
                 </text>
-                <text class="mt-[4rpx] block text-[24rpx] text-[#9d9ea3]">
+                <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
                   {{ t('settings.appDataSize') }}
                 </text>
               </view>
-              <text class="text-[28rpx] text-[#65686f] font-semibold">
+              <text class="text-[28rpx] text-[#8b95a8] font-semibold">
                 {{ cacheInfo.storageSize }}
               </text>
             </view>
 
             <!-- 清除缓存按钮，参考插件编辑按钮样式 -->
             <view
-              class="flex items-center justify-between border border-[#eeeeee] rounded-[16rpx] bg-[#f5f7fb] p-[24rpx]"
+              class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+              style="background: #0a0a14;"
             >
               <view>
-                <text class="text-[28rpx] text-[#232338] font-medium">
+                <text class="text-[28rpx] text-[#f0f4f8] font-medium">
                   {{ t('settings.cacheClear') }}
                 </text>
-                <text class="mt-[4rpx] block text-[24rpx] text-[#9d9ea3]">
+                <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
                   {{ t('settings.clearAllCache') }}
                 </text>
               </view>
               <view
-                class="cursor-pointer rounded-[24rpx] bg-[rgba(255,107,107,0.1)] px-[28rpx] py-[16rpx] text-[24rpx] text-[#ff6b6b] font-semibold transition-all duration-300 active:scale-95 active:bg-[#ff6b6b] active:text-white"
+                class="cursor-pointer rounded-[24rpx] px-[28rpx] py-[16rpx] text-[24rpx] text-[#ff6b6b] font-semibold transition-all duration-300 active:scale-95"
+                style="background: rgba(255,107,107,0.1);"
                 @click="clearCache"
               >
                 {{ t('settings.clearCache') }}
@@ -461,28 +467,29 @@ onMounted(async () => {
       <!-- 隐私与权限 -->
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#232338] font-bold">
+          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('settings.privacyTitle') }}
           </text>
         </view>
 
         <view
-          class="border border-[#eeeeee] rounded-[24rpx] bg-[#fbfbfb] p-[32rpx]"
-          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
+          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
         >
           <view
-            class="flex cursor-pointer items-center justify-between border border-[#eeeeee] rounded-[16rpx] bg-[#f5f7fb] p-[24rpx] transition-all active:bg-[#eef3ff]"
+            class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+            style="background: #0a0a14;"
             @click="openPrivacyPermissions"
           >
             <view>
-              <text class="text-[28rpx] text-[#232338] font-medium">
+              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
                 {{ t('settings.privacyAuth') }}
               </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#9d9ea3]">
+              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
                 {{ t('settings.privacyDesc') }}
               </text>
             </view>
-            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#9d9ea3]" />
+            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
           </view>
         </view>
       </view>
@@ -490,18 +497,18 @@ onMounted(async () => {
       <!-- 应用信息 -->
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#232338] font-bold">
+          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('settings.accountDeletion') }}
           </text>
         </view>
 
         <view
-          class="border border-[#ffd6d6] rounded-[24rpx] bg-[#fffafa] p-[32rpx]"
-          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+          class="border border-[rgba(255,107,107,0.15)] rounded-[24rpx] p-[32rpx]"
+          style="background: rgba(255,107,107,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
         >
           <view class="flex items-center justify-between gap-[24rpx]">
             <view class="min-w-0 flex-1">
-              <text class="text-[28rpx] text-[#232338] font-medium">
+              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
                 {{ t('settings.accountDeletionTitle') }}
               </text>
               <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a] leading-[34rpx]">
@@ -522,28 +529,29 @@ onMounted(async () => {
 
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#232338] font-bold">
+          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('settings.appInfo') }}
           </text>
         </view>
 
         <view
-          class="border border-[#eeeeee] rounded-[24rpx] bg-[#fbfbfb] p-[32rpx]"
-          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
+          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
         >
           <view
-            class="flex cursor-pointer items-center justify-between border border-[#eeeeee] rounded-[16rpx] bg-[#f5f7fb] p-[24rpx] transition-all active:bg-[#eef3ff]"
+            class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+            style="background: #0a0a14;"
             @click="showAbout"
           >
             <view>
-              <text class="text-[28rpx] text-[#232338] font-medium">
+              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
                 {{ t('settings.aboutUs') }}
               </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#9d9ea3]">
+              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
                 {{ t('settings.appVersion') }}
               </text>
             </view>
-            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#9d9ea3]" />
+            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
           </view>
         </view>
       </view>
@@ -551,32 +559,33 @@ onMounted(async () => {
       <!-- 语言设置 -->
       <view class="mb-[32rpx]">
         <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#232338] font-bold">
+          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('settings.languageSettings') }}
           </text>
         </view>
 
         <view
-          class="border border-[#eeeeee] rounded-[24rpx] bg-[#fbfbfb] p-[32rpx]"
-          style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);"
+          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
+          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
         >
           <view
-            class="flex cursor-pointer items-center justify-between border border-[#eeeeee] rounded-[16rpx] bg-[#f5f7fb] p-[24rpx] transition-all active:bg-[#eef3ff]"
+            class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+            style="background: #0a0a14;"
             @click="showLanguageSheet = true"
           >
             <view>
-              <text class="text-[32rpx] text-[#232338] font-medium">
+              <text class="text-[32rpx] text-[#f0f4f8] font-medium">
                 {{ t('settings.language') }}
               </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#9d9ea3]">
+              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
                 {{ t('settings.selectLanguage') }}
               </text>
             </view>
             <view class="flex items-center">
-              <text class="mr-[16rpx] text-[32rpx] text-[#9d9ea3] font-semibold">
+              <text class="mr-[16rpx] text-[32rpx] text-[#5a6372] font-semibold">
                 {{ supportedLanguages.find(lang => lang.code === currentLanguage)?.name }}
               </text>
-              <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#9d9ea3]" />
+              <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
             </view>
           </view>
         </view>
@@ -599,15 +608,12 @@ onMounted(async () => {
       </wd-action-sheet>
 
       <!-- 底部安全距离 -->
-      <!-- 底部安全距离 -->
       <view style="height: env(safe-area-inset-bottom);" />
     </view>
   </view>
 </template>
 
 <style lang="scss" scoped>
-// 保持与 edit.vue 一致的风格，样式主要通过类名控制
-
 // 语言选择弹窗样式
 .language-sheet {
   .language-list {
@@ -616,11 +622,11 @@ onMounted(async () => {
     .language-item {
       padding: 30rpx 0;
       text-align: center;
-      border-bottom: 1rpx solid #f0f0f0;
+      border-bottom: 1rpx solid rgba(255,255,255,0.04);
 
       .language-name {
         font-size: 28rpx;
-        color: #333;
+        color: #f0f4f8;
       }
 
       &:last-child {
@@ -628,7 +634,7 @@ onMounted(async () => {
       }
 
       &:active {
-        background-color: #f5f7fb;
+        background-color: rgba(255,255,255,0.03);
       }
     }
   }

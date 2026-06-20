@@ -88,17 +88,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <view class="min-h-screen bg-[#f5f7fb]">
-    <wd-navbar :title="t('deviceConfig.pageTitle')" safe-area-inset-top />
+  <view class="min-h-screen" style="background: #07070f;">
+    <wd-navbar :title="t('deviceConfig.pageTitle')" safe-area-inset-top
+      custom-class="!bg-[#07070f]"
+      title-class="!text-[#f0f4f8]"
+    />
 
     <view class="box-border px-[20rpx]">
-      <view class="mb-[24rpx] mt-[20rpx] border border-[#dce6ff] rounded-[16rpx] bg-[#eef4ff] p-[20rpx]">
+      <view class="mb-[24rpx] mt-[20rpx] border rounded-[16rpx] p-[20rpx]" style="background: rgba(59,130,246,0.06); border-color: rgba(59,130,246,0.12);">
         <view class="flex items-center justify-between gap-[20rpx]">
           <view class="flex-1">
-            <text class="block text-[26rpx] text-[#232338] font-medium">
+            <text class="block text-[26rpx] text-[#f0f4f8] font-medium">
               {{ t('deviceConfig.permissionNotice') }}
             </text>
-            <text class="mt-[6rpx] block text-[22rpx] text-[#65686f] leading-[1.5]">
+            <text class="mt-[6rpx] block text-[22rpx] text-[#5a6372] leading-[1.5]">
               {{ t('deviceConfig.permissionNoticeSub') }}
             </text>
           </view>
@@ -109,31 +112,31 @@ onMounted(() => {
       </view>
       <!-- 配网方式选择 -->
       <view class="pb-[20rpx] first:pt-[20rpx]">
-        <text class="text-[32rpx] text-[#232338] font-bold">
+        <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('deviceConfig.configMethod') }}
           </text>
       </view>
 
-      <view class="mb-[24rpx] border border-[#eeeeee] rounded-[20rpx] bg-[#fbfbfb] p-[24rpx]" style="box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);">
-        <view class="flex cursor-pointer items-center justify-between border border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[20rpx] transition-all duration-300 active:border-[#336cff] active:bg-[#eef3ff]" @click="showConfigTypeSelector">
-          <text class="text-[28rpx] text-[#232338] font-medium">
+      <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx]" style="background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.04); box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.2);">
+        <view class="flex cursor-pointer items-center justify-between border rounded-[12rpx] p-[20rpx] transition-all duration-300" style="background: #0a0a14; border-color: rgba(255,255,255,0.04);" @click="showConfigTypeSelector">
+          <text class="text-[28rpx] text-[#f0f4f8] font-medium">
               {{ t('deviceConfig.configMethod') }}
             </text>
-            <text class="mx-[16rpx] flex-1 text-right text-[26rpx] text-[#65686f]">
+            <text class="mx-[16rpx] flex-1 text-right text-[26rpx] text-[#8b95a8]">
               {{ configType === 'ble_blufi' ? 'BLE / BluFi' : configType === 'softap_http' || configType === 'wifi' ? 'SoftAP HTTP' : t('deviceConfig.ultrasonicConfig') }}
             </text>
-          <wd-icon name="arrow-right" custom-class="text-[20rpx] text-[#9d9ea3]" />
+          <wd-icon name="arrow-right" custom-class="text-[20rpx] text-[#5a6372]" />
         </view>
       </view>
 
       <!-- WiFi网络选择 -->
       <view class="pb-[20rpx]">
-        <text class="text-[32rpx] text-[#232338] font-bold">
+        <text class="text-[32rpx] text-[#f0f4f8] font-bold">
             {{ t('deviceConfig.networkConfig') }}
           </text>
       </view>
 
-      <view class="mb-[24rpx] border border-[#eeeeee] rounded-[20rpx] bg-[#fbfbfb] p-[24rpx]" style="box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);">
+      <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx]" style="background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.04); box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.2);">
         <wifi-selector
           ref="wifiSelectorRef"
           @network-selected="onNetworkSelected"
