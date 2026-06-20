@@ -1,13 +1,3 @@
-<route lang="jsonc" type="home">
-{
-  "layout": "tabbar",
-  "style": {
-    "navigationStyle": "custom",
-    "navigationBarTitleText": "我的设备"
-  }
-}
-</route>
-
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
@@ -155,7 +145,7 @@ function openDevice(deviceId: string) {
       {{ t('v2.deviceList.addDevice') }}
     </wd-button>
 
-    <wd-popup v-model="showBind" position="bottom" custom-style="border-radius:32rpx 32rpx 0 0;padding:40rpx;background:#0a0a14">
+    <wd-popup v-model="showBind" position="bottom" custom-style="border-radius:32rpx 32rpx 0 0;padding:40rpx;background:#0a0a14;border-top:1rpx solid rgba(255,255,255,0.08);box-shadow:0 -8rpx 40rpx rgba(0,0,0,0.5)">
       <wd-text :text="t('v2.deviceList.addDevice')" size="32rpx" bold custom-class="!text-center !mb-[24rpx] !text-[#f0f4f8]" />
       <wd-input v-model="bindSn" :placeholder="t('v2.deviceList.enterSn')" clearable custom-cell-class="!mb-[20rpx]" />
       <wd-input v-model="bindCode" :placeholder="t('v2.deviceList.enterCode')" clearable />
