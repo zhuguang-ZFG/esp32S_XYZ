@@ -170,8 +170,8 @@ const supportedLanguages = getSupportedLanguages()
 const currentLanguage = ref<Language>(getCurrentLanguage())
 const showLanguageSheet = ref(false)
 
-function handleLanguageChange(lang: Language) {
-  changeLanguage(lang)
+async function handleLanguageChange(lang: Language) {
+  await changeLanguage(lang)
   showLanguageSheet.value = false
   currentLanguage.value = lang
   toast.success(t('settings.languageChanged'))
