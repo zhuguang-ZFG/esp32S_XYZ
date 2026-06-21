@@ -28,6 +28,7 @@ export const SERVER_BASE_URL_OVERRIDE_KEY = 'server_base_url_override'
  */
 export function setServerBaseUrlOverride(url: string) {
   uni.setStorageSync(SERVER_BASE_URL_OVERRIDE_KEY, url)
+  cachedBaseUrl = url
 }
 
 export function isValidServerBaseUrl(url: string): boolean {
@@ -42,6 +43,7 @@ export function isValidServerBaseUrl(url: string): boolean {
 
 export function clearServerBaseUrlOverride() {
   uni.removeStorageSync(SERVER_BASE_URL_OVERRIDE_KEY)
+  cachedBaseUrl = null
 }
 
 export function getServerBaseUrlOverride(): string | null {
