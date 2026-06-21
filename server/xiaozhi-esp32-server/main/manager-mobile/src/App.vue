@@ -6,7 +6,6 @@ import { useConfigStore } from '@/store'
 import { t } from '@/i18n'
 import { useLangStore } from '@/store/lang'
 import { applyM6PendingTabBarBadge } from '@/utils'
-import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only'
 
 const isOnline = ref(true)
 

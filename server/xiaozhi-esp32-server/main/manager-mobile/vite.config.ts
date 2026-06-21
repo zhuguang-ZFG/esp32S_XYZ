@@ -17,7 +17,6 @@ import UniPlatform from '@uni-helper/vite-plugin-uni-platform'
  * @see https://github.com/uni-ku/bundle-optimizer
  */
 import Optimization from '@uni-ku/bundle-optimizer'
-import dayjs from 'dayjs'
 import { visualizer } from 'rollup-plugin-visualizer'
 import AutoImport from 'unplugin-auto-import/vite'
 import { defineConfig, loadEnv } from 'vite'
@@ -127,7 +126,10 @@ export default async ({ command, mode }) => {
       UNI_PLATFORM === 'h5' && {
         name: 'html-transform',
         transformIndexHtml(html) {
-          return html.replace('%BUILD_TIME%', dayjs().format('YYYY-MM-DD HH:mm:ss'))
+          const now = new Date()
+          const pad = (n: number) => String(n).padStart(2, '0')
+          const buildTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+          return html.replace('%BUILD_TIME%', buildTime)
         },
       },
       // 打包分析插件，h5 + 生产环境才弹出
