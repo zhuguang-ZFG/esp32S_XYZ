@@ -1,23 +1,13 @@
 import type { uniappRequestAdapter } from '@alova/adapter-uniapp'
 import type { IResponse } from './types'
-import type { Language } from '@/store/lang'
 import AdapterUniapp from '@alova/adapter-uniapp'
 import { createAlova } from 'alova'
 import { createServerTokenAuthentication } from 'alova/client'
 import VueHook from 'alova/vue'
 import { getEnvBaseUrl } from '@/utils'
 import { toast } from '@/utils/toast'
+import { clearCachedToken, getCachedAuthInfo, getCachedLanguage, setCachedToken } from '@/utils/authCache'
 import { ContentTypeEnum, ResultEnum, ShowMessage } from './enum'
-
-// 语言映射, 用于设置 Accept-language 头
-const langMap: Record<Language, string> = {
-  zh_CN: 'zh-CN',
-  en: 'en-US',
-  zh_TW: 'zh-TW',
-  de: 'de',
-  vi: 'vi',
-  pt_BR: 'pt-BR',
-}
 
 /**
  * 创建请求实例
@@ -36,6 +26,7 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
       }
       catch (error) {
         // 切换到登录页
+        clearCachedToken()
         await uni.reLaunch({ url: '/pages/v2/login/index' })
         throw error
       }
@@ -62,7 +53,7 @@ const alovaInstance = createAlova({
     // 检查混合内容错误（HTTPS页面请求HTTP接口）
     const currentProtocol = typeof window !== 'undefined' && window.location.protocol
     const requestProtocol = method.baseURL?.split(':')[0]
-    const currentLang = langMap[uni.getStorageSync('app_language') as Language || 'zh_CN']
+    const currentLang = getCachedLanguage()
     if (currentProtocol === 'https:' && requestProtocol === 'http') {
       const errorMessage = '无法配置http协议地址,请检查接口地址'
       throw new Error(errorMessage)
@@ -81,15 +72,8 @@ const alovaInstance = createAlova({
 
     // 处理认证信息
     if (!ignoreAuth) {
-      const rawToken = uni.getStorageSync('token') || ''
-      let authInfo: { token?: string } = {}
-      try {
-        authInfo = JSON.parse(rawToken || '{}')
-      }
-      catch {
-        authInfo = { token: rawToken }
-      }
-      if (!authInfo.token) {
+      const authInfo = getCachedAuthInfo()
+      if (!authInfo?.token) {
         // 跳转到登录页
         uni.reLaunch({ url: '/pages/v2/login/index' })
         throw new Error('[请求错误]：未登录')

@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import {
   getUserInfo as _getUserInfo,
 } from '@/api/auth'
+import { clearCachedToken } from '@/utils/authCache'
 
 // 初始化状态
 const userInfoState: UserInfo & { avatar?: string, token?: string } = {
@@ -42,6 +43,7 @@ export const useUserStore = defineStore(
       userInfo.value = { ...userInfoState }
       uni.removeStorageSync('userInfo')
       uni.removeStorageSync('token')
+      clearCachedToken()
     }
     /**
      * 获取用户信息

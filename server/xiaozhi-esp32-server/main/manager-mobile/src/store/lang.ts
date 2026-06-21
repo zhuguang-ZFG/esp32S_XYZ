@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import { setCachedLanguage } from '@/utils/authCache'
 
 // 支持的语言类型
 export type Language = 'zh_CN' | 'en' | 'zh_TW' | 'de' | 'vi' | 'pt_BR'
@@ -20,6 +21,7 @@ export const useLangStore = defineStore(
     const changeLang = (lang: Language) => {
       currentLang.value = lang
       // 将语言设置保存到本地存储
+      setCachedLanguage(lang)
       uni.setStorageSync('app_language', lang)
     }
 

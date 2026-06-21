@@ -4,6 +4,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import { t } from '@/i18n'
 import { v2Login } from '@/api/v2'
+import { setCachedToken } from '@/utils/authCache'
 
 defineOptions({ name: 'V2Login' })
 const message = useMessage()
@@ -21,7 +22,9 @@ async function handleLogin() {
     const res = await uni.login({ provider: 'weixin' })
     if (!res.code) { message.alert(t('v2.login.wxLogin') + '失败'); return }
     const data = await v2Login(res.code)
-    uni.setStorageSync('token', JSON.stringify({ token: data.token, expire: data.expiresIn }))
+    const tokenRaw = JSON.stringify({ token: data.token, expire: data.expiresIn })
+    uni.setStorageSync('token', tokenRaw)
+    setCachedToken(tokenRaw)
     uni.switchTab({ url: '/pages/v2/device-list/index' })
     // #endif
     // #ifndef MP-WEIXIN
