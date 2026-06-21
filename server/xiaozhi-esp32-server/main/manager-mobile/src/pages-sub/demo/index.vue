@@ -14,6 +14,7 @@ import { ref } from 'vue'
 const webUrl = ref('')
 const pageTitle = ref('数字人')
 const loading = ref(true)
+const statusBarHeight = ref(uni.getSystemInfoSync().statusBarHeight || 0)
 
 onLoad((options: any) => {
   const url = options?.url || ''
@@ -50,12 +51,16 @@ function goBack() {
 <template>
   <view class="webview-page">
     <!-- 自定义导航栏 -->
-    <view class="webview-nav" :style="{ paddingTop: (uni.getSystemInfoSync().statusBarHeight || 0) + 'px' }">
+    <view class="webview-nav" :style="{ paddingTop: `${statusBarHeight}px` }">
       <view class="nav-content">
         <view class="nav-back" @click="goBack">
-          <text class="back-icon">‹</text>
+          <text class="back-icon">
+            ‹
+          </text>
         </view>
-        <text class="nav-title">{{ pageTitle }}</text>
+        <text class="nav-title">
+          {{ pageTitle }}
+        </text>
         <view class="nav-placeholder" />
       </view>
     </view>
@@ -63,7 +68,9 @@ function goBack() {
     <!-- 加载中 -->
     <view v-if="loading" class="loading-overlay">
       <view class="loading-spinner" />
-      <text class="loading-text">加载中...</text>
+      <text class="loading-text">
+        加载中...
+      </text>
     </view>
 
     <!-- WebView -->
@@ -77,8 +84,12 @@ function goBack() {
 
     <!-- 无 URL 提示 -->
     <view v-if="!webUrl && !loading" class="empty-tip">
-      <text class="empty-icon">🔗</text>
-      <text class="empty-text">页面地址无效</text>
+      <text class="empty-icon">
+        🔗
+      </text>
+      <text class="empty-text">
+        页面地址无效
+      </text>
     </view>
   </view>
 </template>
@@ -156,7 +167,9 @@ function goBack() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {

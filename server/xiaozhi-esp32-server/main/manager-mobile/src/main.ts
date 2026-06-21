@@ -9,13 +9,13 @@ import '@/style/index.scss'
 
 import 'virtual:uno.css'
 
-export function createApp() {
+export async function createApp() {
   const app = createSSRApp(App)
   app.use(store)
   app.use(routeInterceptor)
 
-  // 初始化国际化
-  initI18n()
+  // 初始化国际化（等待非默认语言包加载完成，避免启动时闪现 fallback 文案）
+  await initI18n()
 
   return {
     app,

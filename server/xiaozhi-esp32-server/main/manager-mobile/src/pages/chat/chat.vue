@@ -8,11 +8,12 @@
 </route>
 
 <script lang="ts" setup>
+import type { ChatMessage } from '@/api/chat/chat'
 import { onLoad } from '@dcloudio/uni-app'
 import { nextTick, ref } from 'vue'
+import { chatCompletionStream } from '@/api/chat/chat'
 import { t } from '@/i18n'
-import { chatCompletionStream, type ChatMessage } from '@/api/chat/chat'
-import { markdownToHtml, hasMarkdown, stripMarkdown } from '@/utils/markdown'
+import { hasMarkdown, markdownToHtml, stripMarkdown } from '@/utils/markdown'
 
 interface DisplayMessage {
   id: string
@@ -33,6 +34,7 @@ const messages = ref<DisplayMessage[]>([])
 const inputText = ref('')
 const sending = ref(false)
 const scrollToView = ref('')
+const statusBarHeight = ref(uni.getSystemInfoSync().statusBarHeight || 0)
 
 let abortController: { abort: () => void } | null = null
 
@@ -56,7 +58,8 @@ function loadHistory() {
       const parsed = JSON.parse(raw) as DisplayMessage[]
       messages.value = parsed.filter(m => m.role && m.content).slice(-MAX_HISTORY)
     }
-  } catch (e) { console.error('load chat history failed', e) }
+  }
+  catch (e) { console.error('load chat history failed', e) }
 }
 
 function saveHistory() {
@@ -65,12 +68,14 @@ function saveHistory() {
       .filter(m => !m.streaming && m.content.trim())
       .slice(-MAX_HISTORY)
     uni.setStorageSync(CHAT_HISTORY_KEY, JSON.stringify(toSave))
-  } catch (e) { console.error('save chat history failed', e) }
+  }
+  catch (e) { console.error('save chat history failed', e) }
 }
 
 function handleSend() {
   const text = inputText.value.trim()
-  if (!text || sending.value) return
+  if (!text || sending.value)
+    return
 
   messages.value.push({ id: generateMessageId(), role: 'user', content: text, time: formatTime(new Date()) })
   inputText.value = ''
@@ -92,7 +97,8 @@ function handleSend() {
     if (msg) {
       msg.content += chunk
       msg.streaming = !done
-      if (done) msg.time = formatTime(new Date())
+      if (done)
+        msg.time = formatTime(new Date())
     }
     scrollToBottom()
     if (done) {
@@ -109,7 +115,10 @@ function handleStop() {
     abortController = null
     sending.value = false
     const last = messages.value[messages.value.length - 1]
-    if (last && last.streaming) { last.streaming = false; last.time = formatTime(new Date()) }
+    if (last && last.streaming) {
+      last.streaming = false
+      last.time = formatTime(new Date())
+    }
     saveHistory()
   }
 }
@@ -117,7 +126,8 @@ function handleStop() {
 function scrollToBottom() {
   nextTick(() => {
     const last = messages.value[messages.value.length - 1]
-    if (!last) return
+    if (!last)
+      return
     const id = `msg-${last.id}`
     scrollToView.value = id
     setTimeout(() => {
@@ -133,19 +143,24 @@ function formatTime(d: Date) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-function navigateBack() { uni.navigateBack() }
+function navigateBack() {
+  uni.navigateBack()
+}
 
 // 获取 AI 消息渲染 HTML
 function getAiHtml(content: string): string {
-  if (!content) return ''
-  if (hasMarkdown(content)) return markdownToHtml(content)
+  if (!content)
+    return ''
+  if (hasMarkdown(content))
+    return markdownToHtml(content)
   return content.replace(/\n/g, '<br>')
 }
 
 // 长按消息菜单
 function onLongPressMessage(msg: DisplayMessage, index: number) {
   const actions = [t('chat.copy')]
-  if (msg.role === 'assistant' && index > 0) actions.push(t('chat.regenerate'))
+  if (msg.role === 'assistant' && index > 0)
+    actions.push(t('chat.regenerate'))
 
   uni.showActionSheet({
     itemList: actions,
@@ -153,7 +168,8 @@ function onLongPressMessage(msg: DisplayMessage, index: number) {
       if (res.tapIndex === 0) {
         const text = stripMarkdown(msg.content)
         uni.setClipboardData({ data: text, success: () => uni.showToast({ title: t('chat.copied'), icon: 'success' }) })
-      } else if (res.tapIndex === 1) {
+      }
+      else if (res.tapIndex === 1) {
         regenerate(index)
       }
     },
@@ -162,9 +178,11 @@ function onLongPressMessage(msg: DisplayMessage, index: number) {
 
 // 重新生成
 function regenerate(aiIndex: number) {
-  if (sending.value) return
+  if (sending.value)
+    return
   const userIndex = aiIndex - 1
-  if (userIndex < 0 || messages.value[userIndex]?.role !== 'user') return
+  if (userIndex < 0 || messages.value[userIndex]?.role !== 'user')
+    return
 
   messages.value.splice(aiIndex)
   sending.value = true
@@ -181,7 +199,8 @@ function regenerate(aiIndex: number) {
     if (msg) {
       msg.content += chunk
       msg.streaming = !done
-      if (done) msg.time = formatTime(new Date())
+      if (done)
+        msg.time = formatTime(new Date())
     }
     scrollToBottom()
     if (done) {
@@ -221,12 +240,14 @@ function clearHistory() {
 <template>
   <view class="chat-page">
     <!-- 导航栏 -->
-    <view class="chat-nav" :style="{ paddingTop: (uni.getSystemInfoSync().statusBarHeight || 0) + 'px' }">
+    <view class="chat-nav" :style="{ paddingTop: `${statusBarHeight}px` }">
       <view class="nav-content">
         <view class="nav-back" @click="navigateBack">
           <wd-icon name="arrow-left" size="20" color="#1d1d1f" />
         </view>
-        <text class="nav-title">{{ t('chat.title') }}</text>
+        <text class="nav-title">
+          {{ t('chat.title') }}
+        </text>
         <view class="nav-action" @click="clearHistory">
           <wd-icon name="delete" size="18" color="#999" />
         </view>
@@ -245,18 +266,26 @@ function clearHistory() {
           @longpress="onLongPressMessage(msg, messages.indexOf(msg))"
         >
           <!-- 用户消息 -->
-          <view v-if="msg.role === 'user'" class="msg-bubble user">
-            <text class="msg-content">{{ msg.content }}</text>
-            <text class="msg-time">{{ msg.time }}</text>
+          <view v-if="msg.role === 'user'" class="user msg-bubble">
+            <text class="msg-content">
+              {{ msg.content }}
+            </text>
+            <text class="msg-time">
+              {{ msg.time }}
+            </text>
           </view>
 
           <!-- AI 消息 -->
           <view v-else class="msg-bubble assistant">
             <rich-text class="msg-rich-text" :nodes="getAiHtml(msg.content)" />
             <view class="msg-footer">
-              <text class="msg-time">{{ msg.time }}</text>
+              <text class="msg-time">
+                {{ msg.time }}
+              </text>
               <view v-if="!msg.streaming" class="msg-actions">
-                <text class="action-btn" @click="copyReply(msg.content)">{{ t('chat.copy') }}</text>
+                <text class="action-btn" @click="copyReply(msg.content)">
+                  {{ t('chat.copy') }}
+                </text>
               </view>
             </view>
             <view v-if="msg.streaming" class="typing-cursor" />
@@ -277,7 +306,7 @@ function clearHistory() {
           confirm-type="send"
           :disabled="sending"
           @confirm="handleSend"
-        />
+        >
       </view>
       <view v-if="!sending" class="send-btn" :class="{ disabled: !inputText.trim() }" @click="handleSend">
         <wd-icon name="arrow-right" size="20" color="#fff" />
@@ -330,7 +359,10 @@ function clearHistory() {
   }
 }
 
-.chat-scroll { flex: 1; overflow: hidden; }
+.chat-scroll {
+  flex: 1;
+  overflow: hidden;
+}
 
 .chat-list {
   padding: 24rpx;
@@ -348,8 +380,12 @@ function clearHistory() {
       background: #336cff;
       border-bottom-right-radius: 4rpx;
     }
-    .msg-content { color: #fff; }
-    .msg-time { color: rgba(255, 255, 255, 0.6); }
+    .msg-content {
+      color: #fff;
+    }
+    .msg-time {
+      color: rgba(255, 255, 255, 0.6);
+    }
   }
 
   &.assistant {
@@ -434,7 +470,8 @@ function clearHistory() {
     color: #65686f;
   }
 
-  :deep(ul), :deep(ol) {
+  :deep(ul),
+  :deep(ol) {
     padding-left: 32rpx;
     margin: 8rpx 0;
   }
@@ -479,7 +516,9 @@ function clearHistory() {
     background: rgba(51, 108, 255, 0.08);
     border-radius: 8rpx;
 
-    &:active { opacity: 0.7; }
+    &:active {
+      opacity: 0.7;
+    }
   }
 }
 
@@ -495,8 +534,13 @@ function clearHistory() {
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .chat-input-bar {
@@ -517,8 +561,15 @@ function clearHistory() {
   padding: 16rpx 28rpx;
 }
 
-.input-field { font-size: 30rpx; color: #1d1d1f; height: 48rpx; line-height: 48rpx; }
-.input-placeholder { color: #9d9ea3; }
+.input-field {
+  font-size: 30rpx;
+  color: #1d1d1f;
+  height: 48rpx;
+  line-height: 48rpx;
+}
+.input-placeholder {
+  color: #9d9ea3;
+}
 
 .send-btn {
   width: 80rpx;
@@ -528,8 +579,12 @@ function clearHistory() {
   display: flex;
   align-items: center;
   justify-content: center;
-  &:active { opacity: 0.8; }
-  &.disabled { opacity: 0.4; }
+  &:active {
+    opacity: 0.8;
+  }
+  &.disabled {
+    opacity: 0.4;
+  }
 }
 
 .stop-btn {
@@ -540,8 +595,15 @@ function clearHistory() {
   display: flex;
   align-items: center;
   justify-content: center;
-  &:active { opacity: 0.8; }
+  &:active {
+    opacity: 0.8;
+  }
 }
 
-.stop-square { width: 24rpx; height: 24rpx; background: #fff; border-radius: 4rpx; }
+.stop-square {
+  width: 24rpx;
+  height: 24rpx;
+  background: #fff;
+  border-radius: 4rpx;
+}
 </style>
