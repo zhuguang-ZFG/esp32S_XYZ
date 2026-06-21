@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { ref } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
-import { t } from '@/i18n'
 import { v2Login } from '@/api/v2'
+import { t } from '@/i18n'
 import { setCachedToken } from '@/utils/authCache'
 
 defineOptions({ name: 'V2Login' })
@@ -20,7 +20,10 @@ async function handleLogin() {
   try {
     // #ifdef MP-WEIXIN
     const res = await uni.login({ provider: 'weixin' })
-    if (!res.code) { message.alert(t('v2.login.wxLogin') + '失败'); return }
+    if (!res.code) {
+      message.alert(`${t('v2.login.wxLogin')}失败`)
+      return
+    }
     const data = await v2Login(res.code)
     const tokenRaw = JSON.stringify({ token: data.token, expire: data.expiresIn })
     uni.setStorageSync('token', tokenRaw)
@@ -30,9 +33,11 @@ async function handleLogin() {
     // #ifndef MP-WEIXIN
     message.alert('请在微信小程序中打开')
     // #endif
-  } catch (e: any) {
+  }
+  catch (e: any) {
     message.alert(e?.message || '登录失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -40,17 +45,18 @@ async function handleLogin() {
 
 <template>
   <wd-config-provider theme-color="#3b82f6" />
-  <wd-navbar :title="t('v2.login.title')" fixed placeholder safe-area-inset-top
+  <wd-navbar
+    :title="t('v2.login.title')" safe-area-inset-top placeholder fixed
     custom-class="!bg-[#07070f]"
     title-class="!text-[#f0f4f8]"
   />
-  <view class="flex flex-col items-center justify-center min-h-screen px-[40rpx]" style="background: #07070f;">
+  <view class="min-h-screen flex flex-col items-center justify-center px-[40rpx]" style="background: #07070f;">
     <wd-status-tip image="content" tip="" />
-    <view class="text-[48rpx] font-bold text-[#f0f4f8] mb-[16rpx]">
+    <view class="mb-[16rpx] text-[48rpx] text-[#f0f4f8] font-bold">
       {{ t('v2.login.title') }}
     </view>
     <wd-text :text="t('v2.login.subtitle')" size="28rpx" color="#5a6372" />
-    <wd-button type="primary" block round size="large" :loading="loading" custom-class="!mt-[80rpx] !h-[96rpx] !text-[32rpx]" @click="handleLogin">
+    <wd-button type="primary" round block size="large" :loading="loading" custom-class="!mt-[80rpx] !h-[96rpx] !text-[32rpx]" @click="handleLogin">
       {{ loading ? t('v2.login.loggingIn') : t('v2.login.wxLogin') }}
     </wd-button>
     <wd-text :text="t('v2.login.privacy')" size="24rpx" color="#5a6372" custom-class="!mt-[40rpx]" />

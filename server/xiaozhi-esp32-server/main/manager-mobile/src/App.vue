@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onHide, onLaunch, onShow } from '@dcloudio/uni-app'
-import { watch, onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { usePageAuth } from '@/hooks/usePageAuth'
-import { useConfigStore } from '@/store'
 import { t } from '@/i18n'
+import { useConfigStore } from '@/store'
 import { useLangStore } from '@/store/lang'
 import { applyM6PendingTabBarBadge } from '@/utils'
 
@@ -56,7 +56,7 @@ function updateTabBarText() {
       index: 0,
       text: '星云',
       success: () => {},
-      fail: (err) => { console.log('设置星云tabBar文本失败:', err) }
+      fail: (err) => { console.log('设置星云tabBar文本失败:', err) },
     })
 
     // index 1: 对话
@@ -64,7 +64,7 @@ function updateTabBarText() {
       index: 1,
       text: '对话',
       success: () => {},
-      fail: (err) => { console.log('设置对话tabBar文本失败:', err) }
+      fail: (err) => { console.log('设置对话tabBar文本失败:', err) },
     })
 
     // index 2: 创作
@@ -72,7 +72,7 @@ function updateTabBarText() {
       index: 2,
       text: '创作',
       success: () => {},
-      fail: (err) => { console.log('设置创作tabBar文本失败:', err) }
+      fail: (err) => { console.log('设置创作tabBar文本失败:', err) },
     })
 
     // index 3: 我的
@@ -80,9 +80,10 @@ function updateTabBarText() {
       index: 3,
       text: '我的',
       success: () => {},
-      fail: (err) => { console.log('设置我的tabBar文本失败:', err) }
+      fail: (err) => { console.log('设置我的tabBar文本失败:', err) },
     })
-  } catch (error) {
+  }
+  catch (error) {
     console.log('更新tabBar文本时出错:', error)
   }
 }

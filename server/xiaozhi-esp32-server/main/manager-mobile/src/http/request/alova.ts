@@ -5,8 +5,8 @@ import { createAlova } from 'alova'
 import { createServerTokenAuthentication } from 'alova/client'
 import VueHook from 'alova/vue'
 import { getEnvBaseUrl } from '@/utils'
+import { clearCachedToken, getCachedAuthInfo, getCachedLanguage } from '@/utils/authCache'
 import { toast } from '@/utils/toast'
-import { clearCachedToken, getCachedAuthInfo, getCachedLanguage, setCachedToken } from '@/utils/authCache'
 import { ContentTypeEnum, ResultEnum, ShowMessage } from './enum'
 
 /**

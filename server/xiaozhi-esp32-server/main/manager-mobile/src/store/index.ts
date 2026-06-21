@@ -9,9 +9,6 @@ store.use(
       setItem: (key, value) => {
         uni.setStorage({ key, data: value })
       },
-      removeItem: (key) => {
-        uni.removeStorage({ key })
-      },
     },
   }),
 )

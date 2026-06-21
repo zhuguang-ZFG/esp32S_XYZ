@@ -1,6 +1,6 @@
+import type { Language } from '@/store/lang'
 import { ref } from 'vue'
 import { useLangStore } from '@/store/lang'
-import type { Language } from '@/store/lang'
 import zh_CN from './zh_CN'
 
 const loaders: Record<Language, () => Promise<Record<string, string>>> = {
@@ -49,7 +49,7 @@ export function t(key: string, params?: Record<string, string | number>): string
   const langMessages = messages[currentLang.value] || messages.zh_CN
 
   if (langMessages && typeof langMessages === 'object' && key in langMessages) {
-    let value = langMessages[key]
+    const value = langMessages[key]
     if (typeof value === 'string') {
       if (params) {
         let result = value
