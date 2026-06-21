@@ -252,7 +252,7 @@ onUnmounted(() => { clearInfoLoadingTimer() })
         </wd-button>
       </view>
       <scroll-view scroll-y class="wss-log">
-        <wd-text v-for="(l, i) in logLines" :key="i" :text="l" size="20rpx" color="#666" custom-class="!leading-[36rpx]" />
+        <wd-text v-for="(l, i) in logLines" :key="`${l}-${i}`" :text="l" size="20rpx" color="#666" custom-class="!leading-[36rpx]" />
         <wd-text v-if="!logLines.length" :text="t('v2.detail.waitingEvents')" size="24rpx" color="#999" />
       </scroll-view>
     </view>

@@ -15,10 +15,15 @@ import { chatCompletionStream, type ChatMessage } from '@/api/chat/chat'
 import { markdownToHtml, hasMarkdown, stripMarkdown } from '@/utils/markdown'
 
 interface DisplayMessage {
+  id: string
   role: 'user' | 'assistant'
   content: string
   time: string
   streaming?: boolean
+}
+
+function generateMessageId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 const CHAT_HISTORY_KEY = 'lima_chat_history'
@@ -35,6 +40,7 @@ onLoad(() => {
   loadHistory()
   if (!messages.value.length) {
     messages.value.push({
+      id: generateMessageId(),
       role: 'assistant',
       content: t('chat.welcome'),
       time: formatTime(new Date()),
@@ -66,7 +72,7 @@ function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value) return
 
-  messages.value.push({ role: 'user', content: text, time: formatTime(new Date()) })
+  messages.value.push({ id: generateMessageId(), role: 'user', content: text, time: formatTime(new Date()) })
   inputText.value = ''
   scrollToBottom()
   saveHistory()
@@ -74,7 +80,7 @@ function handleSend() {
   sending.value = true
 
   const aiIndex = messages.value.length
-  messages.value.push({ role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
+  messages.value.push({ id: generateMessageId(), role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
   scrollToBottom()
 
   const chatMessages: ChatMessage[] = messages.value
@@ -110,9 +116,16 @@ function handleStop() {
 
 function scrollToBottom() {
   nextTick(() => {
-    const id = `msg-${messages.value.length - 1}`
+    const last = messages.value[messages.value.length - 1]
+    if (!last) return
+    const id = `msg-${last.id}`
     scrollToView.value = id
-    setTimeout(() => { scrollToView.value = ''; nextTick(() => { scrollToView.value = id }) }, 50)
+    setTimeout(() => {
+      scrollToView.value = ''
+      nextTick(() => {
+        scrollToView.value = id
+      })
+    }, 50)
   })
 }
 
@@ -155,7 +168,7 @@ function regenerate(aiIndex: number) {
 
   messages.value.splice(aiIndex)
   sending.value = true
-  messages.value.push({ role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
+  messages.value.push({ id: generateMessageId(), role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
   const newAiIndex = messages.value.length - 1
   scrollToBottom()
 
@@ -193,6 +206,7 @@ function clearHistory() {
     success: (res) => {
       if (res.confirm) {
         messages.value = [{
+          id: generateMessageId(),
           role: 'assistant',
           content: t('chat.welcome'),
           time: formatTime(new Date()),
@@ -223,12 +237,12 @@ function clearHistory() {
     <scroll-view class="chat-scroll" scroll-y :scroll-into-view="scrollToView" scroll-with-animation :scroll-animation-duration="200">
       <view class="chat-list">
         <view
-          v-for="(msg, index) in messages"
-          :id="`msg-${index}`"
-          :key="index"
+          v-for="(msg) in messages"
+          :id="`msg-${msg.id}`"
+          :key="msg.id"
           class="msg-row"
           :class="msg.role"
-          @longpress="onLongPressMessage(msg, index)"
+          @longpress="onLongPressMessage(msg, messages.indexOf(msg))"
         >
           <!-- 用户消息 -->
           <view v-if="msg.role === 'user'" class="msg-bubble user">

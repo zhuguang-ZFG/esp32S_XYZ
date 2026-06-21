@@ -336,7 +336,7 @@ onUnload(() => {
         <view
           v-for="(message, index) in messageList"
           :id="`message-${index}`"
-          :key="index"
+          :key="`${message.createdAt}-${message.chatType}-${index}`"
           class="w-full flex"
           :class="{
             'justify-end': message.chatType === 1,
@@ -361,7 +361,7 @@ onUnload(() => {
             >
               <template v-if="Array.isArray(extractContentFromString(message.content))">
                 <div class="content-wrapper">
-                  <div v-for="(item, idx) in extractContentFromString(message.content)" :key="idx">
+                  <div v-for="(item, idx) in extractContentFromString(message.content)" :key="`${item.type}-${idx}-${item.text?.slice(0, 20)}`">
                     <div v-if="item.type === 'text'" class="text-content">
                       {{ item.text }}
                     </div>
