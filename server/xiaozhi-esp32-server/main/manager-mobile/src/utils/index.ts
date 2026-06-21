@@ -3,6 +3,21 @@ import { pages, subPackages } from '@/pages.json'
 
 import { isMpWeixin } from './platform'
 
+function getWeixinEnvVersion(): string | undefined {
+  if (!isMpWeixin)
+    return undefined
+  try {
+    return uni.getAccountInfoSync().miniProgram.envVersion
+  }
+  catch {
+    return undefined
+  }
+}
+
+const cachedWxEnvVersion = getWeixinEnvVersion()
+let cachedBaseUrl: string | null = null
+let cachedUploadUrl: string | null = null
+
 /**
  * 运行时服务端地址覆盖存储键
  */
@@ -141,10 +156,15 @@ export const needLoginPages: string[] = getAllPages('needLogin').map(page => pag
  * 根据微信小程序当前环境，判断应该获取的 baseUrl
  */
 export function getEnvBaseUrl() {
+  if (cachedBaseUrl !== null)
+    return cachedBaseUrl
+
   // 若存在用户设置的覆盖地址，优先返回
   const override = getServerBaseUrlOverride()
-  if (override)
-    return override
+  if (override) {
+    cachedBaseUrl = override
+    return cachedBaseUrl
+  }
 
   // 请求基准地址（默认来源于 env）
   let baseUrl = import.meta.env.VITE_SERVER_BASEURL
@@ -157,11 +177,7 @@ export function getEnvBaseUrl() {
 
   // 微信小程序端环境区分
   if (isMpWeixin) {
-    const {
-      miniProgram: { envVersion },
-    } = uni.getAccountInfoSync()
-
-    switch (envVersion) {
+    switch (cachedWxEnvVersion) {
       case 'develop':
         baseUrl = VITE_SERVER_BASEURL__WEIXIN_DEVELOP || baseUrl
         break
@@ -174,6 +190,7 @@ export function getEnvBaseUrl() {
     }
   }
 
+  cachedBaseUrl = baseUrl
   return baseUrl
 }
 
@@ -234,6 +251,9 @@ function readM6PendingBadgeCount(key: string) {
 }
 
 export function getEnvBaseUploadUrl() {
+  if (cachedUploadUrl !== null)
+    return cachedUploadUrl
+
   // 请求基准地址
   let baseUploadUrl = import.meta.env.VITE_UPLOAD_BASEURL
 
@@ -244,11 +264,7 @@ export function getEnvBaseUploadUrl() {
 
   // 微信小程序端环境区分
   if (isMpWeixin) {
-    const {
-      miniProgram: { envVersion },
-    } = uni.getAccountInfoSync()
-
-    switch (envVersion) {
+    switch (cachedWxEnvVersion) {
       case 'develop':
         baseUploadUrl = VITE_UPLOAD_BASEURL__WEIXIN_DEVELOP || baseUploadUrl
         break
@@ -261,6 +277,7 @@ export function getEnvBaseUploadUrl() {
     }
   }
 
+  cachedUploadUrl = baseUploadUrl
   return baseUploadUrl
 }
 
