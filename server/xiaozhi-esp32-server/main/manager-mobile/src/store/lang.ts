@@ -20,9 +20,7 @@ export const useLangStore = defineStore(
     // 切换语言
     const changeLang = (lang: Language) => {
       currentLang.value = lang
-      // 将语言设置保存到本地存储
       setCachedLanguage(lang)
-      uni.setStorageSync('app_language', lang)
     }
 
     return {

@@ -6,7 +6,12 @@ store.use(
   createPersistedState({
     storage: {
       getItem: uni.getStorageSync,
-      setItem: uni.setStorageSync,
+      setItem: (key, value) => {
+        uni.setStorage({ key, data: value })
+      },
+      removeItem: (key) => {
+        uni.removeStorage({ key })
+      },
     },
   }),
 )
