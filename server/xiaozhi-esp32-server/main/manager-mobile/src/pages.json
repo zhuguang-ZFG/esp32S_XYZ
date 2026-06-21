@@ -10,8 +10,7 @@
     "autoscan": true,
     "custom": {
       "^fg-(.*)": "@/components/fg-$1/fg-$1.vue",
-      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue",
-      "^(?!z-paging-refresh|z-paging-load-more)z-paging(.*)": "z-paging/components/z-paging$1/z-paging$1.vue"
+      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue"
     }
   },
   "tabBar": {
@@ -151,30 +150,12 @@
       }
     },
     {
-      "path": "pages/forgot-password/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "ForgotPassword"
-      }
-    },
-    {
       "path": "pages/index/index",
       "type": "page",
       "layout": "tabbar",
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "LiMa 星云"
-      }
-    },
-    {
-      "path": "pages/login/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "Login"
       }
     },
     {
@@ -220,15 +201,6 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "我的"
-      }
-    },
-    {
-      "path": "pages/register/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "注册"
       }
     },
     {

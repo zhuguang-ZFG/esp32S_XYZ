@@ -16,7 +16,6 @@
       "@dcloudio/types",
       "@uni-helper/uni-types",
       "@types/wechat-miniprogram",
-      "z-paging/types",
       "./src/typings.d.ts"
     ],
     "allowJs": true,
