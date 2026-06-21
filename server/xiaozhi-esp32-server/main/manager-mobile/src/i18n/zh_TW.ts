@@ -2,8 +2,10 @@
 export default {
   // TabBar
   'tabBar.home': '首頁',
+  'tabBar.agent': '智能體',
   'tabBar.deviceConfig': '配網',
   'tabBar.settings': '系統',
+  'tabBar.mine': '我的',
   // 設置頁面標題
   'settings.title': '設置',
   // 登錄頁面

@@ -1,7 +1,7 @@
 {
   "globalStyle": {
     "navigationStyle": "default",
-    "navigationBarTitleText": "小智",
+    "navigationBarTitleText": "LiMa 星云",
     "navigationBarBackgroundColor": "#f8f8f8",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#FFFFFF"
@@ -55,6 +55,14 @@
         "pagePath": "pages/settings/index",
         "text": "系统",
         "icon": "i-carbon-settings",
+        "iconType": "uiLib"
+      },
+      {
+        "iconPath": "static/tabbar/personal.png",
+        "selectedIconPath": "static/tabbar/personalHL.png",
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "icon": "i-carbon-user",
         "iconType": "uiLib"
       }
     ]

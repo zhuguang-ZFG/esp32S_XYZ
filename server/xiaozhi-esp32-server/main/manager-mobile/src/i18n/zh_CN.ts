@@ -2,8 +2,10 @@
 export default {
   // TabBar
   'tabBar.home': '星云',
+  'tabBar.agent': '智能体',
   'tabBar.deviceConfig': '配网',
   'tabBar.settings': '系统',
+  'tabBar.mine': '我的',
   // 设置页面标题
   'settings.title': '设置',
   // 登录页面
@@ -628,9 +630,6 @@ export default {
   'deviceConfig.permissionNotice': '配网需要蓝牙和 Wi-Fi 权限',
   'deviceConfig.permissionNoticeSub': '未授权时可进入权限页查看兜底提示。',
   'deviceConfig.permissionSettings': '权限设置',
-
-  // TabBar
-  'tabBar.agent': '智能体',
 
   // Device list page
   'v2.deviceList.online': '在线',

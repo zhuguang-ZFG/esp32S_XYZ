@@ -2,8 +2,10 @@
 export default {
   // TabBar
   'tabBar.home': 'Startseite',
+  'tabBar.agent': 'Agenten',
   'tabBar.deviceConfig': 'Netzwerkkonfig',
   'tabBar.settings': 'System',
+  'tabBar.mine': 'Mein',
   // Einstellungsseitentitel
   'settings.title': 'Einstellungen',
   // Anmeldeseite

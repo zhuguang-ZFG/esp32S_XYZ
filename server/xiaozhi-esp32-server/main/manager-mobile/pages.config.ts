@@ -1,10 +1,22 @@
+import path from 'node:path'
+import process from 'node:process'
 import { defineUniPages } from '@uni-helper/vite-plugin-uni-pages'
+import { loadEnv } from 'vite'
 import { tabBar } from './src/layouts/fg-tabbar/tabbarList'
+
+function getMode() {
+  const args = process.argv.slice(2)
+  const modeFlagIndex = args.findIndex(arg => arg === '--mode')
+  return modeFlagIndex !== -1 ? args[modeFlagIndex + 1] : args[0] === 'build' ? 'production' : 'development'
+}
+
+const env = loadEnv(getMode(), path.resolve(process.cwd(), 'env'))
+const { VITE_APP_TITLE } = env
 
 export default defineUniPages({
   globalStyle: {
     navigationStyle: 'default',
-    navigationBarTitleText: '小智',
+    navigationBarTitleText: VITE_APP_TITLE || 'LiMa 星云',
     navigationBarBackgroundColor: '#f8f8f8',
     navigationBarTextStyle: 'black',
     backgroundColor: '#FFFFFF',

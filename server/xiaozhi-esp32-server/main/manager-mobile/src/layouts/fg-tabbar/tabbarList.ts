@@ -59,6 +59,14 @@ export const tabbarList: FgTabBarItem[] = [
     icon: 'i-carbon-settings',
     iconType: 'uiLib',
   },
+  {
+    iconPath: 'static/tabbar/personal.png',
+    selectedIconPath: 'static/tabbar/personalHL.png',
+    pagePath: 'pages/mine/mine',
+    text: '我的',
+    icon: 'i-carbon-user',
+    iconType: 'uiLib',
+  },
 ]
 
 // NATIVE_TABBAR(1) 和 CUSTOM_TABBAR_WITH_CACHE(2) 时，需要tabbar缓存
@@ -78,6 +86,15 @@ const _tabbar: TabBar = {
   spacing: '3px',
   list: tabbarList as unknown as TabBar['list'],
 }
+
+// i18n keys for dynamic tabBar text update at runtime
+export const tabBarI18nKeys = [
+  'tabBar.home',
+  'tabBar.agent',
+  'tabBar.deviceConfig',
+  'tabBar.settings',
+  'tabBar.mine',
+]
 
 // 0和1 需要显示底部的tabbar的各种配置，以利用缓存
 export const tabBar = cacheTabbarEnable ? _tabbar : undefined

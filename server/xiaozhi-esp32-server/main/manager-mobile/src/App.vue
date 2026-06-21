@@ -3,6 +3,7 @@ import { onHide, onLaunch, onShow } from '@dcloudio/uni-app'
 import { onMounted, ref, watch } from 'vue'
 import { usePageAuth } from '@/hooks/usePageAuth'
 import { t } from '@/i18n'
+import { tabBarI18nKeys } from '@/layouts/fg-tabbar/tabbarList'
 import { useConfigStore } from '@/store'
 import { useLangStore } from '@/store/lang'
 import { applyM6PendingTabBarBadge } from '@/utils'
@@ -47,20 +48,12 @@ onShow(() => {
   }, 100)
 })
 
-// 动态更新tabBar文本
+// 动态更新tabBar文本（跟随当前语言）
 function updateTabBarText() {
   try {
-    // index 0: 星云
-    uni.setTabBarItem({ index: 0, text: '星云' })
-
-    // index 1: 对话
-    uni.setTabBarItem({ index: 1, text: '对话' })
-
-    // index 2: 创作
-    uni.setTabBarItem({ index: 2, text: '创作' })
-
-    // index 3: 我的
-    uni.setTabBarItem({ index: 3, text: '我的' })
+    tabBarI18nKeys.forEach((key, index) => {
+      uni.setTabBarItem({ index, text: t(key) })
+    })
   }
   catch {
     // ignore tabBar update errors on platforms without tabBar

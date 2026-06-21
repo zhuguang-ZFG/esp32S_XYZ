@@ -7,8 +7,10 @@
 import { useUserStore } from '@/store'
 import { needLoginPages as _needLoginPages, getLastPage, getNeedLoginPages } from '@/utils'
 
-// TODO Check
-const loginRoute = import.meta.env.VITE_LOGIN_URL
+const loginRoute = import.meta.env.VITE_LOGIN_URL || '/pages/v2/login/index'
+if (!import.meta.env.VITE_LOGIN_URL) {
+  console.warn('[routeInterceptor] VITE_LOGIN_URL is not set, fallback to /pages/v2/login/index')
+}
 
 function isLogined() {
   const userStore = useUserStore()

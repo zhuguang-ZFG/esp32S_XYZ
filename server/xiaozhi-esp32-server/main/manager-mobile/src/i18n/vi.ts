@@ -2,8 +2,10 @@
 export default {
   // TabBar
   'tabBar.home': 'Trang chủ',
+  'tabBar.agent': 'Đại lý',
   'tabBar.deviceConfig': 'Cấu hình mạng',
   'tabBar.settings': 'Hệ thống',
+  'tabBar.mine': 'Củả tôi',
   // Tiêu đề trang cài đặt
   'settings.title': 'Cài đặt',
   // Trang đăng nhập

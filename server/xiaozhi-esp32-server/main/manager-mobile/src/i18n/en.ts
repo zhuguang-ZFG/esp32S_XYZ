@@ -2,8 +2,10 @@
 export default {
   // TabBar
   'tabBar.home': 'Home',
+  'tabBar.agent': 'Agents',
   'tabBar.deviceConfig': 'Network Config',
   'tabBar.settings': 'System',
+  'tabBar.mine': 'Mine',
   // Settings page title
   'settings.title': 'Settings',
   // Login page
@@ -627,9 +629,6 @@ export default {
   'deviceConfig.permissionNotice': 'Network configuration requires Bluetooth and Wi-Fi permissions',
   'deviceConfig.permissionNoticeSub': 'Unauthorized permissions can be reviewed in the permissions page.',
   'deviceConfig.permissionSettings': 'Permission Settings',
-
-  // TabBar
-  'tabBar.agent': 'Agents',
 
   // Device list page
   'v2.deviceList.online': 'Online',
