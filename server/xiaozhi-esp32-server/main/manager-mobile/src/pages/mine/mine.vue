@@ -28,25 +28,34 @@ const taskCount = ref(0)
 const loading = ref(false)
 const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0'
 
+let deviceCache: { devices: V2DeviceInfo[]; ts: number } | null = null
+const DEVICE_CACHE_TTL = 10_000
+
 onShow(() => { loadData() })
 
 async function loadData() {
   loading.value = true
   try {
-    const res = await v2GetDevices()
-    devices.value = res.rows || []
-    onlineCount.value = devices.value.filter(d => d.status === 'online').length
+    let rows: V2DeviceInfo[] = []
 
-    // Count active tasks across all devices
-    let activeTasks = 0
-    for (const d of devices.value) {
-      try {
-        const tasks = await v2ListTasks(d.deviceId, 'running', 100)
-        activeTasks += tasks.count
-      }
-      catch { /* device may be offline */ }
+    if (deviceCache && Date.now() - deviceCache.ts < DEVICE_CACHE_TTL) {
+      rows = deviceCache.devices
     }
-    taskCount.value = activeTasks
+    else {
+      const res = await v2GetDevices()
+      rows = res.rows || []
+      deviceCache = { devices: rows, ts: Date.now() }
+    }
+
+    devices.value = rows
+    onlineCount.value = rows.filter(d => d.status === 'online').length
+
+    const taskResults = await Promise.all(
+      rows.map(d =>
+        v2ListTasks(d.deviceId, 'running', 100).catch(() => ({ count: 0 })),
+      ),
+    )
+    taskCount.value = taskResults.reduce((sum, r) => sum + (r.count || 0), 0)
   }
   catch (e) { console.error(e) }
   finally { loading.value = false }
