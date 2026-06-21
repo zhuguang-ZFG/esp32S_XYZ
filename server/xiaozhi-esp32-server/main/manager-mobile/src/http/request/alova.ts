@@ -78,7 +78,6 @@ const alovaInstance = createAlova({
 
     const { config } = method
     const ignoreAuth = config.meta?.ignoreAuth
-    console.log('ignoreAuth===>', ignoreAuth)
 
     // 处理认证信息
     if (!ignoreAuth) {
@@ -102,7 +101,6 @@ const alovaInstance = createAlova({
     // 处理动态域名
     if (config.meta?.domain) {
       method.baseURL = config.meta.domain
-      console.log('当前域名', method.baseURL)
     }
   }),
 
@@ -115,8 +113,6 @@ const alovaInstance = createAlova({
       errMsg,
     } = response as UniNamespace.RequestSuccessCallbackResult
 
-    console.log(response)
-
     // 处理特殊请求类型（上传/下载）
     if (requestType === 'upload' || requestType === 'download') {
       return response
@@ -125,7 +121,6 @@ const alovaInstance = createAlova({
     // 处理 HTTP 状态码错误
     if (statusCode !== 200) {
       const errorMessage = ShowMessage(statusCode) || `HTTP请求错误[${statusCode}]`
-      console.error('errorMessage===>', errorMessage)
       toast.error(errorMessage)
       throw new Error(`${errorMessage}：${errMsg}`)
     }

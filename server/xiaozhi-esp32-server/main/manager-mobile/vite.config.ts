@@ -188,7 +188,9 @@ export default async ({ command, mode }) => {
         : undefined,
     },
     esbuild: {
-      drop: VITE_DELETE_CONSOLE === 'true' ? ['console', 'debugger'] : ['debugger'],
+      drop: mode === 'production' || VITE_DELETE_CONSOLE === 'true'
+        ? ['console', 'debugger']
+        : ['debugger'],
     },
     build: {
       sourcemap: false,
