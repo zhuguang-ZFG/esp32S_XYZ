@@ -8,16 +8,18 @@ defineProps<{
   penStateLabel: string
 }>()
 
-const suppliesLoading = defineModel<boolean>('suppliesLoading', { default: false })
 const emit = defineEmits<{
   updatePaper: [state: 'empty' | 'loaded' | 'unknown']
   newPen: []
 }>()
+const suppliesLoading = defineModel<boolean>('suppliesLoading', { default: false })
 </script>
 
 <template>
   <view class="bento-card">
-    <view class="bento-title">{{ t('v2.detail.supplies') }}</view>
+    <view class="bento-title">
+      {{ t('v2.detail.supplies') }}
+    </view>
     <view class="supply-row">
       <view class="supply-item">
         <wd-tag
@@ -26,7 +28,9 @@ const emit = defineEmits<{
         >
           {{ paperSlotStateLabel }}
         </wd-tag>
-        <text class="supply-label">{{ penStateLabel }}</text>
+        <text class="supply-label">
+          {{ penStateLabel }}
+        </text>
       </view>
     </view>
     <view class="supply-actions">

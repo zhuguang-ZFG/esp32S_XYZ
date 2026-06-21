@@ -3,12 +3,12 @@ export interface V2DeviceInfo {
   model: string
   hwRev: string
   fwRev: string
-  workspaceMm: { x: number; y: number; z: number }
+  workspaceMm: { x: number, y: number, z: number }
   status: string
   lastSeenAt: string
 }
-export interface V2BindResponse { deviceId: string; message: string }
-export interface V2SubmitTaskResponse { taskId: string; status: string; approvalRequiredBy?: string }
+export interface V2BindResponse { deviceId: string, message: string }
+export interface V2SubmitTaskResponse { taskId: string, status: string, approvalRequiredBy?: string }
 export interface V2PendingVoiceTaskResponse {
   taskId: string
   deviceId: string
@@ -29,7 +29,15 @@ export interface V2SelfCheckHistoryResponse {
   checksJson?: string
   reportedAt?: string
 }
-export interface V2LoginResponse { token: string; userId: string; expiresIn?: number }
+export interface V2LoginResponse { token: string, userId: string, expiresIn?: number }
+export interface V2MeResponse {
+  accountId: string
+  phone?: string
+  nickname?: string
+  avatarUrl?: string
+  role?: string
+  createdAt?: string
+}
 export interface V2DeviceSupplyUpdateRequest {
   paperSlotState?: 'empty' | 'loaded' | 'unknown'
   penInstalledAt?: string

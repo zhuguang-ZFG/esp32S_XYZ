@@ -200,7 +200,7 @@ function setPermissionDenied(item: PermissionItem) {
           <text class="mt-[8rpx] block text-[24rpx] text-[#9d9ea3] leading-[1.6]">
             {{ item.fallback }}
           </text>
-          <wd-button type="info" block plain custom-class="!mt-[20rpx] !h-[72rpx] !rounded-[16rpx]" @click="requestPermission(item)">
+          <wd-button type="info" plain block custom-class="!mt-[20rpx] !h-[72rpx] !rounded-[16rpx]" @click="requestPermission(item)">
             单独授权
           </wd-button>
         </view>

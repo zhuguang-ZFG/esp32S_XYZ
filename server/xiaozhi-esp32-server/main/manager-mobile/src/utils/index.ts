@@ -1,7 +1,10 @@
 import smCrypto from 'sm-crypto'
-import { pages, subPackages } from '@/pages.json'
+import pagesJson from '@/pages.json'
 
 import { isMpWeixin } from './platform'
+
+const pages = pagesJson.pages
+const safeSubPackages = (pagesJson as any).subPackages || []
 
 /**
  * 运行时服务端地址覆盖存储键
@@ -107,7 +110,7 @@ export function getAllPages(key = 'needLogin') {
 
   // 这里处理分包
   const subPages: any[] = []
-  subPackages.forEach((subPageObj) => {
+  safeSubPackages.forEach((subPageObj) => {
     // console.log(subPageObj)
     const { root } = subPageObj
 
@@ -266,7 +269,7 @@ export function getEnvBaseUploadUrl() {
 
 /**
  * 生成SM2密钥对（十六进制格式）
- * @returns {Object} 包含公钥和私钥的对象
+ * @returns {object} 包含公钥和私钥的对象
  */
 export function generateSm2KeyPairHex() {
   // 使用sm-crypto库生成SM2密钥对

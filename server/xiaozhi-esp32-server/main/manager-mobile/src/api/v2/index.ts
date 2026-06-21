@@ -1,10 +1,22 @@
-import type { V2BindResponse, V2DeletionResponse, V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceSupplyUpdateRequest, V2DeviceTransferRequest, V2DeviceTransferResponse, V2LoginResponse, V2PendingVoiceTaskResponse, V2SelfCheckHistoryResponse, V2SubmitTaskResponse, V2TaskInfo, V2TaskListResponse } from './types'
+import type { V2BindResponse, V2DeletionResponse, V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceSupplyUpdateRequest, V2DeviceTransferRequest, V2DeviceTransferResponse, V2LoginResponse, V2MeResponse, V2PendingVoiceTaskResponse, V2SelfCheckHistoryResponse, V2SubmitTaskResponse, V2TaskInfo, V2TaskListResponse } from './types'
 import { http } from '@/http/request/alova'
 
 const appPrefix = '/device/v1/app'
 
 export function v2Login(code: string) {
   return http.Post<V2LoginResponse>(`${appPrefix}/auth/login`, { code }, { meta: { ignoreAuth: true, toast: true, isExposeError: true } })
+}
+
+export async function v2GetMe() {
+  const res = await http.Get<V2MeResponse>(`${appPrefix}/auth/me`, { meta: { ignoreAuth: false, toast: false } })
+  return {
+    accountId: res.accountId || '',
+    phone: res.phone || '',
+    nickname: res.nickname || '',
+    avatarUrl: res.avatarUrl || '',
+    role: res.role || 'user',
+    createdAt: res.createdAt || '',
+  }
 }
 
 export function v2BindDevice(deviceSn: string, activationCode: string) {
@@ -16,7 +28,7 @@ export function v2BindDevice(deviceSn: string, activationCode: string) {
 }
 
 export async function v2GetDevices() {
-  const res = await http.Get<{ devices: unknown[]; count: number }>(`${appPrefix}/devices`, {
+  const res = await http.Get<{ devices: unknown[], count: number }>(`${appPrefix}/devices`, {
     meta: { ignoreAuth: false, toast: false },
     cacheFor: { expire: 0 },
   })
@@ -53,7 +65,7 @@ export async function v2ListTasks(deviceId: string, status = '', limit = 20) {
 }
 
 export async function v2ListPendingVoiceTasks(deviceId: string) {
-  const res = await http.Post<{ tasks: V2PendingVoiceTaskResponse[]; count: number }>(
+  const res = await http.Post<{ tasks: V2PendingVoiceTaskResponse[], count: number }>(
     `${appPrefix}/devices/${deviceId}/voice-tasks/pending`,
     {},
     { meta: { ignoreAuth: false, toast: false }, cacheFor: { expire: 0 } },
@@ -62,7 +74,7 @@ export async function v2ListPendingVoiceTasks(deviceId: string) {
 }
 
 export async function v2ListSelfCheckHistory(deviceId: string) {
-  const res = await http.Get<{ selfChecks: unknown[]; count: number }>(
+  const res = await http.Get<{ selfChecks: unknown[], count: number }>(
     `${appPrefix}/devices/${deviceId}/self-checks`,
     { meta: { ignoreAuth: false, toast: false }, cacheFor: { expire: 0 } },
   )
@@ -119,7 +131,7 @@ export function v2CancelDeviceTransfer(transferId: number | string) {
 }
 
 export async function v2ListPendingIncomingDeviceTransfers() {
-  const res = await http.Get<{ transfers: unknown[]; count: number }>(
+  const res = await http.Get<{ transfers: unknown[], count: number }>(
     `${appPrefix}/transfers/pending`,
     { meta: { ignoreAuth: false, toast: false }, cacheFor: { expire: 0 } },
   )
@@ -127,7 +139,7 @@ export async function v2ListPendingIncomingDeviceTransfers() {
 }
 
 export async function v2DeleteAccount() {
-  const res = await http.Post<{ accountId: string; deletedAt: string }>(
+  const res = await http.Post<{ accountId: string, deletedAt: string }>(
     `${appPrefix}/auth/account/delete`,
     {},
     { meta: { ignoreAuth: false, toast: false } },
@@ -227,7 +239,7 @@ function parseWorkspace(value: unknown) {
 }
 
 function createTaskRequestId(capability: string) {
-  const safeCapability = capability.replace(/[^a-zA-Z0-9_-]/g, '_') || 'task'
+  const safeCapability = capability.replace(/[^\w-]/g, '_') || 'task'
   const randomPart = Math.random().toString(36).slice(2, 10)
   return `client-${safeCapability}-${Date.now().toString(36)}-${randomPart}`
 }

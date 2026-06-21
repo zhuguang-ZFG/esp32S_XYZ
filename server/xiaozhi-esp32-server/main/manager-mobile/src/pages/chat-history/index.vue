@@ -3,19 +3,18 @@ import type { ChatSession } from '@/api/chat-history/types'
 import { computed, onMounted, ref } from 'vue'
 import { getChatSessions } from '@/api/chat-history/chat-history'
 import { t } from '@/i18n'
-import { deepClone } from '@/utils'
 
 defineOptions({
   name: 'ChatHistory',
 })
 
 const props = withDefaults(defineProps<Props>(), {
-  agentId: 'default',
+  deviceId: '',
 })
 
 // 接收props
 interface Props {
-  agentId?: string
+  deviceId?: string
 }
 
 // 获取屏幕边界到安全区域距离
@@ -47,16 +46,16 @@ const hasMore = ref(true)
 const currentPage = ref(0)
 const pageSize = 10
 
-// 使用传入的智能体ID
-const currentAgentId = computed(() => {
-  return props.agentId
+// 使用传入的设备ID
+const currentDeviceId = computed(() => {
+  return props.deviceId
 })
 
 // 加载聊天会话列表
 async function loadChatSessions(page = 1, isUpdate = false) {
   try {
     // 检查是否有当前选中的智能体
-    if (!currentAgentId.value) {
+    if (!currentDeviceId.value) {
       console.warn(t('chatHistory.noSelectedAgent'))
       sessionList.value = []
       return
@@ -69,23 +68,21 @@ async function loadChatSessions(page = 1, isUpdate = false) {
       loadingMore.value = true
     }
 
-    const response = await getChatSessions(currentAgentId.value, {
+    const response = await getChatSessions(currentDeviceId.value, {
       page,
       limit: pageSize,
     })
 
+    const sessions = response.sessions || []
     if (page === 1) {
-      const oldSessionList = deepClone(sessionList.value)
-      oldSessionList.splice(0, 10)
-      oldSessionList.unshift(...(response.list || []))
-      sessionList.value = isUpdate ? oldSessionList : response.list || []
+      sessionList.value = sessions
     }
     else {
-      sessionList.value.push(...(response.list || []))
+      sessionList.value.push(...sessions)
     }
 
     // 更新分页信息
-    hasMore.value = (response.list?.length || 0) === pageSize
+    hasMore.value = sessions.length === pageSize
     currentPage.value = page
   }
   catch (error) {
@@ -166,7 +163,7 @@ function formatTime(timeStr: string) {
 // 进入聊天详情
 function goToChatDetail(session: ChatSession) {
   uni.navigateTo({
-    url: `/pages/chat-history/detail?sessionId=${session.sessionId}&agentId=${currentAgentId.value}`,
+    url: `/pages/chat-history/detail?sessionId=${session.sessionId}&deviceId=${currentDeviceId.value}`,
   })
 }
 

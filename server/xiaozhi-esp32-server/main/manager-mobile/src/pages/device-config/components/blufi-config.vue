@@ -222,8 +222,8 @@ onBeforeUnmount(() => {
         v-model="manualPassword"
         label="Password"
         placeholder="Wi-Fi password"
-        show-password
-        clearable
+
+        clearable show-password
       />
     </view>
 

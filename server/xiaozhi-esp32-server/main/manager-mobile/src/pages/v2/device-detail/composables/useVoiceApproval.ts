@@ -1,13 +1,22 @@
-import { computed, ref } from 'vue'
 import type { V2PendingVoiceTaskResponse } from '@/api/v2/types'
+import { computed, ref } from 'vue'
 import { v2ApproveVoiceTask, v2ListPendingVoiceTasks, v2RejectVoiceTask } from '@/api/v2'
-import { updateM6PendingTabBarBadge } from '@/utils'
 import { t } from '@/i18n'
+import { updateM6PendingTabBarBadge } from '@/utils'
 
 interface VoiceprintConstraint {
-  matched?: boolean; reason?: string; member_id?: number | string; memberId?: number | string
-  display_name?: string; displayName?: string; member_type?: string; memberType?: string
-  speaker_ref?: string; speakerRef?: string; reenroll_hint?: boolean; reenrollHint?: boolean
+  matched?: boolean
+  reason?: string
+  member_id?: number | string
+  memberId?: number | string
+  display_name?: string
+  displayName?: string
+  member_type?: string
+  memberType?: string
+  speaker_ref?: string
+  speakerRef?: string
+  reenroll_hint?: boolean
+  reenrollHint?: boolean
 }
 
 export function useVoiceApproval(
@@ -22,7 +31,8 @@ export function useVoiceApproval(
   const pendingVoiceApprovalBadgeText = computed(() => String(pendingVoiceApprovalCount.value))
 
   function parseJsonObject(value: string | undefined) {
-    if (!value) return null
+    if (!value)
+      return null
     try {
       const p = JSON.parse(value)
       return p && typeof p === 'object' && !Array.isArray(p) ? p as Record<string, any> : null
@@ -38,15 +48,18 @@ export function useVoiceApproval(
 
   function voiceprintApprovalLabel(task: V2PendingVoiceTaskResponse) {
     const vp = voiceprintConstraintForTask(task)
-    if (!vp) return t('v2.detail.noVoiceprintMeta')
+    if (!vp)
+      return t('v2.detail.noVoiceprintMeta')
     const displayName = vp.display_name || vp.displayName || ''
     const memberType = vp.member_type || vp.memberType || ''
     if (voiceprintReenrollRequired(task))
       return `${t('v2.detail.voiceprintMatched')} ${displayName || 'child'}, ${t('v2.detail.reenrollNeeded')}`
     if (vp.matched)
       return `${t('v2.detail.voiceprintMatched')} ${displayName || t('v2.detail.registeredMember')}${memberType ? ` (${memberType})` : ''}`
-    if (vp.reason === 'child_unknown_allowed') return t('v2.detail.unknownChildAllowed')
-    if (vp.reason === 'unknown_allowed') return t('v2.detail.unknownAllowed')
+    if (vp.reason === 'child_unknown_allowed')
+      return t('v2.detail.unknownChildAllowed')
+    if (vp.reason === 'unknown_allowed')
+      return t('v2.detail.unknownAllowed')
     return `${t('v2.detail.voiceprint')}: ${vp.reason}`
   }
 
@@ -62,7 +75,8 @@ export function useVoiceApproval(
 
   async function loadPendingVoiceTasks() {
     const did = deviceId()
-    if (!did) return
+    if (!did)
+      return
     voiceApprovalLoading.value = true
     try {
       pendingVoiceTasks.value = await v2ListPendingVoiceTasks(did)
@@ -102,8 +116,15 @@ export function useVoiceApproval(
   }
 
   return {
-    pendingVoiceTasks, voiceApprovalLoading, pendingVoiceApprovalCount, pendingVoiceApprovalBadgeText,
-    voiceprintApprovalLabel, voiceprintReenrollRequired, voiceprintHasUnknownSpeaker,
-    loadPendingVoiceTasks, handleApproveVoiceTask, handleRejectVoiceTask,
+    pendingVoiceTasks,
+    voiceApprovalLoading,
+    pendingVoiceApprovalCount,
+    pendingVoiceApprovalBadgeText,
+    voiceprintApprovalLabel,
+    voiceprintReenrollRequired,
+    voiceprintHasUnknownSpeaker,
+    loadPendingVoiceTasks,
+    handleApproveVoiceTask,
+    handleRejectVoiceTask,
   }
 }

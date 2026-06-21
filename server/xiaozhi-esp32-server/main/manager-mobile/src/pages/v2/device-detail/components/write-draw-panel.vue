@@ -1,28 +1,30 @@
 <script lang="ts" setup>
 import { t } from '@/i18n'
 
-const writeTextInput = defineModel<string>('writeTextInput', { default: '你好' })
-const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星星' })
-
 defineProps<{
   writeTextLoading: boolean
   drawGeneratedLoading: boolean
-  starterAssets: { id: string; label: string }[]
+  starterAssets: { id: string, label: string }[]
   defaultFontId: string
 }>()
-
 const emit = defineEmits<{
   writeText: []
   drawPrompt: []
   drawStarter: [starterId: string]
 }>()
+const writeTextInput = defineModel<string>('writeTextInput', { default: '你好' })
+const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星星' })
 </script>
 
 <template>
   <!-- 写字 -->
   <view class="bento-card">
-    <view class="bento-title">{{ t('v2.detail.writeDemo') }}</view>
-    <text class="hint-text">{{ t('v2.detail.defaultFont') }}: {{ defaultFontId }}</text>
+    <view class="bento-title">
+      {{ t('v2.detail.writeDemo') }}
+    </view>
+    <text class="hint-text">
+      {{ t('v2.detail.defaultFont') }}: {{ defaultFontId }}
+    </text>
     <wd-input
       v-model="writeTextInput"
       clearable
@@ -31,7 +33,7 @@ const emit = defineEmits<{
       custom-class="!bg-[#f5f5f7] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
-      type="primary" block round size="large"
+      type="primary" round block size="large"
       :loading="writeTextLoading"
       custom-class="!h-[88rpx] !text-[30rpx]"
       @click="emit('writeText')"
@@ -42,8 +44,12 @@ const emit = defineEmits<{
 
   <!-- 画图 -->
   <view class="bento-card">
-    <view class="bento-title">{{ t('v2.detail.drawDemo') }}</view>
-    <text class="hint-text">{{ t('v2.detail.drawDesc') }}</text>
+    <view class="bento-title">
+      {{ t('v2.detail.drawDemo') }}
+    </view>
+    <text class="hint-text">
+      {{ t('v2.detail.drawDesc') }}
+    </text>
     <wd-input
       v-model="drawPromptInput"
       clearable
@@ -52,7 +58,7 @@ const emit = defineEmits<{
       custom-class="!bg-[#f5f5f7] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
-      type="primary" block round size="large"
+      type="primary" round block size="large"
       :loading="drawGeneratedLoading"
       custom-class="!h-[88rpx] !text-[30rpx]"
       @click="emit('drawPrompt')"

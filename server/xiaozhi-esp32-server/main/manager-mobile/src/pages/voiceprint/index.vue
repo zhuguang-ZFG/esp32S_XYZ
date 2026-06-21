@@ -1,25 +1,26 @@
 <script lang="ts" setup>
+import type { Member } from '@/api/member'
 import type { ChatHistory, CreateSpeakerData, VoicePrint } from '@/api/voiceprint'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import { useToast } from 'wot-design-uni/components/wd-toast'
+import { getMemberList } from '@/api/member'
 import { createVoicePrint, deleteVoicePrint, getAudioDownloadId, getChatHistory, getVoicePrintList, updateVoicePrint } from '@/api/voiceprint'
 import { t } from '@/i18n'
-import { getEnvBaseUrl } from '@/utils'
 
 defineOptions({
   name: 'VoicePrintManage',
 })
 
 const props = withDefaults(defineProps<Props>(), {
-  agentId: 'default',
+  deviceId: '',
 })
 
 const emits = defineEmits(['update-refresher-enabled'])
 
 // 接收props
 interface Props {
-  agentId?: string
+  deviceId?: string
 }
 
 // 获取屏幕边界到安全区域距离
@@ -50,6 +51,7 @@ const toast = useToast()
 const voicePrintList = ref<VoicePrint[]>([])
 const chatHistoryList = ref<ChatHistory[]>([])
 const chatHistoryActions = ref<any[]>([])
+const memberList = ref<Member[]>([])
 const swipeStates = ref<Record<string, 'left' | 'close' | 'right'>>({})
 const loading = ref(false)
 
@@ -57,45 +59,59 @@ const loading = ref(false)
 const audioRef = ref<UniApp.InnerAudioContext | null>(null)
 const playingAudioId = ref<string>('')
 
-// 使用传入的智能体ID
-const currentAgentId = computed(() => {
-  return props.agentId
+// 使用传入的设备ID
+const currentDeviceId = computed(() => {
+  return props.deviceId
 })
-
-// 智能体选择相关功能已移除
 
 // 弹窗相关
 const showAddDialog = ref(false)
 const showEditDialog = ref(false)
 const showChatHistoryDialog = ref(false)
 const addForm = ref<CreateSpeakerData>({
-  agentId: '',
+  deviceId: '',
+  memberId: '',
   audioId: '',
   sourceName: '',
   introduce: '',
 })
+
+// 成员选择器数据
+const memberPickerRange = computed(() => {
+  return memberList.value.map(m => m.name)
+})
+const selectedMemberName = computed(() => {
+  const member = memberList.value.find(m => m.memberId === addForm.value.memberId)
+  return member?.name || ''
+})
+
 const editForm = ref<VoicePrint>({
   id: '',
+  voiceprintId: '',
+  memberId: '',
+  memberName: '',
+  deviceId: '',
   audioId: '',
   sourceName: '',
   introduce: '',
+  sampleCount: 0,
+  confidence: 0,
+  status: '',
   createDate: '',
+  createdAt: '',
 })
 
 // 获取声纹列表
 async function loadVoicePrintList() {
   try {
-    console.log('获取声纹列表')
-
     // 检查是否有当前选中的智能体
-    if (!currentAgentId.value) {
-      console.warn(t('voiceprint.noSelectedAgent'))
+    if (!currentDeviceId.value) {
       voicePrintList.value = []
       return
     }
 
     loading.value = true
-    const data = await getVoicePrintList(currentAgentId.value)
+    const data = await getVoicePrintList(currentDeviceId.value)
 
     // 初始化滑动状态
     const list = data || []
@@ -108,7 +124,6 @@ async function loadVoicePrintList() {
     voicePrintList.value = list
   }
   catch (error) {
-    console.error('获取声纹列表失败:', error)
     voicePrintList.value = []
   }
   finally {
@@ -121,15 +136,39 @@ async function refresh() {
   await loadVoicePrintList()
 }
 
+// 获取成员列表
+async function loadMemberList() {
+  if (!currentDeviceId.value) {
+    memberList.value = []
+    return
+  }
+  try {
+    const data = await getMemberList(currentDeviceId.value)
+    memberList.value = data || []
+  }
+  catch (error) {
+    memberList.value = []
+  }
+}
+
+// 选择成员
+function onMemberChange(event: any) {
+  const index = event?.detail?.value ?? event?.target?.value
+  const member = memberList.value[Number(index)]
+  if (member) {
+    addForm.value.memberId = member.memberId
+  }
+}
+
 // 获取语音对话记录
 async function loadChatHistory() {
   try {
-    if (!currentAgentId.value) {
+    if (!currentDeviceId.value) {
       toast.error(t('voiceprint.pleaseSelectAgent'))
       return
     }
 
-    const data = await getChatHistory(currentAgentId.value)
+    const data = await getChatHistory(currentDeviceId.value)
     chatHistoryList.value = data || []
     // 转换为ActionSheet格式
     chatHistoryActions.value = chatHistoryList.value.map((item, index) => ({
@@ -139,50 +178,35 @@ async function loadChatHistory() {
     }))
   }
   catch (error) {
-    console.error('获取对话记录失败:', error)
     toast.error(t('voiceprint.fetchHistoryFailed'))
   }
 }
 
 // 打开添加弹窗
-function openAddDialog() {
-  if (!currentAgentId.value) {
+async function openAddDialog() {
+  if (!currentDeviceId.value) {
     toast.error(t('voiceprint.pleaseSelectAgent'))
     return
   }
 
-  // 检查声纹接口是否配置（通过尝试获取声纹列表来检测）
-  const checkVoicePrintConfig = async () => {
-    try {
-      await getVoicePrintList(currentAgentId.value)
-      // 接口正常，继续打开添加弹窗
-      addForm.value = {
-        agentId: currentAgentId.value,
-        audioId: '',
-        sourceName: '',
-        introduce: '',
-      }
-      showAddDialog.value = true
-    }
-    catch (error: any) {
-      // 捕捉声纹接口未配置错误
-      if (error.message && error.message.includes('请求错误[10054]')) {
-        toast.error(t('voiceprint.voiceprintInterfaceNotConfigured'))
-      }
-      else {
-        // 其他错误，继续打开弹窗
-        addForm.value = {
-          agentId: currentAgentId.value,
-          audioId: '',
-          sourceName: '',
-          introduce: '',
-        }
-        showAddDialog.value = true
-      }
-    }
+  if (memberList.value.length === 0) {
+    await loadMemberList()
   }
 
-  checkVoicePrintConfig()
+  if (memberList.value.length === 0) {
+    toast.error(t('voiceprint.noMembers'))
+    return
+  }
+
+  const defaultMember = memberList.value[0]
+  addForm.value = {
+    deviceId: currentDeviceId.value,
+    memberId: defaultMember.memberId,
+    audioId: '',
+    sourceName: '',
+    introduce: '',
+  }
+  showAddDialog.value = true
 }
 
 // 打开编辑弹窗
@@ -225,6 +249,10 @@ async function submitAdd() {
     toast.error(t('voiceprint.pleaseSelectVector'))
     return
   }
+  if (!addForm.value.memberId.trim()) {
+    toast.error(t('voiceprint.pleaseSelectMember'))
+    return
+  }
 
   try {
     await createVoicePrint(addForm.value)
@@ -233,7 +261,6 @@ async function submitAdd() {
     await loadVoicePrintList()
   }
   catch (error) {
-    console.error('添加说话人失败:', error)
     toast.error(t('voiceprint.addFailed'))
   }
 }
@@ -250,19 +277,12 @@ async function submitEdit() {
   }
 
   try {
-    await updateVoicePrint({
-      id: editForm.value.id,
-      audioId: editForm.value.audioId,
-      sourceName: editForm.value.sourceName,
-      introduce: editForm.value.introduce,
-      createDate: editForm.value.createDate,
-    })
+    await updateVoicePrint({ ...editForm.value })
     toast.success(t('voiceprint.editSuccess'))
     showEditDialog.value = false
     await loadVoicePrintList()
   }
   catch (error) {
-    console.error('编辑说话人失败:', error)
     toast.error(t('voiceprint.editFailed'))
   }
 }
@@ -283,7 +303,7 @@ async function handleDelete(id: string) {
     toast.success(t('voiceprint.deleteSuccess'))
     await loadVoicePrintList()
   }).catch(() => {
-    console.log('点击了取消按钮')
+    // cancelled
   })
 }
 
@@ -306,23 +326,19 @@ async function playAudio(audioId: string, event: Event) {
   stopAudio()
 
   try {
-    // 先获取音频下载ID
+    // 先获取音频播放地址
     playingAudioId.value = audioId
-    const downloadId = await getAudioDownloadId(audioId)
+    const audioMeta = await getAudioDownloadId(audioId)
 
-    if (!downloadId) {
+    if (!audioMeta.url) {
       toast.error(t('voiceprint.getAudioFailed'))
       playingAudioId.value = ''
       return
     }
 
-    // 获取baseURL
-    const baseURL = getEnvBaseUrl()
-    const audioUrl = `${baseURL}/agent/play/${downloadId}`
-
     // 创建新的音频实例
     audioRef.value = uni.createInnerAudioContext()
-    audioRef.value.src = audioUrl
+    audioRef.value.src = audioMeta.url
     audioRef.value.autoplay = true
 
     // 监听播放结束
@@ -332,13 +348,12 @@ async function playAudio(audioId: string, event: Event) {
 
     // 监听播放错误
     audioRef.value.onError((error) => {
-      console.error('音频播放错误:', error)
+      console.error('audio play error', error)
       toast.error(t('voiceprint.audioPlayFailed'))
       playingAudioId.value = ''
     })
   }
   catch (error) {
-    console.error('播放音频失败:', error)
     toast.error(t('voiceprint.audioPlayFailed'))
     playingAudioId.value = ''
   }
@@ -364,9 +379,8 @@ watch(() => [showAddDialog.value, showEditDialog.value], (newValues) => {
 })
 
 onMounted(async () => {
-  // 智能体已简化为默认
-
   loadVoicePrintList()
+  loadMemberList()
   loadChatHistory()
 })
 
@@ -458,6 +472,29 @@ defineExpose({
   >
     <view>
       <view class="p-[32rpx]">
+        <!-- 成员选择 -->
+        <view class="mb-[32rpx]">
+          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+            <text class="text-red">
+              *
+            </text>
+            {{ t('voiceprint.member') }}
+          </text>
+          <picker mode="selector" :range="memberPickerRange" @change="onMemberChange">
+            <view
+              class="flex cursor-pointer items-center justify-between border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[20rpx] transition-all duration-300 active:bg-[#eef3ff]"
+            >
+              <text
+                class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[#232338]"
+                :class="{ 'text-[#9d9ea3]': !addForm.memberId }"
+              >
+                {{ selectedMemberName || t('voiceprint.pleaseSelectMember') }}
+              </text>
+              <wd-icon name="arrow-down" custom-class="text-[20rpx] text-[#9d9ea3]" />
+            </view>
+          </picker>
+        </view>
+
         <!-- 声纹向量选择 -->
         <view class="mb-[32rpx]">
           <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">

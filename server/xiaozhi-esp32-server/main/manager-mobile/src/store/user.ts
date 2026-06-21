@@ -1,20 +1,16 @@
-import type { UserInfo } from '@/api/auth'
+import type { V2MeResponse } from '@/api/v2/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import {
-  getUserInfo as _getUserInfo,
-} from '@/api/auth'
+import { v2GetMe } from '@/api/v2'
 
 // 初始化状态
-const userInfoState: UserInfo & { avatar?: string, token?: string } = {
-  id: 0,
-  username: '',
-  realName: '',
-  email: '',
-  mobile: '',
-  status: 0,
-  superAdmin: 0,
-  avatar: '/static/images/default-avatar.png',
+const userInfoState: V2MeResponse & { token?: string } = {
+  accountId: '',
+  phone: '',
+  nickname: '',
+  avatarUrl: '/static/images/default-avatar.png',
+  role: 'user',
+  createdAt: '',
   token: '',
 }
 
@@ -22,20 +18,17 @@ export const useUserStore = defineStore(
   'userInfo',
   () => {
     // 定义用户信息
-    const userInfo = ref<UserInfo & { avatar?: string, token?: string }>({ ...userInfoState })
+    const userInfo = ref<V2MeResponse & { token?: string }>({ ...userInfoState })
     // 设置用户信息
-    const setUserInfo = (val: UserInfo & { avatar?: string, token?: string }) => {
-      console.log('设置用户信息', val)
+    const setUserInfo = (val: V2MeResponse & { token?: string }) => {
       // 若头像为空 则使用本地默认头像（已随 manager-mobile 迁移到 LiMa）
-      if (!val.avatar) {
-        val.avatar = userInfoState.avatar
+      if (!val.avatarUrl) {
+        val.avatarUrl = userInfoState.avatarUrl
       }
       userInfo.value = val
     }
     const setUserAvatar = (avatar: string) => {
-      userInfo.value.avatar = avatar
-      console.log('设置用户头像', avatar)
-      console.log('userInfo', userInfo.value)
+      userInfo.value.avatarUrl = avatar
     }
     // 删除用户信息
     const removeUserInfo = () => {
@@ -47,7 +40,7 @@ export const useUserStore = defineStore(
      * 获取用户信息
      */
     const getUserInfo = async () => {
-      const userData = await _getUserInfo()
+      const userData = await v2GetMe()
       setUserInfo(userData)
       return userData
     }

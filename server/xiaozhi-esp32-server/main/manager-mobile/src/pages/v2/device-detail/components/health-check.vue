@@ -9,16 +9,18 @@ defineProps<{
   selfCheckHistory: V2SelfCheckHistoryResponse[]
 }>()
 
-const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default: false })
 const emit = defineEmits<{
   runHealthCheck: []
 }>()
+const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default: false })
 </script>
 
 <template>
   <view class="bento-card">
     <view class="health-header">
-      <text class="bento-title">{{ t('v2.detail.healthCheck') }}</text>
+      <text class="bento-title">
+        {{ t('v2.detail.healthCheck') }}
+      </text>
       <wd-tag
         :type="latestDiagnosticStatus === 'pass' ? 'success' : latestDiagnosticStatus === 'fail' ? 'danger' : 'default'"
         size="small" round
@@ -26,8 +28,12 @@ const emit = defineEmits<{
         {{ latestDiagnosticStatus }}
       </wd-tag>
     </view>
-    <text class="summary-text">{{ latestDiagnosticSummary }}</text>
-    <text class="time-text">{{ t('v2.detail.latestDiagnosis') }}: {{ latestDiagnosticAt || t('v2.detail.waitingResult') }}</text>
+    <text class="summary-text">
+      {{ latestDiagnosticSummary }}
+    </text>
+    <text class="time-text">
+      {{ t('v2.detail.latestDiagnosis') }}: {{ latestDiagnosticAt || t('v2.detail.waitingResult') }}
+    </text>
 
     <view v-if="selfCheckHistory.length" class="history-list">
       <view
@@ -36,7 +42,9 @@ const emit = defineEmits<{
         class="history-item"
       >
         <view class="history-top">
-          <text class="history-scope">{{ item.scope || item.checkId || 'self_check' }}</text>
+          <text class="history-scope">
+            {{ item.scope || item.checkId || 'self_check' }}
+          </text>
           <wd-tag
             :type="item.status === 'pass' ? 'success' : item.status === 'fail' ? 'danger' : 'default'"
             size="mini" round
@@ -44,13 +52,17 @@ const emit = defineEmits<{
             {{ item.status }}
           </wd-tag>
         </view>
-        <text class="history-time">{{ item.reportedAt ? new Date(item.reportedAt).toLocaleString() : '-' }}</text>
-        <text class="history-summary">{{ item.summary || item.checksJson || 'No summary' }}</text>
+        <text class="history-time">
+          {{ item.reportedAt ? new Date(item.reportedAt).toLocaleString() : '-' }}
+        </text>
+        <text class="history-summary">
+          {{ item.summary || item.checksJson || 'No summary' }}
+        </text>
       </view>
     </view>
 
     <wd-button
-      type="primary" block round size="large"
+      type="primary" round block size="large"
       :loading="healthCheckLoading"
       custom-class="!h-[88rpx] !text-[30rpx] !mt-[20rpx]"
       @click="emit('runHealthCheck')"

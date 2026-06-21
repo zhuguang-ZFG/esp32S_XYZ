@@ -46,8 +46,7 @@ export function createDesignTimeBlufiCredentialPayload(payload: ProvisioningCred
 
 function encodeUtf8(value: string) {
   const encoded = encodeURIComponent(value).replace(/%([0-9A-F]{2})/g, (_, hex) =>
-    String.fromCharCode(Number.parseInt(hex, 16)),
-  )
+    String.fromCharCode(Number.parseInt(hex, 16)))
   const buffer = new ArrayBuffer(encoded.length)
   const view = new Uint8Array(buffer)
   for (let i = 0; i < encoded.length; i += 1)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { t } from '@/i18n'
 import BlufiConfig from './components/blufi-config.vue'
 import UltrasonicConfig from './components/ultrasonic-config.vue'
@@ -78,18 +78,17 @@ function onConnectionStatusChange(connected: boolean) {
 function openPrivacyPermissions() {
   uni.navigateTo({ url: '/pages/settings/privacy-permissions' })
 }
-
-import { onMounted } from 'vue'
 onMounted(() => {
   uni.setNavigationBarTitle({
-    title: t('deviceConfig.pageTitle')
+    title: t('deviceConfig.pageTitle'),
   })
 })
 </script>
 
 <template>
   <view class="min-h-screen" style="background: #07070f;">
-    <wd-navbar :title="t('deviceConfig.pageTitle')" safe-area-inset-top
+    <wd-navbar
+      :title="t('deviceConfig.pageTitle')" safe-area-inset-top
       custom-class="!bg-[#07070f]"
       title-class="!text-[#f0f4f8]"
     />
@@ -113,18 +112,18 @@ onMounted(() => {
       <!-- 配网方式选择 -->
       <view class="pb-[20rpx] first:pt-[20rpx]">
         <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('deviceConfig.configMethod') }}
-          </text>
+          {{ t('deviceConfig.configMethod') }}
+        </text>
       </view>
 
       <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx]" style="background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.04); box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.2);">
         <view class="flex cursor-pointer items-center justify-between border rounded-[12rpx] p-[20rpx] transition-all duration-300" style="background: #0a0a14; border-color: rgba(255,255,255,0.04);" @click="showConfigTypeSelector">
           <text class="text-[28rpx] text-[#f0f4f8] font-medium">
-              {{ t('deviceConfig.configMethod') }}
-            </text>
-            <text class="mx-[16rpx] flex-1 text-right text-[26rpx] text-[#8b95a8]">
-              {{ configType === 'ble_blufi' ? 'BLE / BluFi' : configType === 'softap_http' || configType === 'wifi' ? 'SoftAP HTTP' : t('deviceConfig.ultrasonicConfig') }}
-            </text>
+            {{ t('deviceConfig.configMethod') }}
+          </text>
+          <text class="mx-[16rpx] flex-1 text-right text-[26rpx] text-[#8b95a8]">
+            {{ configType === 'ble_blufi' ? 'BLE / BluFi' : configType === 'softap_http' || configType === 'wifi' ? 'SoftAP HTTP' : t('deviceConfig.ultrasonicConfig') }}
+          </text>
           <wd-icon name="arrow-right" custom-class="text-[20rpx] text-[#5a6372]" />
         </view>
       </view>
@@ -132,8 +131,8 @@ onMounted(() => {
       <!-- WiFi网络选择 -->
       <view class="pb-[20rpx]">
         <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('deviceConfig.networkConfig') }}
-          </text>
+          {{ t('deviceConfig.networkConfig') }}
+        </text>
       </view>
 
       <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx]" style="background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.04); box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.2);">

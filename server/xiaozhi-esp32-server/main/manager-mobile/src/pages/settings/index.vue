@@ -12,8 +12,8 @@
 import type { Language } from '@/store/lang'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useToast } from 'wot-design-uni/components/wd-toast'
-import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
 import { v2DeleteAccount } from '@/api/v2'
+import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
 import { useConfigStore } from '@/store'
 import {
   clearServerBaseUrlOverride,
@@ -273,7 +273,7 @@ function showAbout() {
     title: t('settings.aboutApp', { appName: import.meta.env.VITE_APP_TITLE }),
     content: t('settings.aboutContent', {
       appName: import.meta.env.VITE_APP_TITLE,
-      version: '0.9.3'
+      version: '0.9.3',
     }),
     showCancel: false,
     confirmText: t('common.confirm'),
@@ -348,7 +348,8 @@ onMounted(async () => {
 
 <template>
   <view class="min-h-screen" style="background: #07070f;">
-    <wd-navbar :title="t('settings.title')" placeholder safe-area-inset-top fixed
+    <wd-navbar
+      :title="t('settings.title')" placeholder safe-area-inset-top fixed
       custom-class="!bg-[#07070f]"
       title-class="!text-[#f0f4f8]"
     />
@@ -622,7 +623,7 @@ onMounted(async () => {
     .language-item {
       padding: 30rpx 0;
       text-align: center;
-      border-bottom: 1rpx solid rgba(255,255,255,0.04);
+      border-bottom: 1rpx solid rgba(255, 255, 255, 0.04);
 
       .language-name {
         font-size: 28rpx;
@@ -634,7 +635,7 @@ onMounted(async () => {
       }
 
       &:active {
-        background-color: rgba(255,255,255,0.03);
+        background-color: rgba(255, 255, 255, 0.03);
       }
     }
   }

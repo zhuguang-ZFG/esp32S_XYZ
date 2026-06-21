@@ -14,19 +14,29 @@ defineProps<{
 <template>
   <view class="bento-card device-header">
     <view class="device-top-row">
-      <view class="device-name">{{ deviceInfo?.model || deviceId }}</view>
+      <view class="device-name">
+        {{ deviceInfo?.model || deviceId }}
+      </view>
       <view class="status-dot" :class="connected ? 'online' : 'offline'" />
     </view>
     <view class="device-meta">
       <text>{{ t('v2.detail.hwRev') }} {{ deviceInfo?.hwRev || '—' }} · {{ t('v2.detail.fwRev') }} {{ deviceInfo?.fwRev || '—' }}</text>
     </view>
     <view class="device-id-row">
-      <text class="label">{{ t('v2.detail.deviceId') }}</text>
-      <text class="value">{{ deviceId }}</text>
+      <text class="label">
+        {{ t('v2.detail.deviceId') }}
+      </text>
+      <text class="value">
+        {{ deviceId }}
+      </text>
     </view>
     <view class="device-id-row">
-      <text class="label">{{ t('v2.detail.workspace') }}</text>
-      <text class="value">{{ workspaceLabel }}</text>
+      <text class="label">
+        {{ t('v2.detail.workspace') }}
+      </text>
+      <text class="value">
+        {{ workspaceLabel }}
+      </text>
     </view>
   </view>
 </template>

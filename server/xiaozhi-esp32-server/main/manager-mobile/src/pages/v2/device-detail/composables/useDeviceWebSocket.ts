@@ -1,4 +1,5 @@
-import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
+import type { Ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { buildEdgeAClientWsUrl } from '@/utils'
 
 export interface EdgeAEvent {
@@ -24,7 +25,8 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
 
   function appendLog(msg: string) {
     logLines.value.push(`[${new Date().toLocaleTimeString()}] ${msg}`)
-    if (logLines.value.length > 30) logLines.value = logLines.value.slice(-30)
+    if (logLines.value.length > 30)
+      logLines.value = logLines.value.slice(-30)
   }
 
   function startHeartbeat() {
@@ -62,7 +64,8 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
   }
 
   function connect() {
-    if (!deviceId.value) return
+    if (!deviceId.value)
+      return
 
     const url = buildEdgeAClientWsUrl()
     const token = uni.getStorageSync('token') || ''
@@ -137,7 +140,8 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
   }
 
   onMounted(() => {
-    if (deviceId.value) connect()
+    if (deviceId.value)
+      connect()
   })
 
   onUnmounted(() => {

@@ -13,7 +13,9 @@ defineProps<{
 <template>
   <view class="bento-card">
     <view class="task-header">
-      <text class="bento-title">{{ t('v2.detail.latestTask') }}</text>
+      <text class="bento-title">
+        {{ t('v2.detail.latestTask') }}
+      </text>
       <wd-tag
         :type="latestPhase === 'done' ? 'success' : latestPhase === 'failed' ? 'danger' : latestPhase === 'running' ? 'primary' : 'default'"
         size="small" round
@@ -26,7 +28,9 @@ defineProps<{
       <view class="progress-track">
         <view class="progress-fill" :style="progressBarStyle" />
       </view>
-      <text class="progress-label">{{ latestProgressLabel }}</text>
+      <text class="progress-label">
+        {{ latestProgressLabel }}
+      </text>
     </view>
   </view>
 </template>

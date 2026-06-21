@@ -12,7 +12,7 @@ const loginRoute = import.meta.env.VITE_LOGIN_URL
 
 function isLogined() {
   const userStore = useUserStore()
-  return !!userStore.userInfo.username
+  return !!userStore.userInfo.accountId
 }
 
 const isDev = import.meta.env.DEV

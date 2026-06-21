@@ -13,40 +13,42 @@ export interface MarkdownNode {
  * 将 Markdown 文本解析为 HTML 字符串，适合 rich-text 组件
  */
 export function markdownToHtml(text: string): string {
-  if (!text) return ''
+  if (!text)
+    return ''
 
   let html = escapeHtml(text)
 
   // 代码块（先处理，避免内部内容被其他规则干扰）
-  html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_match, lang, code) => {
+  html = html.replace(/```(\w*)\r?\n([\s\S]*?)```/g, (_match, lang, code) => {
     const cls = lang ? `class="code-lang-${lang}"` : ''
     return `<pre ${cls}><code>${code.trim()}</code></pre>`
   })
 
   // 行内代码
-  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+  html = html.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>')
 
   // 加粗
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>')
+  html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/__([^_\n]+)__/g, '<strong>$1</strong>')
 
   // 斜体
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  html = html.replace(/_([^_]+)_/g, '<em>$1</em>')
+  html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+  html = html.replace(/_([^_\n]+)_/g, '<em>$1</em>')
 
   // 引用块
-  html = html.replace(/^&gt;\s*(.+)$/gm, '<blockquote>$1</blockquote>')
+  html = html.replace(/^&gt;\s*(\S[^\n]*)$/gm, '<blockquote>$1</blockquote>')
 
   // 无序列表
-  html = html.replace(/^-\s+(.+)$/gm, '<li>$1</li>')
-  html = html.replace(/^(<li>.+<\/li>\n?)+/gm, (match) => {
+  html = html.replace(/^-\s+(\S[^\n]*)$/gm, '<li>$1</li>')
+  html = html.replace(/^(<li>[^\n]+<\/li>\n?)+/gm, (match) => {
     return `<ul>${match}</ul>`
   })
 
   // 有序列表
-  html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
-  html = html.replace(/^(<li>.+<\/li>\n?)+/gm, (match) => {
-    if (match.includes('<ul>')) return match
+  html = html.replace(/^\d+\.\s+(\S[^\n]*)$/gm, '<li>$1</li>')
+  html = html.replace(/^(<li>[^\n]+<\/li>\n?)+/gm, (match) => {
+    if (match.includes('<ul>'))
+      return match
     return `<ol>${match}</ol>`
   })
 
@@ -79,12 +81,13 @@ function escapeHtml(text: string): string {
 /**
  * 提取文本中的代码块（用于复制按钮）
  */
-export function extractCodeBlocks(text: string): Array<{ lang: string; code: string }> {
-  const blocks: Array<{ lang: string; code: string }> = []
-  const regex = /```(\w*)\n?([\s\S]*?)```/g
-  let match
-  while ((match = regex.exec(text)) !== null) {
+export function extractCodeBlocks(text: string): Array<{ lang: string, code: string }> {
+  const blocks: Array<{ lang: string, code: string }> = []
+  const regex = /```(\w*)\r?\n([\s\S]*?)```/g
+  let match = regex.exec(text)
+  while (match !== null) {
     blocks.push({ lang: match[1] || 'text', code: match[2].trim() })
+    match = regex.exec(text)
   }
   return blocks
 }
@@ -101,11 +104,11 @@ export function hasMarkdown(text: string): boolean {
  */
 export function stripMarkdown(text: string): string {
   return text
-    .replace(/```\w*\n?([\s\S]*?)```/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/```\w*\r?\n([\s\S]*?)```/g, '$1')
+    .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/\*\*([^*\n]+)\*\*/g, '$1')
+    .replace(/__([^_\n]+)__/g, '$1')
+    .replace(/\*([^*\n]+)\*/g, '$1')
     .replace(/^-\s+/gm, '• ')
     .replace(/^\d+\.\s+/gm, '')
     .replace(/^&gt;\s*/gm, '')

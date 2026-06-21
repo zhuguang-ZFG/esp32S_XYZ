@@ -70,46 +70,6 @@
       }
     },
     {
-      "path": "pages/agent/edit",
-      "type": "page"
-    },
-    {
-      "path": "pages/agent/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationBarTitleText": "智能体",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/agent/provider",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationBarTitleText": "编辑源",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/agent/speedPitch",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationBarTitleText": "语音设置",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/agent/tools",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationBarTitleText": "编辑功能",
-        "navigationStyle": "custom"
-      }
-    },
-    {
       "path": "pages/chat/chat",
       "type": "page",
       "style": {
@@ -139,24 +99,11 @@
       }
     },
     {
-      "path": "pages/device/index",
-      "type": "page"
-    },
-    {
       "path": "pages/device-config/index",
       "type": "page",
       "style": {
         "navigationBarTitleText": "设备配置",
         "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/forgot-password/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "ForgotPassword"
       }
     },
     {
@@ -166,15 +113,6 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "LiMa 星云"
-      }
-    },
-    {
-      "path": "pages/login/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "Login"
       }
     },
     {
@@ -223,15 +161,6 @@
       }
     },
     {
-      "path": "pages/register/index",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "注册"
-      }
-    },
-    {
       "path": "pages/settings/index",
       "type": "page",
       "layout": "default",
@@ -262,19 +191,5 @@
       "type": "page"
     }
   ],
-  "subPackages": [
-    {
-      "root": "pages-sub",
-      "pages": [
-        {
-          "path": "demo/index",
-          "type": "page",
-          "layout": "default",
-          "style": {
-            "navigationStyle": "custom"
-          }
-        }
-      ]
-    }
-  ]
+  "subPackages": []
 }

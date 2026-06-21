@@ -19,7 +19,8 @@ function getBearerToken(): string | null {
   try {
     const parsed = JSON.parse(rawToken)
     return parsed.token || rawToken
-  } catch {
+  }
+  catch {
     return rawToken
   }
 }
@@ -62,7 +63,7 @@ export function chatCompletionStream(
   })
 
   // #ifdef MP-WEIXIN
-  requestTask.onChunkReceived?.((res: any) => {
+  ;(requestTask as any).onChunkReceived?.((res: any) => {
     const chunk = new TextDecoder('utf-8').decode(new Uint8Array(res.data))
     buffer += chunk
     processBuffer()
@@ -71,7 +72,7 @@ export function chatCompletionStream(
 
   // 非微信小程序环境使用定时器轮询（fallback）
   // #ifndef MP-WEIXIN
-  let pollTimer: ReturnType<typeof setInterval> | null = null
+  const pollTimer: ReturnType<typeof setInterval> | null = null
   // #endif
 
   function processBuffer() {
@@ -80,7 +81,8 @@ export function chatCompletionStream(
 
     for (const line of lines) {
       const trimmed = line.trim()
-      if (!trimmed.startsWith('data:')) continue
+      if (!trimmed.startsWith('data:'))
+        continue
 
       const dataStr = trimmed.slice(5).trim()
       if (dataStr === '[DONE]') {
@@ -99,7 +101,8 @@ export function chatCompletionStream(
           onChunk('', true)
           return
         }
-      } catch {
+      }
+      catch {
         // 忽略解析失败的 chunk
       }
     }
@@ -109,7 +112,8 @@ export function chatCompletionStream(
     abort: () => {
       requestTask.abort?.()
       // #ifndef MP-WEIXIN
-      if (pollTimer) clearInterval(pollTimer)
+      if (pollTimer)
+        clearInterval(pollTimer)
       // #endif
     },
   }

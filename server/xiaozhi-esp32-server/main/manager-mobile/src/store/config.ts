@@ -1,19 +1,29 @@
-import type { PublicConfig } from '@/api/auth'
-import { getPublicConfig } from '@/api/auth'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+
+export interface PublicConfig {
+  enableMobileRegister: boolean
+  version: string
+  year: string
+  allowUserRegister: boolean
+  mobileAreaList: Array<{ name: string, key: string }>
+  beianIcpNum: string
+  beianGaNum: string
+  name: string
+  sm2PublicKey: string
+}
 
 // 初始化状态
 const initialConfigState: PublicConfig = {
   enableMobileRegister: false,
-  version: '',
-  year: '',
+  version: import.meta.env.VITE_APP_VERSION || '3.4.0',
+  year: new Date().getFullYear().toString(),
   allowUserRegister: false,
   mobileAreaList: [],
   beianIcpNum: '',
   beianGaNum: '',
   sm2PublicKey: '',
-  name: import.meta.env.VITE_APP_TITLE,
+  name: import.meta.env.VITE_APP_TITLE || 'LiMa',
 }
 
 export const useConfigStore = defineStore(
@@ -28,18 +38,10 @@ export const useConfigStore = defineStore(
     }
 
     // 获取公共配置
+    // 旧版 /user/pub-config 已随小智后端退役；LiMa v2 目前通过构建时 env 注入核心配置。
     const fetchPublicConfig = async () => {
-      try {
-        const configData = await getPublicConfig()
-        console.log(configData)
-
-        setConfig(configData)
-        return configData
-      }
-      catch (error) {
-        console.error('获取公共配置失败:', error)
-        throw error
-      }
+      setConfig({ ...initialConfigState })
+      return config.value
     }
 
     // 重置配置

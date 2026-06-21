@@ -11,18 +11,20 @@ defineProps<{
   voiceprintHasUnknownSpeaker: (task: V2PendingVoiceTaskResponse) => boolean
 }>()
 
-const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { default: false })
 const emit = defineEmits<{
   refreshVoiceTasks: []
   approve: [taskId: string]
   reject: [taskId: string]
 }>()
+const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { default: false })
 </script>
 
 <template>
   <view class="bento-card">
     <view class="voice-header">
-      <text class="bento-title">{{ t('v2.deviceDetail.pendingVoiceApprovals') }}</text>
+      <text class="bento-title">
+        {{ t('v2.deviceDetail.pendingVoiceApprovals') }}
+      </text>
       <view class="header-right">
         <wd-tag v-if="pendingVoiceApprovalCount" type="warning" size="small" round>
           {{ pendingVoiceApprovalBadgeText }}
@@ -32,7 +34,9 @@ const emit = defineEmits<{
         </wd-button>
       </view>
     </view>
-    <text class="voice-subtitle">{{ pendingVoiceApprovalCount }} {{ t('v2.detail.voiceTasksWaiting') }}</text>
+    <text class="voice-subtitle">
+      {{ pendingVoiceApprovalCount }} {{ t('v2.detail.voiceTasksWaiting') }}
+    </text>
 
     <template v-if="pendingVoiceTasks.length">
       <view
@@ -41,13 +45,23 @@ const emit = defineEmits<{
         class="task-card"
       >
         <view class="task-top">
-          <text class="task-capability">{{ task.capability }}</text>
-          <wd-tag type="warning" size="mini" round>{{ task.status }}</wd-tag>
+          <text class="task-capability">
+            {{ task.capability }}
+          </text>
+          <wd-tag type="warning" size="mini" round>
+            {{ task.status }}
+          </wd-tag>
         </view>
-        <text class="task-id">{{ task.requestId || task.taskId }}</text>
-        <text v-if="task.paramsJson" class="task-params">{{ task.paramsJson.slice(0, 120) }}</text>
+        <text class="task-id">
+          {{ task.requestId || task.taskId }}
+        </text>
+        <text v-if="task.paramsJson" class="task-params">
+          {{ task.paramsJson.slice(0, 120) }}
+        </text>
         <view v-if="task.constraintsJson" class="task-constraints">
-          <text class="constraint-text">{{ voiceprintApprovalLabel(task) }}</text>
+          <text class="constraint-text">
+            {{ voiceprintApprovalLabel(task) }}
+          </text>
           <wd-tag v-if="voiceprintReenrollRequired(task)" type="warning" size="mini" round>
             {{ t('v2.detail.reenrollNeeded') }}
           </wd-tag>

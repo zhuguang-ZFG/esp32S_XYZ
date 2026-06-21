@@ -2,7 +2,6 @@
   "compilerOptions": {
     "composite": true,
     "target": "ES2015",
-    "downlevelIteration": true,
     "lib": ["esnext", "dom"],
     "baseUrl": ".",
     "module": "ESNext",
@@ -21,6 +20,7 @@
     ],
     "allowJs": true,
     "noImplicitThis": true,
+    "downlevelIteration": true,
     "outDir": "dist",
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,

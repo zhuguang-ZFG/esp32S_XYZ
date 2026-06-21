@@ -9,7 +9,15 @@ export interface ChatSession {
 // 聊天会话列表响应
 export interface ChatSessionsResponse {
   total: number
-  list: ChatSession[]
+  sessions: ChatSession[]
+  count: number
+}
+
+// 聊天消息响应
+export interface ChatMessagesResponse {
+  sessionId: string
+  messages: ChatMessage[]
+  count: number
 }
 
 // 聊天消息

@@ -9,12 +9,11 @@
 </route>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
-import { t } from '@/i18n'
-import { v2GetDevices, v2ListTasks } from '@/api/v2'
 import type { V2DeviceInfo } from '@/api/v2/types'
-import { getEnvBaseUrl } from '@/utils'
+import { onShow } from '@dcloudio/uni-app'
+import { ref } from 'vue'
+import { v2GetDevices, v2ListTasks } from '@/api/v2'
+import { t } from '@/i18n'
 
 defineOptions({ name: 'MinePage' })
 
@@ -28,7 +27,9 @@ const taskCount = ref(0)
 const loading = ref(false)
 const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0'
 
-onShow(() => { loadData() })
+onShow(() => {
+  loadData()
+})
 
 async function loadData() {
   loading.value = true
@@ -52,12 +53,17 @@ async function loadData() {
   finally { loading.value = false }
 }
 
-function goDevices() { uni.switchTab({ url: '/pages/v2/device-list/index' }) }
-function goConfig() { uni.switchTab({ url: '/pages/device-config/index' }) }
-function goSettings() { uni.switchTab({ url: '/pages/settings/index' }) }
+function goDevices() {
+  uni.switchTab({ url: '/pages/v2/device-list/index' })
+}
+function goConfig() {
+  uni.switchTab({ url: '/pages/device-config/index' })
+}
+function goSettings() {
+  uni.switchTab({ url: '/pages/settings/index' })
+}
 function goDigitalHuman() {
-  const url = getEnvBaseUrl().replace(/\/$/, '') + '/digital-human'
-  uni.navigateTo({ url: `/pages-sub/demo/index?url=${encodeURIComponent(url)}&title=${encodeURIComponent(t('mine.digitalHuman'))}` })
+  uni.showToast({ title: t('nebula.digitalHumanComingSoon'), icon: 'none' })
 }
 function goLogout() {
   uni.showModal({
@@ -77,11 +83,13 @@ function showAbout() {
 </script>
 
 <template>
-  <view class="mine-page" :style="{ paddingTop: safeAreaTop + 'px' }">
+  <view class="mine-page" :style="{ paddingTop: `${safeAreaTop}px` }">
     <!-- Nav -->
     <view class="mine-nav">
       <view class="nav-content">
-        <text class="nav-title">{{ t('mine.title') }}</text>
+        <text class="nav-title">
+          {{ t('mine.title') }}
+        </text>
       </view>
     </view>
 
@@ -91,52 +99,82 @@ function showAbout() {
         <wd-icon name="person" size="48" color="#fff" />
       </view>
       <view class="user-info">
-        <text class="user-name">{{ t('mine.userDefault') }}</text>
-        <text class="user-sub">{{ t('mine.subtitle') }}</text>
+        <text class="user-name">
+          {{ t('mine.userDefault') }}
+        </text>
+        <text class="user-sub">
+          {{ t('mine.subtitle') }}
+        </text>
       </view>
     </view>
 
     <!-- Stats -->
     <view class="stats-row">
       <view class="stat-card">
-        <text class="stat-num">{{ devices.length }}</text>
-        <text class="stat-label">{{ t('mine.devices') }}</text>
+        <text class="stat-num">
+          {{ devices.length }}
+        </text>
+        <text class="stat-label">
+          {{ t('mine.devices') }}
+        </text>
       </view>
       <view class="stat-card">
-        <text class="stat-num online">{{ onlineCount }}</text>
-        <text class="stat-label">{{ t('mine.online') }}</text>
+        <text class="stat-num online">
+          {{ onlineCount }}
+        </text>
+        <text class="stat-label">
+          {{ t('mine.online') }}
+        </text>
       </view>
       <view class="stat-card">
-        <text class="stat-num tasks">{{ taskCount }}</text>
-        <text class="stat-label">{{ t('mine.tasks') }}</text>
+        <text class="stat-num tasks">
+          {{ taskCount }}
+        </text>
+        <text class="stat-label">
+          {{ t('mine.tasks') }}
+        </text>
       </view>
     </view>
 
     <!-- Feature Menu -->
     <view class="menu-section">
-      <text class="menu-title">{{ t('mine.featureCenter') }}</text>
+      <text class="menu-title">
+        {{ t('mine.featureCenter') }}
+      </text>
       <view class="menu-list">
         <view class="menu-item" @click="goDevices">
           <wd-icon name="setting" size="22" color="#336cff" custom-class="menu-icon" />
           <view class="menu-content">
-            <text class="menu-name">{{ t('mine.deviceMgmt') }}</text>
-            <text class="menu-desc">{{ t('mine.deviceMgmtDesc') }}</text>
+            <text class="menu-name">
+              {{ t('mine.deviceMgmt') }}
+            </text>
+            <text class="menu-desc">
+              {{ t('mine.deviceMgmtDesc') }}
+            </text>
           </view>
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
         <view class="menu-item" @click="goConfig">
           <wd-icon name="wifi" size="22" color="#336cff" custom-class="menu-icon" />
           <view class="menu-content">
-            <text class="menu-name">{{ t('mine.deviceConfig') }}</text>
-            <text class="menu-desc">{{ t('mine.deviceConfigDesc') }}</text>
+            <text class="menu-name">
+              {{ t('mine.deviceConfig') }}
+            </text>
+            <text class="menu-desc">
+              {{ t('mine.deviceConfigDesc') }}
+            </text>
           </view>
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
         <view class="menu-item" @click="goDigitalHuman">
           <wd-icon name="user" size="22" color="#336cff" custom-class="menu-icon" />
           <view class="menu-content">
-            <text class="menu-name">{{ t('mine.digitalHuman') }}</text>
-            <text class="menu-desc">{{ t('mine.digitalHumanDesc') }}</text>
+            <text class="menu-name">
+              {{ t('mine.digitalHuman') }}
+            </text>
+            <text class="menu-desc">
+              {{ t('mine.digitalHumanDesc') }}
+            </text>
           </view>
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
@@ -145,21 +183,31 @@ function showAbout() {
 
     <!-- System Menu -->
     <view class="menu-section">
-      <text class="menu-title">{{ t('mine.system') }}</text>
+      <text class="menu-title">
+        {{ t('mine.system') }}
+      </text>
       <view class="menu-list">
         <view class="menu-item" @click="goSettings">
           <wd-icon name="setting" size="22" color="#666" custom-class="menu-icon" />
           <view class="menu-content">
-            <text class="menu-name">{{ t('mine.settings') }}</text>
-            <text class="menu-desc">{{ t('mine.settingsDesc') }}</text>
+            <text class="menu-name">
+              {{ t('mine.settings') }}
+            </text>
+            <text class="menu-desc">
+              {{ t('mine.settingsDesc') }}
+            </text>
           </view>
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
         <view class="menu-item" @click="showAbout">
           <wd-icon name="info-circle" size="22" color="#666" custom-class="menu-icon" />
           <view class="menu-content">
-            <text class="menu-name">{{ t('mine.about') }}</text>
-            <text class="menu-desc">{{ t('mine.aboutDesc') }} v{{ appVersion }}</text>
+            <text class="menu-name">
+              {{ t('mine.about') }}
+            </text>
+            <text class="menu-desc">
+              {{ t('mine.aboutDesc') }} v{{ appVersion }}
+            </text>
           </view>
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
@@ -169,7 +217,9 @@ function showAbout() {
     <!-- Logout -->
     <view class="logout-section">
       <view class="logout-btn" @click="goLogout">
-        <text class="logout-text">{{ t('mine.logout') }}</text>
+        <text class="logout-text">
+          {{ t('mine.logout') }}
+        </text>
       </view>
     </view>
 
@@ -265,8 +315,12 @@ function showAbout() {
   font-weight: 800;
   color: #336cff;
 
-  &.online { color: #07c160; }
-  &.tasks { color: #f59e0b; }
+  &.online {
+    color: #07c160;
+  }
+  &.tasks {
+    color: #f59e0b;
+  }
 }
 
 .stat-label {
@@ -303,8 +357,12 @@ function showAbout() {
   border-bottom: 1rpx solid #f0f0f0;
   transition: background 0.15s ease;
 
-  &:last-child { border-bottom: none; }
-  &:active { background: #f5f5f7; }
+  &:last-child {
+    border-bottom: none;
+  }
+  &:active {
+    background: #f5f5f7;
+  }
 }
 
 .menu-icon {
@@ -347,7 +405,9 @@ function showAbout() {
   align-items: center;
   justify-content: center;
 
-  &:active { background: #fff5f5; }
+  &:active {
+    background: #fff5f5;
+  }
 }
 
 .logout-text {

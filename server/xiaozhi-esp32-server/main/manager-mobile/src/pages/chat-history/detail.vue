@@ -14,7 +14,7 @@ import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 import { getAudioId, getChatHistory } from '@/api/chat-history/chat-history'
 import { t } from '@/i18n'
-import { debounce, getEnvBaseUrl } from '@/utils'
+import { debounce } from '@/utils'
 import { toast } from '@/utils/toast'
 
 defineOptions({
@@ -44,13 +44,13 @@ safeAreaInsets = systemInfo.safeAreaInsets
 
 // 页面参数
 const sessionId = ref('')
-const agentId = ref('')
+const deviceId = ref('')
 
-// 智能体信息（简化）
-const currentAgent = computed(() => {
+// 设备信息（简化）
+const currentDevice = computed(() => {
   return {
-    id: agentId.value,
-    agentName: t('chatHistory.assistantName'),
+    id: deviceId.value,
+    name: t('chatHistory.assistantName'),
   }
 })
 
@@ -70,14 +70,14 @@ function goBack() {
 
 // 加载聊天记录
 async function loadChatHistory() {
-  if (!sessionId.value || !agentId.value) {
+  if (!sessionId.value || !deviceId.value) {
     console.error('缺少必要参数')
     return
   }
 
   try {
     loading.value = true
-    const response = await getChatHistory(agentId.value, sessionId.value)
+    const response = await getChatHistory(deviceId.value, sessionId.value)
     messageList.value = response
   }
   catch (error) {
@@ -119,7 +119,7 @@ function getSpeakerName(message: ChatMessage): string {
     return parsed ? parsed.speaker : t('chatHistory.userName')
   }
   else {
-    return currentAgent.value?.agentName || t('chatHistory.aiAssistantName')
+    return currentDevice.value?.name || t('chatHistory.aiAssistantName')
   }
 }
 
@@ -189,12 +189,9 @@ const playAudio = debounce(async (audioId: string) => {
       return
     }
 
-    // 获取音频下载ID
-    const downloadId = await getAudioId(audioId)
-
-    // 构造音频播放地址
-    const baseUrl = getEnvBaseUrl()
-    const audioUrl = `${baseUrl}/agent/play/${downloadId}`
+    // 获取音频播放地址
+    const audioMeta = await getAudioId(audioId)
+    const audioUrl = audioMeta.url
 
     // 创建音频上下文
     if (!audioContext.value) {
@@ -282,9 +279,9 @@ function getFirstLineText(text: string) {
 }
 
 onLoad((options) => {
-  if (options?.sessionId && options?.agentId) {
+  if (options?.sessionId && options?.deviceId) {
     sessionId.value = options.sessionId
-    agentId.value = options.agentId
+    deviceId.value = options.deviceId
   }
   else {
     console.error('缺少必要参数')

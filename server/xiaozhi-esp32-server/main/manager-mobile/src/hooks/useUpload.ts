@@ -1,6 +1,17 @@
 import { ref } from 'vue'
 import { getEnvBaseUploadUrl } from '@/utils'
 
+function getBearerToken(): string | null {
+  const rawToken = uni.getStorageSync('token') || ''
+  try {
+    const parsed = JSON.parse(rawToken)
+    return parsed.token || rawToken
+  }
+  catch {
+    return rawToken
+  }
+}
+
 const VITE_UPLOAD_BASEURL = `${getEnvBaseUploadUrl()}`
 
 type TfileType = 'image' | 'file'
@@ -57,7 +68,6 @@ export default function useUpload<T extends TfileType>(options: TOptions<T> = {}
       onSuccess: (res) => {
         const { data: _data } = JSON.parse(res)
         data.value = _data
-        // console.log('上传成功', res)
         success?.(_data)
       },
       onError: (err) => {
@@ -76,7 +86,6 @@ export default function useUpload<T extends TfileType>(options: TOptions<T> = {}
     const chooseFileOptions = {
       count: 1,
       success: (res: any) => {
-        console.log('File selected successfully:', res)
         // 小程序中res:{errMsg: "chooseImage:ok", tempFiles: [{fileType: "image", size: 48976, tempFilePath: "http://tmp/5iG1WpIxTaJf3ece38692a337dc06df7eb69ecb49c6b.jpeg"}]}
         // h5中res:{errMsg: "chooseImage:ok", tempFilePaths: "blob:http://localhost:9000/f74ab6b8-a14d-4cb6-a10d-fcf4511a0de5", tempFiles: [File]}
         // h5的File有以下字段：{name: "girl.jpeg", size: 48976, type: "image/jpeg"}
@@ -95,7 +104,6 @@ export default function useUpload<T extends TfileType>(options: TOptions<T> = {}
         handleFileChoose({ tempFilePath, size })
       },
       fail: (err: any) => {
-        console.error('File selection failed:', err)
         error.value = err
         onError?.(err)
       },
@@ -137,11 +145,13 @@ async function uploadFile({
   onError: (err: any) => void
   onComplete: () => void
 }) {
+  const token = getBearerToken()
   uni.uploadFile({
     url: VITE_UPLOAD_BASEURL,
     filePath: tempFilePath,
     name: 'file',
     formData,
+    header: token ? { Authorization: `Bearer ${token}` } : {},
     success: (uploadFileRes) => {
       try {
         const data = uploadFileRes.data
@@ -152,7 +162,6 @@ async function uploadFile({
       }
     },
     fail: (err) => {
-      console.error('Upload failed:', err)
       onError(err)
     },
     complete: onComplete,

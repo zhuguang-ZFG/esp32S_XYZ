@@ -7,21 +7,24 @@ defineProps<{
   transferStateLabel: string
 }>()
 
-const transferLoading = defineModel<boolean>('transferLoading', { default: false })
-const transferTargetUnionid = defineModel<string>('transferTargetUnionid', { default: '' })
-const transferAcceptId = defineModel<string>('transferAcceptId', { default: '' })
-
 const emit = defineEmits<{
   requestTransfer: []
   cancelTransfer: []
   acceptTransfer: []
 }>()
+const transferLoading = defineModel<boolean>('transferLoading', { default: false })
+const transferTargetUnionid = defineModel<string>('transferTargetUnionid', { default: '' })
+const transferAcceptId = defineModel<string>('transferAcceptId', { default: '' })
 </script>
 
 <template>
   <view class="bento-card">
-    <view class="bento-title">{{ t('v2.detail.transfer') }}</view>
-    <text class="state-label">{{ transferStateLabel }}</text>
+    <view class="bento-title">
+      {{ t('v2.detail.transfer') }}
+    </view>
+    <text class="state-label">
+      {{ transferStateLabel }}
+    </text>
     <wd-input
       v-model="transferTargetUnionid"
       clearable
