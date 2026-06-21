@@ -10,7 +10,7 @@
     "autoscan": true,
     "custom": {
       "^fg-(.*)": "@/components/fg-$1/fg-$1.vue",
-      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue"
+      "^wd-(config-provider|toast|message-box|icon|tabbar|tabbar-item|navbar|button|action-sheet|loading|swipe-action|fab|popup|input|tag|text|status-tip)$": "wot-design-uni/components/wd-$1/wd-$1.vue"
     }
   },
   "tabBar": {
