@@ -166,9 +166,9 @@ static void report_util_axis_values(float* axis_value, char* rpt) {
     auto n_axis = number_axis->get();
     for (idx = 0; idx < n_axis; idx++) {
         snprintf(axisVal, coordStringLen - 1, format, axis_value[idx] * unit_conv);
-        strcat(rpt, axisVal);
+        strncat(rpt, axisVal, axesStringLen - strlen(rpt) - 1);
         if (idx < (number_axis->get() - 1)) {
-            strcat(rpt, ",");
+            strncat(rpt, ",", axesStringLen - strlen(rpt) - 1);
         }
     }
 }
@@ -306,10 +306,10 @@ void report_probe_parameters(uint8_t client) {
     float print_position[MAX_N_AXIS];
     system_convert_array_steps_to_mpos(print_position, sys_probe_position);
     report_util_axis_values(print_position, temp);
-    strcat(probe_rpt, temp);
+    strncat(probe_rpt, temp, sizeof(probe_rpt) - strlen(probe_rpt) - 1);
     // add the success indicator and add closing characters
-    sprintf(temp, ":%d]\r\n", sys.probe_succeeded);
-    strcat(probe_rpt, temp);
+    snprintf(temp, sizeof(temp), ":%d]\r\n", sys.probe_succeeded);
+    strncat(probe_rpt, temp, sizeof(probe_rpt) - strlen(probe_rpt) - 1);
     grbl_send(client, probe_rpt);  // send the report
 }
 

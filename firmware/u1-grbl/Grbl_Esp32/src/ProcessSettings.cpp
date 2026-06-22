@@ -328,7 +328,7 @@ Error doJog(const char* value, WebUI::AuthenticationLevel auth_level, WebUI::ESP
     }
     char jogLine[LINE_BUFFER_SIZE];
     strcpy(jogLine, "$J=");
-    strcat(jogLine, value);
+    strncat(jogLine, value, LINE_BUFFER_SIZE - strlen(jogLine) - 1);
     return gc_execute_line(jogLine, out->client());
 }
 
