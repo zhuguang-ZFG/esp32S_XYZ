@@ -7,7 +7,7 @@ store.use(
     storage: {
       getItem: uni.getStorageSync,
       setItem: (key, value) => {
-        uni.setStorage({ key, data: value })
+        uni.setStorageSync(key, value)
       },
     },
   }),

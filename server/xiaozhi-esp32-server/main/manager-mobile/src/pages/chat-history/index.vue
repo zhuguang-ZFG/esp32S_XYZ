@@ -18,27 +18,6 @@ interface Props {
   agentId?: string
 }
 
-// 获取屏幕边界到安全区域距离
-let safeAreaInsets: any
-let systemInfo: any
-
-// #ifdef MP-WEIXIN
-systemInfo = uni.getWindowInfo()
-safeAreaInsets = systemInfo.safeArea
-  ? {
-      top: systemInfo.safeArea.top,
-      right: systemInfo.windowWidth - systemInfo.safeArea.right,
-      bottom: systemInfo.windowHeight - systemInfo.safeArea.bottom,
-      left: systemInfo.safeArea.left,
-    }
-  : null
-// #endif
-
-// #ifndef MP-WEIXIN
-systemInfo = uni.getSystemInfoSync()
-safeAreaInsets = systemInfo.safeAreaInsets
-// #endif
-
 // 聊天会话数据
 const sessionList = ref<ChatSession[]>([])
 const loading = ref(false)

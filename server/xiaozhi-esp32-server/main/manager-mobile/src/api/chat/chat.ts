@@ -56,7 +56,15 @@ export function chatCompletionStream(
     },
     timeout: 120000,
     enableChunked: true,
-    success: () => {},
+    success: (res) => {
+      // #ifndef MP-WEIXIN
+      // 非微信环境目前没有 onChunkReceived，一次性拿到完整响应后兜底处理
+      if (typeof res.data === 'string') {
+        buffer += res.data
+        processBuffer()
+      }
+      // #endif
+    },
     fail: (err) => {
       onChunk(`请求失败：${err.errMsg || '未知错误'}`, true)
     },
@@ -68,11 +76,6 @@ export function chatCompletionStream(
     buffer += chunk
     processBuffer()
   })
-  // #endif
-
-  // 非微信小程序环境使用定时器轮询（fallback）
-  // #ifndef MP-WEIXIN
-  const pollTimer: ReturnType<typeof setInterval> | null = null
   // #endif
 
   function processBuffer() {
@@ -111,10 +114,6 @@ export function chatCompletionStream(
   return {
     abort: () => {
       requestTask.abort?.()
-      // #ifndef MP-WEIXIN
-      if (pollTimer)
-        clearInterval(pollTimer)
-      // #endif
     },
   }
 }
