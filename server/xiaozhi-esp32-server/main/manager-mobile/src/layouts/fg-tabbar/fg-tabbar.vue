@@ -25,10 +25,7 @@ onLoad(() => {
   hideRedundantTabbarEnable
   && uni.hideTabBar({
     fail(err) {
-      console.log('hideTabBar fail: ', err)
-    },
-    success(res) {
-      console.log('hideTabBar success: ', res)
+      console.error('hideTabBar fail: ', err)
     },
   })
 })

@@ -31,8 +31,8 @@ knife4j:
   enable: true
   basic:
     enable: false
-    username: admin
-    password: admin
+    username: ${KNIFE4J_USERNAME:admin}
+    password: ${KNIFE4J_PASSWORD:}
   setting:
     enableFooter: false
 

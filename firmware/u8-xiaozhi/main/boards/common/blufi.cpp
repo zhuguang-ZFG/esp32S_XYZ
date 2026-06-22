@@ -866,15 +866,15 @@ void Blufi::_handle_event(esp_blufi_cb_event_t event, esp_blufi_cb_param_t* para
             break;
         case ESP_BLUFI_EVENT_RECV_STA_SSID:
             strncpy((char*)m_sta_config.sta.ssid, (char*)param->sta_ssid.ssid,
-                    param->sta_ssid.ssid_len);
-            m_sta_config.sta.ssid[param->sta_ssid.ssid_len] = '\0';
+                    sizeof(m_sta_config.sta.ssid) - 1);
+            m_sta_config.sta.ssid[sizeof(m_sta_config.sta.ssid) - 1] = '\0';
             ESP_LOGI(BLUFI_TAG, "Recv STA SSID: %s", m_sta_config.sta.ssid);
             break;
         case ESP_BLUFI_EVENT_RECV_STA_PASSWD:
             strncpy((char*)m_sta_config.sta.password, (char*)param->sta_passwd.passwd,
-                    param->sta_passwd.passwd_len);
-            m_sta_config.sta.password[param->sta_passwd.passwd_len] = '\0';
-            ESP_LOGI(BLUFI_TAG, "Recv STA PASSWORD : %s", m_sta_config.sta.password);
+                    sizeof(m_sta_config.sta.password) - 1);
+            m_sta_config.sta.password[sizeof(m_sta_config.sta.password) - 1] = '\0';
+            ESP_LOGI(BLUFI_TAG, "Recv STA PASSWORD: ***");
             break;
         case ESP_BLUFI_EVENT_GET_WIFI_LIST: {
             ESP_LOGI(BLUFI_TAG, "BLUFI get wifi list");
