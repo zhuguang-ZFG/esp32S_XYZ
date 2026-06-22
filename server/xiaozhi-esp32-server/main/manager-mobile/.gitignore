@@ -9,7 +9,14 @@ lerna-debug.log*
 
 node_modules
 .DS_Store
-dist
+/dist/
+!/dist/
+/dist/*
+!/dist/build/
+/dist/build/*
+!/dist/build/mp-weixin/
+/dist/build/mp-weixin/*
+!/dist/build/mp-weixin/project.config.json
 *.local
 
 # Editor directories and files
