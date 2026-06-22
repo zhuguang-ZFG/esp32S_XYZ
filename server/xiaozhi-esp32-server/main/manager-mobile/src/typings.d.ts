@@ -1,5 +1,10 @@
 // 全局要用的类型放到这里
 
+declare module 'sm-crypto' {
+  const smCrypto: any
+  export default smCrypto
+}
+
 declare global {
   const computed: typeof import('vue')['computed']
   const onLoad: typeof import('@dcloudio/uni-app')['onLoad']
