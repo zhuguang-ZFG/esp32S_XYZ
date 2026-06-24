@@ -75,6 +75,34 @@ class Live2DManager {
         this._downArea = 'Body';
         this._movedBeyondClick = false;
         this._swipeMinDist = 24; // 触发滑动的最小距离
+        this._modelLoadTimeoutMs = 15000; // 模型加载超时时间
+    }
+
+    /**
+     * 带超时的模型加载
+     */
+    _loadModelWithTimeout(modelPath, timeoutMs = this._modelLoadTimeoutMs) {
+        const loadPromise = PIXI.live2d.Live2DModel.from(modelPath);
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(`模型加载超时（${timeoutMs}ms）: ${modelPath}`)), timeoutMs);
+        });
+        return Promise.race([loadPromise, timeoutPromise]);
+    }
+
+    /**
+     * 显示模型加载失败提示
+     */
+    _showModelLoadError(message) {
+        console.error(message);
+        const modelLoading = document.getElementById('modelLoading');
+        if (modelLoading) {
+            modelLoading.innerHTML = `<div class="loading-char-float"><div class="main-char" style="color:#ff6b6b">${message}</div></div>`;
+            modelLoading.style.display = 'flex';
+        }
+        const app = window.chatApp;
+        if (app && app.uiController && typeof app.uiController.addChatMessage === 'function') {
+            app.uiController.addChatMessage(message, false);
+        }
     }
 
     /**
@@ -112,7 +140,7 @@ class Live2DManager {
             const modelFileName = modelFileMap[savedModelName] || 'hiyori_pro_t11.model3.json';
             const modelPath = basePath + 'resources/' + savedModelName + '/runtime/' + modelFileName;
 
-            this.live2dModel = await PIXI.live2d.Live2DModel.from(modelPath);
+            this.live2dModel = await this._loadModelWithTimeout(modelPath);
             this.live2dApp.stage.addChild(this.live2dModel);
 
             // 保存当前模型名称
@@ -345,7 +373,8 @@ class Live2DManager {
             });
 
         } catch (err) {
-            console.error('加载 Live2D 模型失败:', err);
+            const message = `加载 Live2D 模型失败: ${err.message || err}`;
+            this._showModelLoadError(message);
         }
     }
 
@@ -772,7 +801,7 @@ class Live2DManager {
             }
 
             // 加载新模型
-            this.live2dModel = await PIXI.live2d.Live2DModel.from(modelPath);
+            this.live2dModel = await this._loadModelWithTimeout(modelPath);
             this.live2dApp.stage.addChild(this.live2dModel);
 
             // 设置模型属性
@@ -808,7 +837,8 @@ class Live2DManager {
             console.log('模型切换成功:', modelName);
             return true;
         } catch (error) {
-            console.error('切换模型失败:', error);
+            const message = `切换模型失败: ${error.message || error}`;
+            this._showModelLoadError(message);
             const app = window.chatApp;
             if (app) {
                 app.setModelLoadingStatus(false);

@@ -37,8 +37,11 @@
 </head>
 
 <body>
-    <!-- 背景容器 -->
+    <!-- 背景容器：双图层交叉淡入淡出 -->
     <div class="background-container" id="backgroundContainer">
+        <div class="bg-layer bg-layer--active" id="bgLayerA"></div>
+        <div class="bg-layer" id="bgLayerB"></div>
+        <div class="bg-static-fallback" id="bgStaticFallback"></div>
         <div class="background-overlay"></div>
     </div>
 

@@ -14,7 +14,13 @@ class UIController {
         this.visualizerContext = null;
         this.audioStatsTimer = null;
         this.currentBackgroundIndex = localStorage.getItem('backgroundIndex') ? parseInt(localStorage.getItem('backgroundIndex')) : 0;
-        this.backgroundImages = ['1.png', '2.png', '3.png'];
+        this.backgroundSources = [
+            { type: 'video', src: 'media/hero-bg.mp4', poster: 'images/1.png', static: 'images/1.png' },
+            { type: 'video', src: 'media/product-draw-loop.mp4', poster: 'images/2.png', static: 'images/2.png' },
+            { type: 'image', src: 'images/3.png' }
+        ];
+        this.backgroundTransitionMs = 1000;
+        this._isBackgroundSwitching = false;
         this.dialBtnDisabled = false;
         this.isConnecting = false;
         this.lastWakewordDialTime = 0;
@@ -60,11 +66,8 @@ class UIController {
 
         // Initialize status display
         this.updateConnectionUI(false);
-        // Apply saved background
-        const backgroundContainer = document.querySelector('.background-container');
-        if (backgroundContainer) {
-            backgroundContainer.style.backgroundImage = `url('./images/${this.backgroundImages[this.currentBackgroundIndex]}')`;
-        }
+        // Apply saved background and preload next
+        this._initBackgroundLayers();
 
         this.updateDialButton(false);
 
@@ -458,14 +461,138 @@ class UIController {
         chatStream.scrollTop = chatStream.scrollHeight;
     }
 
-    // Switch background
-    switchBackground() {
-        this.currentBackgroundIndex = (this.currentBackgroundIndex + 1) % this.backgroundImages.length;
-        const backgroundContainer = document.querySelector('.background-container');
-        if (backgroundContainer) {
-            backgroundContainer.style.backgroundImage = `url('./images/${this.backgroundImages[this.currentBackgroundIndex]}')`;
+    // Switch background with crossfade
+    async switchBackground() {
+        if (this._isBackgroundSwitching) return;
+        this._isBackgroundSwitching = true;
+
+        try {
+            const nextIndex = (this.currentBackgroundIndex + 1) % this.backgroundSources.length;
+            const activeLayer = this._getActiveLayer();
+            const inactiveLayer = this._getInactiveLayer();
+
+            // The inactive layer has already been preloaded with the next source.
+            inactiveLayer.classList.add('bg-layer--active');
+            activeLayer.classList.remove('bg-layer--active');
+
+            // Start playing the newly active video and pause the old one.
+            this._playLayerMedia(inactiveLayer);
+            this._pauseLayerMedia(activeLayer);
+
+            // Update state and fallback image.
+            this.currentBackgroundIndex = nextIndex;
+            localStorage.setItem('backgroundIndex', nextIndex);
+            this._updateStaticFallback(this.backgroundSources[nextIndex]);
+
+            // After the crossfade finishes, clear the old layer and preload the next source.
+            setTimeout(() => {
+                this._clearLayer(activeLayer);
+                const preloadIndex = (nextIndex + 1) % this.backgroundSources.length;
+                this._preloadIntoLayer(inactiveLayer, this.backgroundSources[preloadIndex], false)
+                    .catch(err => console.warn('预加载下一张背景失败:', err));
+                this._isBackgroundSwitching = false;
+            }, this.backgroundTransitionMs);
+        } catch (error) {
+            console.error('切换背景失败:', error);
+            this._isBackgroundSwitching = false;
         }
-        localStorage.setItem('backgroundIndex', this.currentBackgroundIndex);
+    }
+
+    // Initialize background layers: active shows current, inactive preloads next.
+    async _initBackgroundLayers() {
+        const activeLayer = document.getElementById('bgLayerA');
+        const inactiveLayer = document.getElementById('bgLayerB');
+        if (!activeLayer || !inactiveLayer) return;
+
+        const currentSource = this.backgroundSources[this.currentBackgroundIndex];
+        try {
+            await this._preloadIntoLayer(activeLayer, currentSource, true);
+            activeLayer.classList.add('bg-layer--active');
+            this._updateStaticFallback(currentSource);
+
+            const nextIndex = (this.currentBackgroundIndex + 1) % this.backgroundSources.length;
+            await this._preloadIntoLayer(inactiveLayer, this.backgroundSources[nextIndex], false);
+        } catch (error) {
+            console.warn('背景初始化失败:', error);
+        }
+    }
+
+    _getActiveLayer() {
+        const layerA = document.getElementById('bgLayerA');
+        return layerA && layerA.classList.contains('bg-layer--active') ? layerA : document.getElementById('bgLayerB');
+    }
+
+    _getInactiveLayer() {
+        const layerA = document.getElementById('bgLayerA');
+        return layerA && layerA.classList.contains('bg-layer--active') ? document.getElementById('bgLayerB') : layerA;
+    }
+
+    _clearLayer(layer) {
+        if (!layer) return;
+        this._pauseLayerMedia(layer);
+        layer.innerHTML = '';
+    }
+
+    _pauseLayerMedia(layer) {
+        if (!layer) return;
+        const video = layer.querySelector('video');
+        if (video && typeof video.pause === 'function') {
+            try { video.pause(); } catch (e) { /* ignore */ }
+        }
+    }
+
+    _playLayerMedia(layer) {
+        if (!layer) return;
+        const video = layer.querySelector('video');
+        if (video && typeof video.play === 'function') {
+            video.play().catch(() => { /* autoplay may be blocked */ });
+        }
+    }
+
+    _updateStaticFallback(source) {
+        const fallback = document.getElementById('bgStaticFallback');
+        if (!fallback || !source) return;
+        const fallbackUrl = source.static || source.src;
+        fallback.style.backgroundImage = `url('./${fallbackUrl}')`;
+    }
+
+    _preloadIntoLayer(layer, source, autoplay) {
+        if (!layer || !source) return Promise.resolve();
+        this._clearLayer(layer);
+        return this._createMediaElement(source, autoplay).then(element => {
+            layer.appendChild(element);
+            return element;
+        });
+    }
+
+    _createMediaElement(source, autoplay) {
+        return new Promise((resolve, reject) => {
+            if (source.type === 'video') {
+                const video = document.createElement('video');
+                video.autoplay = autoplay;
+                video.muted = true;
+                video.loop = true;
+                video.playsInline = true;
+                video.preload = 'auto';
+                video.src = source.src;
+                if (source.poster) {
+                    video.poster = source.poster;
+                }
+                video.onloadeddata = () => {
+                    if (autoplay) {
+                        video.play().catch(() => { /* autoplay may be blocked */ });
+                    }
+                    resolve(video);
+                };
+                video.onerror = () => reject(new Error(`背景视频加载失败: ${source.src}`));
+                video.load();
+            } else {
+                const img = document.createElement('img');
+                img.src = source.src;
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`背景图片加载失败: ${source.src}`));
+            }
+        });
     }
 
     // Switch Live2D model

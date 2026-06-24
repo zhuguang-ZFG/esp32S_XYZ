@@ -21,12 +21,48 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-image: url('../images/1.png');
+    background: #000 url('../images/1.png') center/cover no-repeat;
+    z-index: -2;
+    overflow: hidden;
+}
+
+.bg-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.bg-layer.bg-layer--active {
+    opacity: 1;
+    z-index: 1;
+}
+
+.bg-layer video,
+.bg-layer img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.bg-static-fallback {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    transition: background-image 0.5s ease-in-out;
-    z-index: -2;
+    opacity: 0;
+    z-index: 0;
+    display: none;
 }
 
 .background-overlay {
@@ -36,7 +72,8 @@ body {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.3);
-    z-index: -1;
+    z-index: 2;
+    pointer-events: none;
 }
 
 /* ==================== 主容器 ==================== */
@@ -181,7 +218,7 @@ body {
     height: 100vh;
     display: block;
     z-index: 100;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 .status-indicator {
@@ -1476,5 +1513,33 @@ body {
     .audio-visualizer {
         width: 250px;
         height: 80px;
+    }
+}
+
+/* ==================== 移动端背景降级：避免视频流量浪费 ==================== */
+@media (max-width: 768px) {
+    .bg-layer {
+        display: none;
+    }
+
+    .bg-static-fallback {
+        display: block;
+        opacity: 1;
+    }
+}
+
+/* ==================== 减少动态效果：静止替代视频与淡入淡出 ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .bg-layer {
+        transition: none;
+    }
+
+    .bg-layer video {
+        display: none;
+    }
+
+    .bg-static-fallback {
+        display: block !important;
+        opacity: 1;
     }
 }
