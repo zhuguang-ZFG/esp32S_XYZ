@@ -2,19 +2,8 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-rule_files:
-  - rules/manager-api-alerts.yml
-
-scrape_configs:
-  - job_name: manager-api
-    metrics_path: /xiaozhi/internal/v1/metrics
-    authorization:
-      type: Bearer
-      credentials_file: /etc/prometheus/secrets/manager-api.secret
-    static_configs:
-      - targets:
-          - manager-api:8002
-
+# manager-api retired 2026-06: scrapes and alerts removed.
+# Retain alertmanager stub for future LiMa-side metrics.
 alerting:
   alertmanagers:
     - static_configs:

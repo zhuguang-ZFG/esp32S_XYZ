@@ -44,9 +44,6 @@ build-u1: ## Build U1 firmware
 build-u8: ## Build U8 firmware (requires ESP-IDF environment)
 	cd $(U8_DIR) && idf.py build
 
-build-server: ## Build Java BusinessServer
-	cd $(SERVER_DIR)/manager-api && mvn clean package -DskipTests
-
 # ── Flash ────────────────────────────────────────────────
 PORT ?=
 
@@ -85,9 +82,6 @@ test-python: ## Python unit tests
 test-fake: ## Fake integration tests
 	python -m pytest $(TESTS_DIR)/test_fake_integration.py -v
 
-test-java: ## Java unit tests
-	cd $(SERVER_DIR)/manager-api && mvn test
-
 # ── Tools ────────────────────────────────────────────────
 lint: ## Lint Python code
 	ruff check tools/ tests/ --fix
@@ -96,7 +90,6 @@ lint: ## Lint Python code
 clean: ## Clean build artifacts
 	cd $(U1_DIR) && pio run -t clean 2>/dev/null || true
 	rm -rf $(U8_DIR)/build 2>/dev/null || true
-	cd $(SERVER_DIR)/manager-api && mvn clean 2>/dev/null || true
 
 # ── Fake simulators ─────────────────────────────────────
 fake-u1: ## Start fake U1 simulator

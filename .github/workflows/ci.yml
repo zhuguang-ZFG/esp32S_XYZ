@@ -103,24 +103,6 @@ jobs:
           python -m unittest tools.fake_ai.tests.test_app -v
           python -m unittest tests.ci.test_fake_integration -v
 
-  manager-api-tests:
-    name: Manager API tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server/xiaozhi-esp32-server/main/manager-api
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: Run App V2 tests
-        run: mvn "-Dtest=AESUtilsTest,RenExceptionHandlerTest,SafetyValidatorTest,SafetyAuditServiceTest,ContentAuditServiceTest,ContentAuditLogServiceTest,SingleLineSvgValidatorTest,WriteTextProjectionServiceTest,DrawGeneratedProjectionServiceTest,FactoryEntitlementServiceTest,ResourceEntitlementServiceTest,FirmwareReleaseServiceTest,FirmwareReleaseControllerTest,MemberServiceImplTest,VoiceprintEnrollmentServiceImplTest,PrivacyDeletionServiceImplTest,DeviceSupplyServiceImplTest,PrimarySessionServiceImplTest,DeviceTransferServiceImplTest,DeviceRmaServiceImplTest,ProductNotificationOutboxServiceImplTest,MonitoringMetricsServiceImplTest,MonitoringMetricsControllerTest,AppV2ServiceImplTest,AppV2ControllerTest,InternalMotionEventControllerTest,ConfigControllerTest,DeviceServerMotionGatewayImplTest,EdgeAClientHubTest,ClientEdgeWebSocketHandlerTest" test
-
   manager-mobile-tests:
     name: Manager mobile tests
     runs-on: ubuntu-latest

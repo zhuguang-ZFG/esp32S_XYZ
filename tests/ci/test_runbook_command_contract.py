@@ -131,18 +131,6 @@ class RunbookCommandContractTests(unittest.TestCase):
                         context,
                     )
 
-    def test_manager_api_relative_source_paths_document_manager_api_cwd(self):
-        for path in sorted(RUNBOOKS.glob("*.md")):
-            text = path.read_text(encoding="utf-8", errors="replace")
-            for block in POWERSHELL_BLOCK.finditer(text):
-                body = block.group("body")
-                if "src/main/java" not in body:
-                    continue
-
-                context = text[max(0, block.start() - 300):block.start()].lower()
-                with self.subTest(runbook=path.name, command=body.strip()):
-                    self.assertIn("manager-api", context)
-
     def test_m6_doc_inline_shell_commands_use_rtk_prefix(self):
         for path in sorted(DOCS.glob("M6*.md")):
             text = path.read_text(encoding="utf-8", errors="replace")
