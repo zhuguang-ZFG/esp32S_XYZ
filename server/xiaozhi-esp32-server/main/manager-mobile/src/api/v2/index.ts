@@ -135,6 +135,21 @@ export async function v2DeleteAccount() {
   return { status: 'deleted', affectedRows: res.accountId ? 1 : 0, auditRetentionDays: 0 } as V2DeletionResponse
 }
 
+export function v2CheckOta(deviceId: string) {
+  return http.Get<Record<string, any>>(
+    `${appPrefix}/ota/check`,
+    { params: { device_id: deviceId }, meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
+export function v2StartOta(deviceId: string, rollback = false) {
+  return http.Post<Record<string, any>>(
+    `${appPrefix}/ota/start`,
+    { device_id: deviceId, rollback },
+    { meta: { ignoreAuth: false, toast: true } },
+  )
+}
+
 function toDeviceInfo(raw: unknown): V2DeviceInfo {
   const row = raw as Record<string, any>
   return {

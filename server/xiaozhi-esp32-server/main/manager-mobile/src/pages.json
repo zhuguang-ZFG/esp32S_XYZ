@@ -204,6 +204,15 @@
       }
     },
     {
+      "path": "pages/ota/index",
+      "type": "page",
+      "layout": "default",
+      "style": {
+        "navigationBarTitleText": "固件升级",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/settings/index",
       "type": "page",
       "layout": "default",

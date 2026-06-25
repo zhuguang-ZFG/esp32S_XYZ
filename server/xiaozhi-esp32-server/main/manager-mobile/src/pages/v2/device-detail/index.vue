@@ -189,6 +189,7 @@ function navigateBack() { uni.navigateBack() }
 function goToChatHistory() { uni.navigateTo({ url: '/pages/chat-history/index?agentId=default' }) }
 function goToVoiceprint() { uni.navigateTo({ url: '/pages/voiceprint/index?agentId=default' }) }
 function goToAgents() { uni.switchTab({ url: '/pages/index/index' }) }
+function goToOta() { uni.navigateTo({ url: `/pages/ota/index?deviceId=${deviceId.value}` }) }
 
 onLoad((opt: any) => { deviceId.value = opt?.deviceId || '' })
 onMounted(async () => { if (!deviceId.value) return; try { deviceInfo.value = await v2GetDeviceInfo(deviceId.value) } catch (e) { console.warn('device info load failed:', e) }; await loadPendingVoiceTasks(); await loadSelfCheckHistoryData(); wsConnect() })
@@ -236,6 +237,11 @@ onUnmounted(() => { clearInfoLoadingTimer() })
         <view class="quick-link" @click="goToAgents">
           <wd-icon name="robot" size="20" color="#336cff" />
           <text>{{ t('v2.detail.manageAgents') }}</text>
+          <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
+        </view>
+        <view class="quick-link" @click="goToOta">
+          <wd-icon name="refresh" size="20" color="#336cff" />
+          <text>固件升级</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
       </view>
