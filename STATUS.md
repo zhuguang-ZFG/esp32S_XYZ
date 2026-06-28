@@ -4,6 +4,37 @@
 > Branch: main
 > Tests: **115 passed, 0 failed**
 
+## U1 固件瘦身：删除 26 个冗余机器配置（2026-06-28）
+
+> U1（Grbl_Esp32）的 `Machines/` 目录原 28 个机器配置（3axis_v4/mpcnc/lowrider/tapster 等上游模板），实际只用 `dlc_motor_control_p1.h`（XYYZ 写字机）。
+>
+> | 指标 | 瘦身前 | 瘦身后 | 变化 |
+> |------|--------|--------|------|
+> | Machines 行数 | 3,182 | 205 | **-93.6%（删 2,977 行）** |
+> | Machines 文件数 | 28 | 2 | 删 26 个 |
+>
+> **保留**：`dlc_motor_control_p1.h`（你的配置，Machine.h include 它）+ `test_drive.h`（Machine.h 注释推荐的初始测试配置）。
+> **验证**：CI 静态测试 115 passed（无回归）；`dlc_motor_control_p1.h` 不依赖任何已删配置（引用检查通过）。
+
+### U1 OTA 升级通道调研（WiFi/蓝牙关闭决策依据）
+
+U1 固件升级有两条通道：
+1. **platformio upload（串口烧录，upload_speed=921600）** — 开发/维护期烧录，通过 USB/串口，**不依赖 WiFi**
+2. **WebUI `/updatefw`（WiFi OTA）** — 运行期远程升级，依赖 `ENABLE_WIFI`（Config.h:105）
+
+**结论**：U1 是 MOTOR_MCU（运动控制），通过 UART 被 U8 控制，本身不需要网络。WiFi/蓝牙（6,410 行 WebUI）仅用于现场调试/OTA 便利。**关闭 WiFi/蓝牙是产品决策**：
+- 若写字机不需要现场 WiFi 调试/远程升级 U1 → 可关（注释 Config.h:100,105，省 6K+ 行）
+- 若需要现场调试 → 保留
+- **本决策需用户确认**，未擅自关闭
+
+### U1 加厚方向（待真机验证，非本轮代码改动）
+
+1. **strapping pin 显式初始化**：IO46(X_STEP)/IO3(DIR)/IO45(LASER) 是 ESP32-S3 strapping pin，配置文件注释标注"实测无冲突"，建议上电时显式拉高消除启动时序依赖。
+2. **激光安全联锁核对**：LASER_MODE 启用，需确认限位/急停时激光是否立即断电。
+3. **运动参数实机标定**：STEPS_PER_MM/MAX_RATE/ACCELERATION 是 bring-up 保守值，需实机标定固化。
+
+---
+
 ## U8 固件核心质量加固（2026-06-28）
 
 > 瘦身后对 U8 核心代码做深度质量检查，修复 2 个 MEDIUM 健壮性问题：
