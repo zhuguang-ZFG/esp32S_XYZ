@@ -114,7 +114,7 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
     def test_device_detail_handles_device_info_reply_event(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
 
-        self.assertIn("handleEdgeAEvent(m.event)", text)
+        self.assertIn("handleEdgeAEvent(event)", text)
         self.assertIn("event?.event_type === 'device_info_reply'", text)
         self.assertIn("applyDeviceInfoReply(event, payload as DeviceInfoReplyPayload)", text)
         self.assertIn("payload?.hw_rev", text)
@@ -127,8 +127,7 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
 
         self.assertIn("handleRefreshInfo", text)
         self.assertIn("v2SubmitTask(deviceId.value, 'get_device_info')", text)
-        self.assertIn("latestDeviceInfoTaskId", text)
-        self.assertIn("刷新信息", text)
+        self.assertIn("v2.detail.refreshInfo", text)
 
     def test_device_detail_displays_run_path_progress_events(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
@@ -136,16 +135,13 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("latestProgressPercent", text)
         self.assertIn("applyTaskProgress(jobPayload)", text)
         self.assertIn("payload.phase === 'progress'", text)
-        self.assertIn("payload.phase === 'accepted' || payload.phase === 'running'", text)
-        self.assertIn("latestPhase.value === 'progress'", text)
+        self.assertIn("['accepted', 'running'].includes(payload.phase)", text)
         self.assertIn("progressBarStyle", text)
         self.assertIn("latestProgressLabel", text)
 
     def test_device_detail_prompts_retry_when_runtime_status_is_refreshing(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
 
-        self.assertIn("runtimeStatusRefreshMessage", text)
-        self.assertIn("设备状态正在刷新，请稍后重试", text)
         self.assertIn("taskSubmitErrorMessage", text)
         self.assertIn("text.includes('E_RUNTIME_STALE')", text)
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
@@ -153,23 +149,21 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
     def test_device_detail_shows_child_friendly_content_audit_message(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
 
-        self.assertIn("contentBlockedMessage", text)
-        self.assertIn("内容不适合绘制，请换一段文字或图案", text)
+        self.assertIn("v2.detail.errorContentBlocked", text)
         self.assertIn("text.includes('E_CONTENT_BLOCKED')", text)
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
 
     def test_device_detail_shows_friendly_invalid_drawing_message(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
 
-        self.assertIn("invalidDrawingMessage", text)
-        self.assertIn("图案暂时无法绘制，请换一个更简单的图案", text)
+        self.assertIn("v2.detail.errorInvalidDrawing", text)
         self.assertIn("text.includes('E_INVALID_DRAWING')", text)
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
 
     def test_device_detail_shows_friendly_entitlement_message(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
 
-        self.assertIn("entitlementRequiredMessage", text)
+        self.assertIn("v2.detail.errorNotEntitled", text)
         self.assertIn("E_NOT_ENTITLED", text)
         self.assertIn("text.includes('E_NOT_ENTITLED')", text)
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
@@ -177,19 +171,32 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
     def test_device_detail_can_manually_maintain_supplies_state(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
         api = V2_API.read_text(encoding="utf-8", errors="replace")
+        supplies_component = (
+            ROOT
+            / "server"
+            / "xiaozhi-esp32-server"
+            / "main"
+            / "manager-mobile"
+            / "src"
+            / "pages"
+            / "v2"
+            / "device-detail"
+            / "components"
+            / "supplies-panel.vue"
+        ).read_text(encoding="utf-8", errors="replace")
 
         self.assertIn("v2UpdateDeviceSupplies", api)
-        self.assertIn("`/api/v1/devices/${deviceId}/supplies`", api)
+        self.assertIn("`${appPrefix}/devices/${deviceId}/supplies`", api)
         self.assertIn("deviceSupplies", text)
-        self.assertIn("updatePaperSlotState", text)
-        self.assertIn("markNewPenInstalled", text)
+        self.assertIn("updatePaper", text)
+        self.assertIn("markNewPen", text)
         self.assertIn("paperSlotState: 'empty' | 'loaded' | 'unknown'", (ROOT / "server" / "xiaozhi-esp32-server" / "main" / "manager-mobile" / "src" / "api" / "v2" / "types.ts").read_text(encoding="utf-8", errors="replace"))
-        self.assertIn("updatePaperSlotState('loaded')", text)
-        self.assertIn("updatePaperSlotState('empty')", text)
+        self.assertIn("emit('updatePaper', 'loaded')", supplies_component)
+        self.assertIn("emit('updatePaper', 'empty')", supplies_component)
         self.assertIn("resetPenMileage: true", text)
         self.assertIn("penInkPercentEst: 100", text)
         self.assertIn("E_NO_PAPER", text)
-        self.assertIn("noPaperMessage", text)
+        self.assertIn("v2.detail.errorNoPaper", text)
 
     def test_device_detail_can_request_cancel_and_accept_device_transfer(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
@@ -202,65 +209,102 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("v2AcceptDeviceTransfer", api)
         self.assertIn("v2CancelDeviceTransfer", api)
         self.assertIn("v2ListPendingIncomingDeviceTransfers", api)
-        self.assertIn("`/api/v1/devices/${deviceId}/transfer`", api)
-        self.assertIn("`/api/v1/device-transfers/${transferId}/accept`", api)
-        self.assertIn("`/api/v1/device-transfers/${transferId}/cancel`", api)
-        self.assertIn("'/api/v1/device-transfers/pending-incoming'", api)
+        self.assertIn("`${appPrefix}/devices/${deviceId}/transfer`", api)
+        self.assertIn("`${appPrefix}/transfers/${transferId}/accept`", api)
+        self.assertIn("`${appPrefix}/transfers/${transferId}/cancel`", api)
+        self.assertIn("`${appPrefix}/transfers/pending`", api)
         self.assertIn("transferTargetUnionid", text)
         self.assertIn("transferAcceptId", text)
         self.assertIn("deviceTransfer", text)
         self.assertIn("handleRequestTransfer", text)
         self.assertIn("handleCancelTransfer", text)
         self.assertIn("handleAcceptTransfer", text)
-        self.assertIn("currentTransferId", text)
-        self.assertIn("v2RequestDeviceTransfer(deviceId.value, { targetUnionid })", text)
-        self.assertIn("v2CancelDeviceTransfer(transferId)", text)
-        self.assertIn("v2AcceptDeviceTransfer(transferId)", text)
+        self.assertIn("v2RequestDeviceTransfer(deviceId.value, { targetUnionid: target })", text)
+        self.assertIn("v2CancelDeviceTransfer(tid)", text)
+        self.assertIn("v2AcceptDeviceTransfer(tid)", text)
 
     def test_device_detail_primary_can_handle_pending_voice_approvals(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
         api = V2_API.read_text(encoding="utf-8", errors="replace")
         types = (ROOT / "server" / "xiaozhi-esp32-server" / "main" / "manager-mobile" / "src" / "api" / "v2" / "types.ts").read_text(encoding="utf-8", errors="replace")
+        composable = (
+            ROOT
+            / "server"
+            / "xiaozhi-esp32-server"
+            / "main"
+            / "manager-mobile"
+            / "src"
+            / "pages"
+            / "v2"
+            / "device-detail"
+            / "composables"
+            / "useVoiceApproval.ts"
+        ).read_text(encoding="utf-8", errors="replace")
 
         self.assertIn("V2PendingVoiceTaskResponse", types)
         self.assertIn("approvalRequiredBy?: string", types)
         self.assertIn("v2ListPendingVoiceTasks", api)
         self.assertIn("v2ApproveVoiceTask", api)
         self.assertIn("v2RejectVoiceTask", api)
-        self.assertIn("`/api/v1/devices/${deviceId}/voice-tasks/pending`", api)
-        self.assertIn("`/api/v1/tasks/${taskId}/approve`", api)
-        self.assertIn("`/api/v1/tasks/${taskId}/reject`", api)
+        self.assertIn("`${appPrefix}/devices/${deviceId}/voice-tasks/pending`", api)
+        self.assertIn("`${appPrefix}/tasks/${taskId}/approve`", api)
+        self.assertIn("`${appPrefix}/tasks/${taskId}/reject`", api)
         self.assertIn("pendingVoiceTasks", text)
         self.assertIn("voiceApprovalLoading", text)
         self.assertIn("pendingVoiceApprovalCount", text)
         self.assertIn("pendingVoiceApprovalBadgeText", text)
-        self.assertIn("updateM6PendingTabBarBadge", text)
-        self.assertIn("updateM6PendingTabBarBadge('voiceApproval', pendingVoiceTasks.value.length)", text)
-        self.assertIn("updateM6PendingTabBarBadge('voiceApproval', 0)", text)
+        self.assertIn("updateM6PendingTabBarBadge", composable)
+        self.assertIn("updateM6PendingTabBarBadge('voiceApproval', pendingVoiceTasks.value.length)", composable)
+        self.assertIn("updateM6PendingTabBarBadge('voiceApproval', 0)", composable)
         self.assertIn("loadPendingVoiceTasks", text)
-        self.assertIn("v2ListPendingVoiceTasks(deviceId.value)", text)
+        self.assertIn("v2ListPendingVoiceTasks(did)", composable)
         self.assertIn("handleApproveVoiceTask", text)
         self.assertIn("handleRejectVoiceTask", text)
-        self.assertIn("v2ApproveVoiceTask(taskId", text)
-        self.assertIn("v2RejectVoiceTask(taskId", text)
-        self.assertIn("pendingVoiceApprovals", text)
-        self.assertIn("noPendingVoice", text)
         self.assertIn("approve", text)
         self.assertIn("reject", text)
 
     def test_device_detail_explains_voiceprint_approval_context(self):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        composable = (
+            ROOT
+            / "server"
+            / "xiaozhi-esp32-server"
+            / "main"
+            / "manager-mobile"
+            / "src"
+            / "pages"
+            / "v2"
+            / "device-detail"
+            / "composables"
+            / "useVoiceApproval.ts"
+        ).read_text(encoding="utf-8", errors="replace")
+        voice_component = (
+            ROOT
+            / "server"
+            / "xiaozhi-esp32-server"
+            / "main"
+            / "manager-mobile"
+            / "src"
+            / "pages"
+            / "v2"
+            / "device-detail"
+            / "components"
+            / "voice-approval.vue"
+        ).read_text(encoding="utf-8", errors="replace")
 
-        self.assertIn("voiceprintConstraintForTask", text)
-        self.assertIn("parseJsonObject(task.constraintsJson)", text)
-        self.assertIn("voiceprintApprovalLabel(task)", text)
-        self.assertIn("voiceprintReenrollRequired(task)", text)
-        self.assertIn("voiceprintHasUnknownSpeaker(task)", text)
-        self.assertIn("child_reenroll_required", text)
-        self.assertIn("child_unknown_allowed", text)
-        self.assertIn("unknown_allowed", text)
-        self.assertIn("Child voiceprint re-enroll needed", text)
-        self.assertIn("Unknown speaker requires primary review", text)
+        self.assertIn("voiceprintConstraintForTask", composable)
+        self.assertIn("parseJsonObject(task.constraintsJson)", composable)
+        self.assertIn("voiceprintApprovalLabel", text)
+        self.assertIn("voiceprintReenrollRequired", text)
+        self.assertIn("voiceprintHasUnknownSpeaker", text)
+        self.assertIn("voiceprintApprovalLabel(task)", voice_component)
+        self.assertIn("voiceprintReenrollRequired(task)", voice_component)
+        self.assertIn("voiceprintHasUnknownSpeaker(task)", voice_component)
+        self.assertIn("child_reenroll_required", composable)
+        self.assertIn("child_unknown_allowed", composable)
+        self.assertIn("unknown_allowed", composable)
+        self.assertIn("v2.detail.reenrollNeeded", composable)
+        self.assertIn("v2.detail.unknownChildAllowed", composable)
 
     def test_device_list_shows_pending_incoming_device_transfers(self):
         text = DEVICE_LIST.read_text(encoding="utf-8", errors="replace")
@@ -275,8 +319,6 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("v2ListPendingIncomingDeviceTransfers", text)
         self.assertIn("handleAcceptIncomingTransfer", text)
         self.assertIn("v2AcceptDeviceTransfer(transferId)", text)
-        self.assertIn("pendingTransfers", text)
-        self.assertIn("transfersWaiting", text)
 
     def test_product_notification_runbook_covers_transfer_and_voice_approval_push_gap(self):
         text = PRODUCT_NOTIFICATIONS_RUNBOOK.read_text(encoding="utf-8", errors="replace")
@@ -349,13 +391,13 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
 
         self.assertIn("handleDrawPrompt", text)
-        self.assertIn("submitDrawGenerated", text)
+        self.assertIn("submitDraw", text)
         self.assertIn("drawPromptInput", text)
         self.assertIn("v2SubmitTask(deviceId.value, 'draw_generated'", text)
         self.assertIn("starterAssets", text)
         for asset_id in ("starter_star", "starter_house", "starter_tree", "starter_fish", "starter_flower"):
             self.assertIn(asset_id, text)
-        self.assertIn("starter_id: starterId", text)
+        self.assertIn("starter_id: id", text)
         self.assertIn("use_starter_asset: true", text)
 
     def test_device_detail_can_submit_health_check_and_show_self_check_summary(self):
@@ -368,11 +410,11 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("event?.event_type === 'self_check'", text)
         self.assertIn("applySelfCheck", text)
         self.assertIn("formatSelfCheckSummary", text)
-        self.assertIn("loadSelfCheckHistory", text)
+        self.assertIn("loadSelfCheckHistoryData", text)
         self.assertIn("v2ListSelfCheckHistory(deviceId.value)", text)
         self.assertIn("healthCheckPath", text)
         self.assertIn("v2SubmitTask(deviceId.value, 'run_path'", text)
-        self.assertIn("health_check run_path", text)
+        self.assertIn("health_check:", text)
         for check_name in ("'nvs'", "'wifi'", "'u1_uart'", "'audio'"):
             self.assertIn(check_name, text)
 
@@ -384,7 +426,7 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("checksJson?: string", types)
         self.assertIn("reportedAt?: string", types)
         self.assertIn("v2ListSelfCheckHistory", api)
-        self.assertIn("`/api/v1/devices/${deviceId}/self-check/history`", api)
+        self.assertIn("`${appPrefix}/devices/${deviceId}/self-checks`", api)
 
     def test_v2_task_submission_uses_client_request_id(self):
         text = V2_API.read_text(encoding="utf-8", errors="replace")

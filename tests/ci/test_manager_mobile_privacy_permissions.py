@@ -50,8 +50,8 @@ class ManagerMobilePrivacyPermissionsTests(unittest.TestCase):
 
         self.assertIn("openPrivacyPermissions", text)
         self.assertIn("uni.navigateTo({ url: '/pages/settings/privacy-permissions' })", text)
-        self.assertIn("隐私协议与系统授权", text)
-        self.assertIn("麦克风、蓝牙、Wi-Fi", text)
+        self.assertIn("settings.privacyAuth", text)
+        self.assertIn("settings.privacyDesc", text)
 
     def test_privacy_permissions_page_has_separate_permission_flows_and_fallbacks(self):
         text = PRIVACY_PERMISSIONS_PAGE.read_text(encoding="utf-8", errors="replace")
@@ -76,9 +76,9 @@ class ManagerMobilePrivacyPermissionsTests(unittest.TestCase):
         text = DEVICE_CONFIG_PAGE.read_text(encoding="utf-8", errors="replace")
 
         self.assertIn("openPrivacyPermissions", text)
-        self.assertIn("配网需要蓝牙和 Wi-Fi 权限", text)
-        self.assertIn("未授权时可进入权限页查看兜底提示", text)
-        self.assertIn("权限设置", text)
+        self.assertIn("deviceConfig.permissionNotice", text)
+        self.assertIn("deviceConfig.permissionNoticeSub", text)
+        self.assertIn("deviceConfig.permissionSettings", text)
 
 
     def test_privacy_permissions_runbook_covers_wechat_console_and_device_drill(self):
