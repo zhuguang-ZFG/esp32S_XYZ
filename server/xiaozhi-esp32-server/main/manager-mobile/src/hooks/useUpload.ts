@@ -1,16 +1,5 @@
 import { ref } from 'vue'
-import { getEnvBaseUploadUrl } from '@/utils'
-
-function getBearerToken(): string | null {
-  const rawToken = uni.getStorageSync('token') || ''
-  try {
-    const parsed = JSON.parse(rawToken)
-    return parsed.token || rawToken
-  }
-  catch {
-    return rawToken
-  }
-}
+import { getBearerToken, getEnvBaseUploadUrl } from '@/utils'
 
 const VITE_UPLOAD_BASEURL = `${getEnvBaseUploadUrl()}`
 

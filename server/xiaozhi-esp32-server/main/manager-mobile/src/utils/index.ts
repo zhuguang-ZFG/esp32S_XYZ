@@ -37,6 +37,27 @@ export function getServerBaseUrlOverride(): string | null {
   return value || null
 }
 
+/**
+ * 从本地存储读取 Bearer token 字符串。
+ *
+ * token 存储格式为 `JSON.stringify({ token, expireAt })`，
+ * 早期或异常情况下也可能是裸字符串。此函数统一解析为 token 值，
+ * 解析失败（非 JSON）时回退为原始字符串，保证向后兼容。
+ * @returns token 字符串；存储为空时返回 null
+ */
+export function getBearerToken(): string | null {
+  const rawToken = uni.getStorageSync('token') || ''
+  if (!rawToken)
+    return null
+  try {
+    const parsed = JSON.parse(rawToken)
+    return parsed.token || rawToken
+  }
+  catch {
+    return rawToken
+  }
+}
+
 export function getLastPage() {
   // getCurrentPages() 至少有1个元素，所以不再额外判断
   // const lastPage = getCurrentPages().at(-1)

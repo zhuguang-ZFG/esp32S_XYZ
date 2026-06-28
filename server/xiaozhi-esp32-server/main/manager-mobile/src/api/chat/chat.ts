@@ -1,4 +1,4 @@
-import { getEnvBaseUrl } from '@/utils'
+import { getBearerToken, getEnvBaseUrl } from '@/utils'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
@@ -12,17 +12,6 @@ export interface ChatCompletionChunk {
     }
     finish_reason?: string
   }>
-}
-
-function getBearerToken(): string | null {
-  const rawToken = uni.getStorageSync('token') || ''
-  try {
-    const parsed = JSON.parse(rawToken)
-    return parsed.token || rawToken
-  }
-  catch {
-    return rawToken
-  }
 }
 
 /**

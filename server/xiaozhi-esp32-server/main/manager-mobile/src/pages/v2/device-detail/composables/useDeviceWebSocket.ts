@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildEdgeAClientWsUrl } from '@/utils'
+import { buildEdgeAClientWsUrl, getBearerToken } from '@/utils'
 
 export interface EdgeAEvent {
   event_type?: string
@@ -68,7 +68,8 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
       return
 
     const url = buildEdgeAClientWsUrl()
-    const token = uni.getStorageSync('token') || ''
+    // token 存储为 JSON（{token, expireAt}），需解析出 token 值，否则会把整个 JSON 字符串当 Bearer
+    const token = getBearerToken() || ''
     appendLog(`→ ${url}`)
 
     socketTask = uni.connectSocket({
