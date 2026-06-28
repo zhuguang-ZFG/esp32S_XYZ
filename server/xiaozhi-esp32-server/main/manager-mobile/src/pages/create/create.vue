@@ -22,6 +22,7 @@ safeAreaTop.value = systemInfo.statusBarHeight || 0
 const mode = ref<'draw' | 'write' | 'image'>('draw')
 const imageGenerating = ref(false)
 const imageResultUrl = ref('')
+// 品牌标签（「LiMa 生图」），非真实后端名；后端真实模型对外不可见。
 const imageResultBackend = ref('')
 const devices = ref<V2DeviceInfo[]>([])
 const selectedDeviceId = ref('')

@@ -9,6 +9,7 @@ export interface ImageGenerationRequest {
 export interface ImageGenerationResponse {
   created: number
   data: { url: string }[]
+  /** 品牌标签（如「LiMa 生图」），非真实后端名；后端真实模型对外不可见。 */
   backend?: string
 }
 
