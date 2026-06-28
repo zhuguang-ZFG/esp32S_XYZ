@@ -215,22 +215,29 @@ ReturnValue MotionExecutor::RunPathWithTaskId(const std::string& task_id,
             cJSON_GetObjectItemCaseSensitive(segment, "cmd");
         cJSON* x_item = cJSON_GetObjectItemCaseSensitive(segment, "x");
         cJSON* y_item = cJSON_GetObjectItemCaseSensitive(segment, "y");
-        if (!cJSON_IsString(cmd_item) || cmd_item->valuestring == nullptr ||
-            !cJSON_IsNumber(x_item) || !cJSON_IsNumber(y_item)) {
+        if (!cJSON_IsNumber(x_item) || !cJSON_IsNumber(y_item)) {
             cJSON_Delete(root);
-            return std::string("path segment missing cmd/x/y");
+            return std::string("path segment missing x/y");
+        }
+
+        std::string cmd;
+        if (cJSON_IsString(cmd_item) && cmd_item->valuestring != nullptr) {
+            cmd = cmd_item->valuestring;
+        }
+        // Cloud-generated paths may omit cmd; default to M for the first
+        // segment and L for the rest so vectorized raster images still run.
+        if (cmd.empty()) {
+            cmd = (segment_index == 0) ? "M" : "L";
+        }
+        if (cmd != "M" && cmd != "L") {
+            cJSON_Delete(root);
+            return std::string("unsupported segment cmd");
         }
 
         char xbuf[32];
         char ybuf[32];
         U1ProtocolClient::JsonNumberToString(x_item, xbuf, sizeof(xbuf));
         U1ProtocolClient::JsonNumberToString(y_item, ybuf, sizeof(ybuf));
-
-        std::string cmd = cmd_item->valuestring;
-        if (cmd != "M" && cmd != "L") {
-            cJSON_Delete(root);
-            return std::string("unsupported segment cmd");
-        }
 
         cJSON* seg_extra = cJSON_CreateObject();
         cJSON_AddNumberToObject(seg_extra, "segment_index", segment_index);
