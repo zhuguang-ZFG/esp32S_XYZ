@@ -602,9 +602,16 @@ void Application::InitializeProtocol() {
 #if CONFIG_RECEIVE_CUSTOM_MESSAGE
         } else if (strcmp(type->valuestring, "custom") == 0) {
             auto payload = cJSON_GetObjectItem(root, "payload");
-            ESP_LOGI(TAG, "Received custom message: %s", cJSON_PrintUnformatted(root));
+            {
+                char* root_str = cJSON_PrintUnformatted(root);
+                ESP_LOGI(TAG, "Received custom message: %s", root_str ? root_str : "{}");
+                cJSON_free(root_str);
+            }
             if (cJSON_IsObject(payload)) {
-                Schedule([this, display, payload_str = std::string(cJSON_PrintUnformatted(payload))]() {
+                char* payload_raw = cJSON_PrintUnformatted(payload);
+                std::string payload_str(payload_raw ? payload_raw : "{}");
+                cJSON_free(payload_raw);
+                Schedule([this, display, payload_str]() {
                     display->SetChatMessage("system", payload_str.c_str());
                 });
             } else {
