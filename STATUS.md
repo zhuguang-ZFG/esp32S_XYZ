@@ -2,7 +2,19 @@
 
 > Updated: 2026-06-28
 > Branch: main
-> Tests: **115 passed, 0 failed**（瘦身前后 CI 静态测试一致）
+> Tests: **115 passed, 0 failed**
+
+## U8 固件核心质量加固（2026-06-28）
+
+> 瘦身后对 U8 核心代码做深度质量检查，修复 2 个 MEDIUM 健壮性问题：
+>
+> 1. **ReadU1Response 无上限保护（内存耗尽风险）** — `u1_protocol_client.cc:ReadU1Response` 的 `response.append` 无上限，U1 故障狂发数据时字符串无限增长耗尽堆。修复：加 `kU1MaxResponseBytes = 8KB` 上限（u1_protocol_client.h:26），超限 break + warning 日志。
+> 2. **任务看门狗配置但未注册** — `sdkconfig:24 CONFIG_ESP_TASK_WDT_TIMEOUT_S=10` 配了看门狗，但无任务 `esp_task_wdt_add`，卡死不触发重启。修复：主循环（application.cc:189）`esp_task_wdt_add(NULL)` + 每轮 `esp_task_wdt_reset()`（line 193）；将 `portMAX_DELAY` 改为 5s 有限超时（kMainLoopWaitTicks，< 看门狗 10s），确保无事件时也能喂狗。
+>
+> **验证**：CI 静态测试 **115 passed, 169 subtests**（无回归）。两处改动均经代码一致性核对。
+> **需用户验证**：本地 `idf.py build` 编译验证（watchdog 行为需真机确认无误触发）。
+
+---
 
 ## U8 固件 board 瘦身（2026-06-28）
 
@@ -33,7 +45,7 @@
 ## 当前状态
 
 > **2026-06-25 服务端瘦身**：服务端组件（xiaozhi-server / manager-api / manager-web / digital-human）已物理删除。
-> 能力已由 LiMa 主项目（D:/QWEN3.0）集成。小程序已连接 LiMa 公网入口 https://chat.donglicao.com。
+> 能力已由 LiMa 主项目（D:/QWEN3.0）集成。小程序已连接 LiMa 公网入口 <https://chat.donglicao.com>。
 > 本仓库现仅保留 **固件** 与 **小程序** 两个客户端组件。
 
 | 组件 | 状态 | 备注 |

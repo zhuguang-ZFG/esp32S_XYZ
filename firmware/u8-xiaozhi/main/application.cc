@@ -12,6 +12,7 @@
 
 #include <cstring>
 #include <esp_log.h>
+#include <esp_task_wdt.h>
 #include <cJSON.h>
 #include <driver/gpio.h>
 #include <arpa/inet.h>
@@ -182,8 +183,15 @@ void Application::Run() {
         MAIN_EVENT_ACTIVATION_DONE |
         MAIN_EVENT_STATE_CHANGED;
 
+    // 注册主任务到任务看门狗（CONFIG_ESP_TASK_WDT_TIMEOUT_S=10）。
+    // 主循环卡死（如 U1 UART 阻塞、死锁）时看门狗触发系统重启，避免设备假死。
+    // 用有限超时（5s，< 看门狗 10s）替代 portMAX_DELAY，确保即使无事件也能喂狗。
+    esp_task_wdt_add(NULL);
+    const TickType_t kMainLoopWaitTicks = pdMS_TO_TICKS(5000);
+
     while (true) {
-        auto bits = xEventGroupWaitBits(event_group_, ALL_EVENTS, pdTRUE, pdFALSE, portMAX_DELAY);
+        esp_task_wdt_reset();
+        auto bits = xEventGroupWaitBits(event_group_, ALL_EVENTS, pdTRUE, pdFALSE, kMainLoopWaitTicks);
 
         if (bits & MAIN_EVENT_ERROR) {
             SetDeviceState(kDeviceStateIdle);

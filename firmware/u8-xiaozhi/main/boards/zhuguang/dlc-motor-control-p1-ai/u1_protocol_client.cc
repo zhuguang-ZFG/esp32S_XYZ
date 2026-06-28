@@ -40,6 +40,13 @@ std::string U1ProtocolClient::ReadU1Response(int timeout_ms) {
     int idle_rounds = 0;
 
     while (idle_rounds < 2) {
+        // 防止 U1 故障时持续发送导致 response 无界增长耗尽堆（OOM）。
+        if (response.size() >= kU1MaxResponseBytes) {
+            ESP_LOGW(TAG_U1_PROTOCOL,
+                     "U1 response exceeded %zu bytes, truncating (possible U1 flood)",
+                     kU1MaxResponseBytes);
+            break;
+        }
         int len = uart_read_bytes(U1_UART_PORT_NUM, buffer, sizeof(buffer),
                                   pdMS_TO_TICKS(timeout_ms));
         if (len > 0) {

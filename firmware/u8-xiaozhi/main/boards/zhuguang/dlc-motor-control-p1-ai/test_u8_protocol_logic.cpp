@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <utility>
 
 // --- Re-implementations of pure logic for native testing ---
 
@@ -40,7 +41,7 @@ static std::string NormalizeMotionCapabilityName(const char* raw) {
         return "";
     }
     std::string s = raw;
-    if (s.size() > 5 && s.compare(0, 5, "self.") == 0) {
+    if (s.size() > 5 && ToLowerAscii(s.substr(0, 5)) == "self.") {
         s = s.substr(5);
     }
     return ToLowerAscii(std::move(s));

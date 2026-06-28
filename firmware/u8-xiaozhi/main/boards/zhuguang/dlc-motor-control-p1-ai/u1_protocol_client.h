@@ -21,6 +21,10 @@
 
 #define TAG_U1_PROTOCOL "U1ProtocolClient"
 
+// U1 响应最大字节数。防止 U1 故障时持续发送导致 response 字符串无界增长耗尽堆。
+// 实际 U1 单条协议响应通常 < 512 字节（cJSON 序列化的 capability/state），8KB 足够冗余。
+static constexpr size_t kU1MaxResponseBytes = 8 * 1024;
+
 struct U1CapabilityResult {
     bool ok = false;
     uint32_t msg_id = 0;

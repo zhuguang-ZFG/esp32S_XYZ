@@ -38,6 +38,9 @@
     },
     {
       "pattern": "aliexpress\\.com"
+    },
+    {
+      "pattern": "qweather\.com"
     }
   ],
   "timeout": "20s",
