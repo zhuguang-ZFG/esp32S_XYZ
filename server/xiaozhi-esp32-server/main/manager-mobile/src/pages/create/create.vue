@@ -11,6 +11,7 @@
 import type { V2DeviceInfo, V2TaskInfo } from '@/api/v2/types'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { onUnmounted, ref } from 'vue'
+import { generateImage } from '@/api/images'
 import { v2GetDevices, v2GetTask, v2SubmitTask } from '@/api/v2'
 import { t } from '@/i18n'
 
@@ -18,7 +19,10 @@ const safeAreaTop = ref(0)
 const systemInfo = uni.getSystemInfoSync()
 safeAreaTop.value = systemInfo.statusBarHeight || 0
 
-const mode = ref<'draw' | 'write'>('draw')
+const mode = ref<'draw' | 'write' | 'image'>('draw')
+const imageGenerating = ref(false)
+const imageResultUrl = ref('')
+const imageResultBackend = ref('')
 const devices = ref<V2DeviceInfo[]>([])
 const selectedDeviceId = ref('')
 const prompt = ref('')
@@ -27,10 +31,12 @@ const tasks = ref<V2TaskInfo[]>([])
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 onLoad((options: any) => {
-  mode.value = options?.mode === 'write' ? 'write' : 'draw'
+  const allowed: Array<'draw' | 'write' | 'image'> = ['draw', 'write', 'image']
+  mode.value = allowed.includes(options?.mode) ? options.mode : 'draw'
 })
 onShow(() => {
-  loadDevices()
+  if (mode.value !== 'image')
+    loadDevices()
 })
 onUnmounted(() => {
   if (pollTimer.value)
@@ -79,6 +85,49 @@ async function handleSubmit() {
   finally {
     submitting.value = false
   }
+}
+
+async function handleImageGenerate() {
+  if (!prompt.value.trim()) {
+    uni.showToast({ title: t('create.pleaseEnterPrompt'), icon: 'none' })
+    return
+  }
+  imageGenerating.value = true
+  try {
+    const res = await generateImage({ prompt: prompt.value.trim(), size: '1024x1024', n: 1 })
+    imageResultUrl.value = res.data?.[0]?.url || ''
+    imageResultBackend.value = res.backend || ''
+    if (!imageResultUrl.value) {
+      uni.showToast({ title: t('create.imageNoResult'), icon: 'none' })
+    }
+  }
+  catch (e: any) {
+    uni.showToast({ title: `${t('create.imageFailed')}: ${e.message || ''}`, icon: 'none' })
+  }
+  finally {
+    imageGenerating.value = false
+  }
+}
+
+function sendImageToDevice() {
+  if (!imageResultUrl.value || !selectedDeviceId.value) {
+    uni.showToast({ title: t('create.imageSelectDeviceFirst'), icon: 'none' })
+    return
+  }
+  submitting.value = true
+  v2SubmitTask(selectedDeviceId.value, 'draw_generated', { imageUrl: imageResultUrl.value, prompt: prompt.value.trim() })
+    .then(() => {
+      uni.showToast({ title: t('create.taskSubmitted'), icon: 'success' })
+      imageResultUrl.value = ''
+      imageResultBackend.value = ''
+      prompt.value = ''
+    })
+    .catch((e: any) => {
+      uni.showToast({ title: `${t('create.submitFailed')}: ${e.message || ''}`, icon: 'none' })
+    })
+    .finally(() => {
+      submitting.value = false
+    })
 }
 
 function startPolling(taskId: string) {
@@ -223,6 +272,12 @@ function clearAllTasks() {
           {{ t('create.writeTab') }}
         </text>
       </view>
+      <view class="mode-tab" :class="{ active: mode === 'image' }" @click="mode = 'image'">
+        <wd-icon name="cloud" size="28" :color="mode === 'image' ? '#336cff' : '#9d9ea3'" />
+        <text class="tab-label">
+          {{ t('create.imageTab') }}
+        </text>
+      </view>
     </view>
 
     <view class="section">
@@ -254,7 +309,7 @@ function clearAllTasks() {
         {{ t('create.promptTitle') }}
       </text>
       <view class="prompt-box">
-        <textarea v-model="prompt" class="prompt-textarea" :placeholder="mode === 'draw' ? t('create.drawPlaceholder') : t('create.writePlaceholder')" placeholder-class="prompt-placeholder" :maxlength="500" :disabled="submitting" />
+        <textarea v-model="prompt" class="prompt-textarea" :placeholder="mode === 'image' ? t('create.imagePlaceholder') : (mode === 'draw' ? t('create.drawPlaceholder') : t('create.writePlaceholder'))" placeholder-class="prompt-placeholder" :maxlength="500" :disabled="submitting || imageGenerating" />
         <text class="prompt-count">
           {{ prompt.length }}/500
         </text>
@@ -262,10 +317,44 @@ function clearAllTasks() {
     </view>
 
     <view class="submit-section">
-      <view class="submit-btn" :class="{ disabled: !selectedDeviceId || !prompt.trim() || submitting }" @click="handleSubmit">
+      <view v-if="mode === 'image'" class="submit-btn" :class="{ disabled: !prompt.trim() || imageGenerating }" @click="handleImageGenerate">
+        <text class="submit-text">
+          {{ imageGenerating ? t('create.imageGenerating') : t('create.submitImage') }}
+        </text>
+      </view>
+      <view v-else class="submit-btn" :class="{ disabled: !selectedDeviceId || !prompt.trim() || submitting }" @click="handleSubmit">
         <text class="submit-text">
           {{ submitting ? t('create.submitting') : (mode === 'draw' ? t('create.submitDraw') : t('create.submitWrite')) }}
         </text>
+      </view>
+    </view>
+
+    <view v-if="imageResultUrl" class="section image-result-section">
+      <view class="section-header-row">
+        <text class="section-title">
+          {{ t('create.imageResult') }}
+        </text>
+        <text v-if="imageResultBackend" class="backend-tag">
+          {{ imageResultBackend }}
+        </text>
+      </view>
+      <view class="image-wrapper">
+        <image
+          class="result-image"
+          :src="imageResultUrl"
+          mode="aspectFill"
+          @click="previewImage(imageResultUrl)"
+        />
+      </view>
+      <view class="result-actions">
+        <view class="action-btn secondary" @click="saveImageToAlbum(imageResultUrl)">
+          <wd-icon name="download" size="16" color="#336cff" />
+          <text>{{ t('create.saveToAlbum') }}</text>
+        </view>
+        <view class="action-btn primary" :class="{ disabled: !selectedDeviceId || submitting }" @click="sendImageToDevice">
+          <wd-icon name="phone" size="16" color="#fff" />
+          <text>{{ t('create.sendToDevice') }}</text>
+        </view>
       </view>
     </view>
 
@@ -641,5 +730,38 @@ function clearAllTasks() {
   font-size: 24rpx;
   color: #9d9ea3;
   padding: 8rpx 16rpx;
+}
+.image-result-section {
+  margin-top: 32rpx;
+}
+.backend-tag {
+  font-size: 22rpx;
+  color: #336cff;
+  background: rgba(51, 108, 255, 0.08);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  &:active {
+    opacity: 0.9;
+  }
+  &.disabled {
+    opacity: 0.4;
+  }
+  &.primary {
+    background: #336cff;
+    color: #fff;
+  }
+  &.secondary {
+    background: rgba(51, 108, 255, 0.08);
+    color: #336cff;
+  }
 }
 </style>
