@@ -29,6 +29,8 @@ U8_PARTITION_TABLE = ROOT / "firmware" / "u8-xiaozhi" / "partitions" / "v2" / "1
 U8_WIFI_BOARD = ROOT / "firmware" / "u8-xiaozhi" / "main" / "boards" / "common" / "wifi_board.cc"
 U8_PROVISIONING_CONTRACT = ROOT / "firmware" / "u8-xiaozhi" / "main" / "provisioning_contract.h"
 U1_PROTOCOL = ROOT / "firmware" / "u1-grbl" / "Grbl_Esp32" / "src" / "Protocol.cpp"
+U1_SETTINGS_CC = ROOT / "firmware" / "u1-grbl" / "Grbl_Esp32" / "src" / "Settings.cpp"
+U1_MOTION_CONTROL_CC = ROOT / "firmware" / "u1-grbl" / "Grbl_Esp32" / "src" / "MotionControl.cpp"
 M5_PROVISIONING_STATUS = ROOT / "docs" / "M5.1-provisioning-status.md"
 M5_AP_FALLBACK_STATUS = ROOT / "docs" / "M5.2-ap-fallback-status.md"
 M5_NVS_ENCRYPTION_STATUS = ROOT / "docs" / "M5.3-nvs-encryption-status.md"
@@ -621,6 +623,36 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertGreaterEqual(len(ack_lines), 1)
         for line in ack_lines:
             self.assertRegex(line, re.escape('\\"accepted\\":true'))
+
+    def test_u1_not_cycle_or_hold_uses_or_not_and(self):
+        text = U1_SETTINGS_CC.read_text(encoding="utf-8", errors="replace")
+        self.assertIn("bool notCycleOrHold()", text)
+        func = text[text.index("bool notCycleOrHold()"):]
+        func = func[:func.index("}") + 1]
+        self.assertIn("return sys.state == State::Cycle || sys.state == State::Hold;", func)
+        self.assertNotIn("sys.state == State::Cycle && sys.state == State::Hold", func)
+
+    def test_u1_idle_or_alarm_rejects_non_idle_non_alarm(self):
+        text = U1_SETTINGS_CC.read_text(encoding="utf-8", errors="replace")
+        self.assertIn("bool idleOrAlarm()", text)
+        func = text[text.index("bool idleOrAlarm()"):]
+        func = func[:func.index("}") + 1]
+        self.assertIn("return sys.state != State::Idle && sys.state != State::Alarm;", func)
+
+    def test_u1_idle_or_jog_rejects_non_idle_non_jog(self):
+        text = U1_SETTINGS_CC.read_text(encoding="utf-8", errors="replace")
+        self.assertIn("bool idleOrJog()", text)
+        func = text[text.index("bool idleOrJog()"):]
+        func = func[:func.index("}") + 1]
+        self.assertIn("return sys.state != State::Idle && sys.state != State::Jog;", func)
+
+    def test_u1_probe_found_log_follows_success_flag(self):
+        text = U1_MOTION_CONTROL_CC.read_text(encoding="utf-8", errors="replace")
+        success_idx = text.find("sys.probe_succeeded = true;")
+        found_idx = text.find('grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Found")')
+        self.assertGreater(success_idx, -1, "probe success flag not found")
+        self.assertGreater(found_idx, -1, "Found log not found")
+        self.assertGreater(found_idx, success_idx, "Found log must follow probe success flag")
 
 
 if __name__ == "__main__":
