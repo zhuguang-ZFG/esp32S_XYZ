@@ -105,8 +105,8 @@ async function stopBlufiScan() {
   try {
     await bluetooth.stopBluetoothDevicesDiscovery()
   }
-  catch (error) {
-    console.log('BLE discovery already stopped:', error)
+  catch {
+    // ignore: may already be stopped
   }
 }
 

@@ -2,7 +2,7 @@
 
 > Updated: 2026-06-25
 > Branch: main
-> Tests: **93 passed, 18 failed**（pre-existing manager_mobile failures，与本次清理无关）
+> Tests: **111 passed, 0 failed**（manager_mobile CI 测试已修复）
 
 ## 当前状态
 
@@ -14,7 +14,7 @@
 |------|------|------|
 | U1 固件 (Grbl_Esp32) | 已修复 P0/P1 | 缓冲区溢出、fallthrough、JSON 解析器、错误码 |
 | U8 固件 (xiaozhi-esp32) | cJSON 一致性已修复 | BuildProtocolCommandJson 改用 cJSON |
-| Mobile Client (uni-app) | TypeScript 类型检查通过 | 微信小程序，连 LiMa chat.donglicao.com |
+| Mobile Client (uni-app) | TypeScript 类型检查通过 / 运行期日志清理 / 登录 i18n 补全 | 微信小程序，连 LiMa chat.donglicao.com |
 | ~~xiaozhi-server (Python)~~ | **已删除 2026-06-25** | 能力由 LiMa 集成 |
 | ~~manager-api (Java Spring Boot)~~ | **已删除 2026-06-25** | 能力由 LiMa 集成 |
 | ~~manager-web (Vue.js)~~ | **已删除 2026-06-25** | 后台由 LiMa admin 接管 |
@@ -23,7 +23,7 @@
 ## 测试
 
 `
-总测试:     93 passed, 18 failed (manager_mobile 预存在失败)
+总测试:     111 passed, 0 failed (manager_mobile CI 已修复)
 Schema:     62 验证通过
 GPIO:       1 静态检查通过
 固件单测:   40 passed (JSON 解析器 18 + U8 协议逻辑 22, g++ native)

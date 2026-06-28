@@ -228,23 +228,16 @@ async function generateAndPlay() {
   generating.value = true
 
   try {
-    console.log(`${t('deviceConfig.generatingUltrasonicConfigAudio')}...`)
-
     // 准备配网数据 - 参考HTML文件格式
     const dataStr = `${props.selectedNetwork.ssid}\n${props.password}`
     const textBytes = stringToBytes(dataStr)
     const fullBytes = [...START_BYTES, ...textBytes, checksum(textBytes), ...END_BYTES]
-
-    console.log(`${t('deviceConfig.configData')}:`, { ssid: props.selectedNetwork.ssid, password: props.password })
-    console.log(`${t('deviceConfig.dataBytesLength')}:`, textBytes.length)
 
     // 转换为比特流
     let bits: number[] = []
     fullBytes.forEach((b) => {
       bits = bits.concat(toBits(b))
     })
-
-    console.log(`${t('deviceConfig.bitStreamLength')}:`, bits.length)
 
     // AFSK调制 - 减少采样率降低文件大小
     const reducedSampleRate = 22050 // 降低采样率
@@ -267,8 +260,6 @@ async function generateAndPlay() {
     const base64 = arrayBufferToBase64(wavBuffer)
     const dataUri = `data:audio/wav;base64,${base64}`
 
-    console.log(`${t('deviceConfig.base64Length')}:`, base64.length, t('deviceConfig.about'), Math.round(base64.length / 1024), 'KB')
-
     // 检查数据大小
     if (base64.length > 1024 * 1024) { // 超过1MB
       throw new Error(t('deviceConfig.audioFileTooLarge'))
@@ -276,8 +267,6 @@ async function generateAndPlay() {
 
     audioFilePath.value = dataUri
     audioGenerated.value = true
-
-    console.log(`${t('deviceConfig.audioGenerationSuccess')}，比特流长度:`, bits.length, `${t('deviceConfig.samplePoints')}:`, floatBuf.length)
 
     toast.success(t('deviceConfig.soundWaveGenerationSuccess'))
 
@@ -357,7 +346,6 @@ async function playAudio() {
     await new Promise(resolve => setTimeout(resolve, 200))
 
     playing.value = true
-    console.log(t('deviceConfig.startPlayingUltrasonicConfigAudio'))
 
     // 创建新的音频上下文
     const innerAudioContext = uni.createInnerAudioContext()
@@ -371,12 +359,10 @@ async function playAudio() {
 
     // 简化的事件监听
     innerAudioContext.onPlay(() => {
-      console.log(t('deviceConfig.ultrasonicAudioStartedPlaying'))
       toast.success(t('deviceConfig.startPlayingConfigSoundWave'))
     })
 
     innerAudioContext.onEnded(() => {
-      console.log(t('deviceConfig.ultrasonicAudioPlaybackEnded'))
       if (!autoLoop.value) {
         playing.value = false
         cleanupAudio()
@@ -404,14 +390,12 @@ async function playAudio() {
     })
 
     innerAudioContext.onStop(() => {
-      console.log('音频播放停止')
       playing.value = false
     })
 
     // 延迟播放
     setTimeout(() => {
       if (audioContext.value) {
-        console.log('尝试播放音频，src长度:', audioFilePath.value.length)
         audioContext.value.play()
       }
     }, 300)
@@ -430,10 +414,9 @@ async function cleanupAudio() {
     try {
       audioContext.value.pause()
       audioContext.value.destroy()
-      console.log(t('deviceConfig.cleaningUpAudioContext'))
     }
-    catch (e) {
-      console.log(`${t('deviceConfig.cleaningUpAudioContextFailed')}:`, e)
+    catch {
+      // ignore cleanup errors
     }
     finally {
       audioContext.value = null
@@ -446,7 +429,6 @@ async function stopAudio() {
   playing.value = false
   await cleanupAudio()
 
-  console.log(t('deviceConfig.stoppedPlayingUltrasonicAudio'))
   toast.success(t('deviceConfig.stoppedPlaying'))
 }
 </script>

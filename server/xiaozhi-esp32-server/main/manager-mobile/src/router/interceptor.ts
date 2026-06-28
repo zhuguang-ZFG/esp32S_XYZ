@@ -26,7 +26,6 @@ const navigateToInterceptor = {
   invoke({ url }: { url: string }) {
     // console.log(url) // /pages/route-interceptor/index?name=feige&age=30
     let path = url.split('?')[0]
-    console.log('页面变动')
 
     // 处理相对路径
     if (!path.startsWith('/')) {

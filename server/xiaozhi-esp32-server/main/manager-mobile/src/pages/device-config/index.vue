@@ -70,8 +70,8 @@ function onNetworkSelected(network: WiFiNetwork | null, password: string) {
 }
 
 // ESP32连接状态变化事件
-function onConnectionStatusChange(connected: boolean) {
-  console.log('ESP32连接状态:', connected)
+function onConnectionStatusChange(_connected: boolean) {
+  // no-op
 }
 
 // 在组件挂载后设置导航栏标题

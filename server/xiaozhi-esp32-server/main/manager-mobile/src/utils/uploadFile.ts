@@ -190,8 +190,6 @@ export function useUpload<T = string>(url: string, formData: Record<string, any>
       sizeType,
       sourceType,
       success: (res) => {
-        console.log('选择图片成功:', res)
-
         // 开始上传
         loading.value = true
         progress.value = 0
@@ -283,7 +281,6 @@ function uploadFile<T>({
       },
       // 确保文件名称合法
       success: (uploadFileRes) => {
-        console.log('上传文件成功:', uploadFileRes)
         try {
           // 解析响应数据
           const { data: _data } = JSON.parse(uploadFileRes.data)

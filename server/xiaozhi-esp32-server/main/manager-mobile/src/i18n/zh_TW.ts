@@ -504,6 +504,16 @@ export default {
   'deviceConfig.audioPlaybackError': '音頻播放錯誤',
   'deviceConfig.playbackFailed': '播放失敗',
 
+  // v2 pages
+  'v2.login.title': 'DLC 寫字機',
+  'v2.login.subtitle': 'AI 語音寫字繪圖機',
+  'v2.login.wxLogin': '微信一鍵登錄',
+  'v2.login.loggingIn': '登錄中...',
+  'v2.login.privacy': '登錄即同意《用戶協議》和《隱私政策》',
+  'v2.login.openInWechat': '請在微信小程序中打開',
+  'v2.login.loginFailed': '登錄失敗',
+  'v2.login.wxLoginFailed': '微信登錄失敗',
+
   // Voiceprint page
   'voiceprint.audioNotExist': '該音頻不存在',
   'voiceprint.getAudioFailed': '獲取音頻失敗',

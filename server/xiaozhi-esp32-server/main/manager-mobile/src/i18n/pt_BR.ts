@@ -504,6 +504,16 @@ export default {
   'deviceConfig.audioPlaybackError': 'Erro na reprodução de áudio',
   'deviceConfig.playbackFailed': 'Falha na reprodução',
 
+  // v2 pages
+  'v2.login.title': 'DLC Writer',
+  'v2.login.subtitle': 'AI Voice Writing & Drawing',
+  'v2.login.wxLogin': 'WeChat Login',
+  'v2.login.loggingIn': 'Logging in...',
+  'v2.login.privacy': 'By logging in you agree to the User Agreement and Privacy Policy',
+  'v2.login.openInWechat': 'Please open in WeChat Mini Program',
+  'v2.login.loginFailed': 'Login failed',
+  'v2.login.wxLoginFailed': 'WeChat login failed',
+
   // Voiceprint page
   'voiceprint.audioNotExist': 'O áudio não existe',
   'voiceprint.getAudioFailed': 'Falha ao obter áudio',

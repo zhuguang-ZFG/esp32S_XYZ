@@ -42,8 +42,7 @@ async function checkESP32Connection() {
     })
     return response.statusCode === 200
   }
-  catch (error) {
-    console.log(`${t('deviceConfig.esp32ConnectionCheckFailed')}:`, error)
+  catch {
     return false
   }
 }
@@ -61,7 +60,6 @@ async function submitConfig() {
   }
 
   configuring.value = true
-  console.log(`${t('deviceConfig.startWifiConfig')}:`, props.selectedNetwork.ssid)
 
   try {
     const response = await uni.request({
@@ -76,8 +74,6 @@ async function submitConfig() {
       },
       timeout: 15000,
     })
-
-    console.log('WiFi配网响应:', response)
 
     if (response.statusCode === 200 && (response.data as any)?.success) {
       toast.success(`${t('deviceConfig.configSuccess')}！${t('deviceConfig.deviceWillConnectTo')} ${props.selectedNetwork.ssid}，${t('deviceConfig.deviceWillRestart')}。${t('deviceConfig.pleaseDisconnectXiaozhiHotspot')}`)

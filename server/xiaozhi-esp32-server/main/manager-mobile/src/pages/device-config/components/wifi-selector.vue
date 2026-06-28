@@ -57,12 +57,10 @@ async function checkESP32Connection() {
     })
     isConnectedToESP32.value = response.statusCode === 200
     emit('connection-status', isConnectedToESP32.value)
-    console.log(`${t('deviceConfig.xiaozhi')}连接状态:`, isConnectedToESP32.value)
   }
-  catch (error) {
+  catch {
     isConnectedToESP32.value = false
     emit('connection-status', false)
-    console.log('xiaozhi连接检查失败:', error)
   }
   finally {
     checkingConnection.value = false
@@ -77,7 +75,6 @@ async function scanWifi() {
   }
 
   scanning.value = true
-  console.log('开始扫描WiFi网络')
 
   try {
     const response = await uni.request({
@@ -86,13 +83,10 @@ async function scanWifi() {
       timeout: 10000,
     })
 
-    console.log(`${t('deviceConfig.wifiScanResponse')}:`, response)
-
     if (response.statusCode === 200 && response.data) {
       const data = response.data as any
       if (data.success && Array.isArray(data.networks)) {
         wifiNetworks.value = data.networks
-        console.log(`${t('deviceConfig.scanSuccess')}，发现 ${data.networks.length} ${t('deviceConfig.networks')}`)
       }
       else if (data.aps && Array.isArray(data.aps)) {
         // 兼容 { data: { support_5g, aps } } 格式
@@ -102,7 +96,6 @@ async function scanWifi() {
           authmode: item.authmode,
           channel: item.channel || 0,
         }))
-        console.log(`${t('deviceConfig.scanSuccess')}，发现 ${data.aps.length} ${t('deviceConfig.networks')}`)
       }
       else if (Array.isArray(response.data)) {
         // 兼容旧格式
@@ -153,7 +146,6 @@ function selectNetwork(network: WiFiNetwork) {
   selectedNetwork.value = network
   password.value = ''
   selectorExpanded.value = false
-  console.log('选择网络:', network.ssid)
 
   // 通知父组件
   emit('network-selected', network, '')

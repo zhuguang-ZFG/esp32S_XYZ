@@ -20,7 +20,7 @@ async function handleLogin() {
     // #ifdef MP-WEIXIN
     const res = await uni.login({ provider: 'weixin' })
     if (!res.code) {
-      message.alert(`${t('v2.login.wxLogin')}失败`)
+      message.alert(t('v2.login.wxLoginFailed'))
       return
     }
     const data = await v2Login(res.code)
@@ -28,11 +28,11 @@ async function handleLogin() {
     uni.switchTab({ url: '/pages/v2/device-list/index' })
     // #endif
     // #ifndef MP-WEIXIN
-    message.alert('请在微信小程序中打开')
+    message.alert(t('v2.login.openInWechat'))
     // #endif
   }
   catch (e: any) {
-    message.alert(e?.message || '登录失败')
+    message.alert(e?.message || t('v2.login.loginFailed'))
   }
   finally {
     loading.value = false
