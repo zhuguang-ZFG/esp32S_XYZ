@@ -24,7 +24,9 @@ async function handleLogin() {
       return
     }
     const data = await v2Login(res.code)
-    uni.setStorageSync('token', JSON.stringify({ token: data.token, expire: data.expiresIn }))
+    // 存绝对过期时间戳（秒），用于 alova isExpired 判断与静默刷新
+    const expireAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 86400)
+    uni.setStorageSync('token', JSON.stringify({ token: data.token, expireAt }))
     uni.switchTab({ url: '/pages/v2/device-list/index' })
     // #endif
     // #ifndef MP-WEIXIN

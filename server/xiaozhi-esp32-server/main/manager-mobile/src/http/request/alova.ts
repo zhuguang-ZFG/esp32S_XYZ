@@ -5,6 +5,7 @@ import AdapterUniapp from '@alova/adapter-uniapp'
 import { createAlova } from 'alova'
 import { createServerTokenAuthentication } from 'alova/client'
 import VueHook from 'alova/vue'
+import { v2RefreshToken } from '@/api/v2'
 import { getEnvBaseUrl } from '@/utils'
 import { toast } from '@/utils/toast'
 import { ContentTypeEnum, ResultEnum, ShowMessage } from './enum'
@@ -20,22 +21,55 @@ const langMap: Record<Language, string> = {
 }
 
 /**
+ * 最近一次刷新成功的毫秒时间戳。
+ * 用于防止无限刷新循环：alova 内置无循环保护，若刷新后重试仍返回 401
+ * （账号被禁用/服务端异常），会再次触发刷新 → 死循环。
+ * 此处要求两次刷新间隔 ≥ REFRESH_COOLDOWN_MS，否则视为刷新无效，回退登录页。
+ */
+let lastRefreshAt = 0
+const REFRESH_COOLDOWN_MS = 30_000
+
+/**
  * 创建请求实例
+ *
+ * 鉴权刷新策略说明（重要）：
+ * LiMa 后端在 token 过期/无效时返回 HTTP 401（状态码，非业务 code）。
+ * uni-app 请求适配器对任何 HTTP 状态码（含 401）都走 success 回调，
+ * 仅网络层失败才 reject。因此 HTTP 401 必然进入 responded.onSuccess 路径，
+ * 而非 onError。故必须使用 refreshTokenOnSuccess（在 onSuccess 拦截器内判定），
+ * 而非 refreshTokenOnError（仅在适配器 reject 时触发，对 LiMa 的 401 永远不触发）。
+ *
+ * 刷新流程（alova 内置）：
+ * isExpired 返回 true → 调用 handler 静默刷新 → handler 成功（无抛出）后
+ * alova 自动重发原始请求并返回重试结果，对业务层完全透明。
+ * handler 抛出则刷新失败，回退到登录页。
  */
 const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthentication<
   typeof VueHook,
   typeof uniappRequestAdapter
 >({
-  refreshTokenOnError: {
-    isExpired: (error) => {
-      return error.response?.status === ResultEnum.Unauthorized
+  refreshTokenOnSuccess: {
+    // 响应到达 onSuccess 时判定：HTTP 401 表示服务端拒绝当前 token
+    isExpired: (response) => {
+      const statusCode = (response as UniNamespace.RequestSuccessCallbackResult)?.statusCode
+      return statusCode === ResultEnum.Unauthorized
     },
+    // 静默刷新：微信 code → v2Login → 更新本地 token。
+    // 成功后 alova 自动重发原始请求；失败则清除 token 回退登录页并抛出（中止重试）。
+    // 冷却期内重复触发视为刷新无效（重试仍 401），直接回退登录页以打破潜在死循环。
     handler: async () => {
+      const now = Date.now()
+      if (now - lastRefreshAt < REFRESH_COOLDOWN_MS) {
+        uni.removeStorageSync('token')
+        await uni.reLaunch({ url: '/pages/v2/login/index' })
+        throw new Error('token refresh ineffective, fallback to login')
+      }
       try {
-        // await authLogin();
+        await v2RefreshToken()
+        lastRefreshAt = Date.now()
       }
       catch (error) {
-        // 切换到登录页
+        uni.removeStorageSync('token')
         await uni.reLaunch({ url: '/pages/v2/login/index' })
         throw error
       }
