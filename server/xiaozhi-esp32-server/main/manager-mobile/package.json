@@ -1,8 +1,8 @@
 {
   "name": "lima-manager-mobile",
   "type": "commonjs",
-  "version": "3.4.0",
-  "unibest-version": "3.4.0",
+  "version": "3.5.0",
+  "unibest-version": "3.5.0",
   "packageManager": "pnpm@10.10.0",
   "description": "LiMa AI device manager mobile app (UniApp)",
   "generate-time": "2025-08-04",
