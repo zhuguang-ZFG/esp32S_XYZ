@@ -347,7 +347,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <view class="min-h-screen" style="background: #07070f;">
+  <view class="min-h-screen page-enter" style="background: #07070f;">
     <wd-navbar
       :title="t('settings.title')" placeholder safe-area-inset-top fixed
       custom-class="!bg-[#07070f]"

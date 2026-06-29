@@ -76,9 +76,9 @@ export const cacheTabbarEnable = selectedTabbarStrategy === TABBAR_MAP.NATIVE_TA
 const _tabbar: TabBar = {
   // 只有微信小程序支持 custom。App 和 H5 不生效
   custom: selectedTabbarStrategy === TABBAR_MAP.CUSTOM_TABBAR_WITH_CACHE,
-  color: '#e6e6e6',
-  selectedColor: '#667dea',
-  backgroundColor: '#fff',
+  color: '#5a6372',
+  selectedColor: '#3b82f6',
+  backgroundColor: '#0a0a14',
   borderStyle: 'black',
   height: '50px',
   fontSize: '10px',

@@ -49,16 +49,18 @@ const suppliesLoading = defineModel<boolean>('suppliesLoading', { default: false
 
 <style lang="scss" scoped>
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 16rpx;
 }
 
@@ -74,7 +76,7 @@ const suppliesLoading = defineModel<boolean>('suppliesLoading', { default: false
 
 .supply-label {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .supply-actions {

@@ -74,16 +74,18 @@ const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default:
 
 <style lang="scss" scoped>
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 .health-header {
@@ -96,14 +98,14 @@ const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default:
 .summary-text {
   display: block;
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
   margin-bottom: 8rpx;
 }
 
 .time-text {
   display: block;
   font-size: 22rpx;
-  color: #9d9ea3;
+  color: var(--dim);
   margin-bottom: 20rpx;
 }
 
@@ -114,7 +116,7 @@ const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default:
 }
 
 .history-item {
-  background: #f5f5f7;
+  background: var(--bg2);
   border-radius: 16rpx;
   padding: 16rpx;
 }
@@ -129,19 +131,19 @@ const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default:
 .history-scope {
   font-size: 24rpx;
   font-weight: 500;
-  color: #232338;
+  color: var(--text);
 }
 
 .history-time {
   display: block;
   font-size: 22rpx;
-  color: #65686f;
+  color: var(--muted);
   margin-bottom: 4rpx;
 }
 
 .history-summary {
   display: block;
   font-size: 22rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 </style>

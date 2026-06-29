@@ -158,7 +158,7 @@ function getStatusColor(status: string) {
   const map: Record<string, string> = {
     pending: '#f59e0b',
     queued: '#f59e0b',
-    running: '#336cff',
+    running: '#3b82f6',
     completed: '#07c160',
     failed: '#ff4d4f',
     error: '#ff4d4f',
@@ -247,11 +247,11 @@ function clearAllTasks() {
 </script>
 
 <template>
-  <view class="create-page" :style="{ paddingTop: `${safeAreaTop}px` }">
+  <view class="create-page page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
     <view class="create-nav">
       <view class="nav-content">
         <view class="nav-back" @click="navigateBack">
-          <wd-icon name="arrow-left" size="20" color="#1d1d1f" />
+          <wd-icon name="arrow-left" size="20" color="var(--text)" />
         </view>
         <text class="nav-title">
           {{ t('create.title') }}
@@ -262,19 +262,19 @@ function clearAllTasks() {
 
     <view class="mode-tabs">
       <view class="mode-tab" :class="{ active: mode === 'draw' }" @click="mode = 'draw'">
-        <wd-icon name="photo" size="28" :color="mode === 'draw' ? '#336cff' : '#9d9ea3'" />
+        <wd-icon name="photo" size="28" :color="mode === 'draw' ? '#3b82f6' : 'var(--dim)'" />
         <text class="tab-label">
           {{ t('create.drawTab') }}
         </text>
       </view>
       <view class="mode-tab" :class="{ active: mode === 'write' }" @click="mode = 'write'">
-        <wd-icon name="edit-2" size="28" :color="mode === 'write' ? '#336cff' : '#9d9ea3'" />
+        <wd-icon name="edit-2" size="28" :color="mode === 'write' ? '#3b82f6' : 'var(--dim)'" />
         <text class="tab-label">
           {{ t('create.writeTab') }}
         </text>
       </view>
       <view class="mode-tab" :class="{ active: mode === 'image' }" @click="mode = 'image'">
-        <wd-icon name="cloud" size="28" :color="mode === 'image' ? '#336cff' : '#9d9ea3'" />
+        <wd-icon name="cloud" size="28" :color="mode === 'image' ? '#3b82f6' : 'var(--dim)'" />
         <text class="tab-label">
           {{ t('create.imageTab') }}
         </text>
@@ -291,7 +291,7 @@ function clearAllTasks() {
       <scroll-view v-else scroll-x class="device-scroll">
         <view class="device-list">
           <view v-for="d in devices" :key="d.deviceId" class="device-chip" :class="{ selected: selectedDeviceId === d.deviceId }" @click="selectedDeviceId = d.deviceId">
-            <wd-icon name="phone" size="20" :color="selectedDeviceId === d.deviceId ? '#336cff' : '#666'" />
+            <wd-icon name="phone" size="20" :color="selectedDeviceId === d.deviceId ? '#3b82f6' : 'var(--muted)'" />
             <view class="chip-info">
               <text class="chip-name">
                 {{ d.model || 'Device' }}
@@ -349,7 +349,7 @@ function clearAllTasks() {
       </view>
       <view class="result-actions">
         <view class="action-btn secondary" @click="saveImageToAlbum(imageResultUrl)">
-          <wd-icon name="download" size="16" color="#336cff" />
+          <wd-icon name="download" size="16" color="#3b82f6" />
           <text>{{ t('create.saveToAlbum') }}</text>
         </view>
         <view class="action-btn primary" :class="{ disabled: !selectedDeviceId || submitting }" @click="sendImageToDevice">
@@ -433,11 +433,11 @@ function clearAllTasks() {
 <style lang="scss" scoped>
 .create-page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: var(--bg);
 }
 .create-nav {
-  background: #fff;
-  border-bottom: 1rpx solid #eee;
+  background: var(--surface);
+  border-bottom: 1rpx solid var(--border);
   .nav-content {
     display: flex;
     align-items: center;
@@ -453,7 +453,7 @@ function clearAllTasks() {
   .nav-title {
     font-size: 34rpx;
     font-weight: 600;
-    color: #1d1d1f;
+    color: var(--text);
   }
   .nav-placeholder {
     width: 60rpx;
@@ -471,20 +471,22 @@ function clearAllTasks() {
   align-items: center;
   gap: 12rpx;
   padding: 24rpx 0;
-  background: #fff;
+  background: var(--surface);
+  border: 2rpx solid var(--border);
   border-radius: 20rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   &:active {
     transform: scale(0.97);
   }
   &.active {
-    background: #eef3ff;
-    box-shadow: 0 0 0 2rpx #336cff;
+    background: rgba(59, 130, 246, 0.1);
+    border: 2rpx solid var(--accent);
+    box-shadow: none;
   }
   .tab-label {
     font-size: 26rpx;
     font-weight: 600;
-    color: #1d1d1f;
+    color: var(--text);
   }
 }
 .section {
@@ -495,13 +497,13 @@ function clearAllTasks() {
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 16rpx;
 }
 .empty-tip {
   padding: 32rpx 0;
   text-align: center;
-  color: #9d9ea3;
+  color: var(--dim);
   font-size: 28rpx;
 }
 .device-scroll {
@@ -517,15 +519,17 @@ function clearAllTasks() {
   align-items: center;
   gap: 12rpx;
   padding: 16rpx 24rpx;
-  background: #fff;
+  background: var(--surface);
+  border: 2rpx solid var(--border);
   border-radius: 16rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   &:active {
     transform: scale(0.97);
   }
   &.selected {
-    background: #eef3ff;
-    box-shadow: 0 0 0 2rpx #336cff;
+    background: rgba(59, 130, 246, 0.1);
+    border: 2rpx solid var(--accent);
+    box-shadow: none;
   }
   .chip-info {
     display: flex;
@@ -535,7 +539,7 @@ function clearAllTasks() {
   .chip-name {
     font-size: 26rpx;
     font-weight: 600;
-    color: #1d1d1f;
+    color: var(--text);
   }
   .chip-status {
     font-size: 22rpx;
@@ -543,33 +547,34 @@ function clearAllTasks() {
       color: #07c160;
     }
     &.offline {
-      color: #9d9ea3;
+      color: var(--dim);
     }
   }
 }
 .prompt-box {
-  background: #fff;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   border-radius: 20rpx;
   padding: 20rpx;
   position: relative;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
 }
 .prompt-textarea {
   width: 100%;
   height: 200rpx;
   font-size: 28rpx;
-  color: #1d1d1f;
+  color: var(--text);
   line-height: 1.6;
 }
 .prompt-placeholder {
-  color: #9d9ea3;
+  color: var(--dim);
 }
 .prompt-count {
   position: absolute;
   bottom: 12rpx;
   right: 20rpx;
   font-size: 22rpx;
-  color: #c7c7cc;
+  color: var(--dim);
 }
 .submit-section {
   padding: 0 24rpx;
@@ -578,7 +583,7 @@ function clearAllTasks() {
 .submit-btn {
   width: 100%;
   padding: 28rpx 0;
-  background: #336cff;
+  background: var(--accent);
   border-radius: 20rpx;
   display: flex;
   align-items: center;
@@ -604,10 +609,11 @@ function clearAllTasks() {
   gap: 16rpx;
 }
 .task-card {
-  background: #fff;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   border-radius: 20rpx;
   padding: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 12rpx;
@@ -619,7 +625,7 @@ function clearAllTasks() {
 }
 .task-cap {
   font-size: 26rpx;
-  color: #1d1d1f;
+  color: var(--text);
   font-weight: 600;
 }
 .task-status {
@@ -636,13 +642,13 @@ function clearAllTasks() {
 }
 .task-prompt {
   font-size: 26rpx;
-  color: #65686f;
+  color: var(--muted);
   line-height: 1.5;
   word-break: break-word;
 }
 .progress-bar {
   height: 8rpx;
-  background: #edf1f7;
+  background: var(--border);
   border-radius: 4rpx;
   overflow: hidden;
 }
@@ -664,11 +670,11 @@ function clearAllTasks() {
   width: 100%;
   height: 320rpx;
   border-radius: 16rpx;
-  background: #f5f5f7;
+  background: var(--bg);
 }
 .result-tip {
   font-size: 22rpx;
-  color: #9d9ea3;
+  color: var(--dim);
   text-align: center;
 }
 .task-error {
@@ -695,9 +701,9 @@ function clearAllTasks() {
 }
 .save-btn {
   font-size: 24rpx;
-  color: #336cff;
+  color: var(--accent);
   padding: 6rpx 16rpx;
-  background: rgba(51, 108, 255, 0.08);
+  background: rgba(59, 130, 246, 0.1);
   border-radius: 8rpx;
 }
 
@@ -709,7 +715,7 @@ function clearAllTasks() {
   align-items: center;
   justify-content: center;
   gap: 12rpx;
-  background: #f5f5f7;
+  background: var(--bg);
   border-radius: 16rpx;
 }
 .image-error-icon {
@@ -717,19 +723,19 @@ function clearAllTasks() {
 }
 .image-error-text {
   font-size: 26rpx;
-  color: #9d9ea3;
+  color: var(--dim);
 }
 
 .task-actions-bar {
   display: flex;
   justify-content: flex-end;
-  border-top: 1rpx solid #f0f0f0;
+  border-top: 1rpx solid var(--border);
   padding-top: 16rpx;
   margin-top: 4rpx;
 }
 .task-delete-btn {
   font-size: 24rpx;
-  color: #9d9ea3;
+  color: var(--dim);
   padding: 8rpx 16rpx;
 }
 .image-result-section {
@@ -737,8 +743,8 @@ function clearAllTasks() {
 }
 .backend-tag {
   font-size: 22rpx;
-  color: #336cff;
-  background: rgba(51, 108, 255, 0.08);
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
 }
@@ -757,12 +763,12 @@ function clearAllTasks() {
     opacity: 0.4;
   }
   &.primary {
-    background: #336cff;
+    background: var(--accent);
     color: #fff;
   }
   &.secondary {
-    background: rgba(51, 108, 255, 0.08);
-    color: #336cff;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent);
   }
 }
 </style>

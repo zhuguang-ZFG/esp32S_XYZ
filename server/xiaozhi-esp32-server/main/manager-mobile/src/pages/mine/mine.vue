@@ -83,7 +83,7 @@ function showAbout() {
 </script>
 
 <template>
-  <view class="mine-page" :style="{ paddingTop: `${safeAreaTop}px` }">
+  <view class="mine-page page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
     <!-- Nav -->
     <view class="mine-nav">
       <view class="nav-content">
@@ -143,7 +143,7 @@ function showAbout() {
       </text>
       <view class="menu-list">
         <view class="menu-item" @click="goDevices">
-          <wd-icon name="setting" size="22" color="#336cff" custom-class="menu-icon" />
+          <wd-icon name="setting" size="22" color="#3b82f6" custom-class="menu-icon" />
           <view class="menu-content">
             <text class="menu-name">
               {{ t('mine.deviceMgmt') }}
@@ -155,7 +155,7 @@ function showAbout() {
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
         <view class="menu-item" @click="goConfig">
-          <wd-icon name="wifi" size="22" color="#336cff" custom-class="menu-icon" />
+          <wd-icon name="wifi" size="22" color="#3b82f6" custom-class="menu-icon" />
           <view class="menu-content">
             <text class="menu-name">
               {{ t('mine.deviceConfig') }}
@@ -167,7 +167,7 @@ function showAbout() {
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
         <view class="menu-item" @click="goDigitalHuman">
-          <wd-icon name="user" size="22" color="#336cff" custom-class="menu-icon" />
+          <wd-icon name="user" size="22" color="#3b82f6" custom-class="menu-icon" />
           <view class="menu-content">
             <text class="menu-name">
               {{ t('mine.digitalHuman') }}
@@ -230,12 +230,12 @@ function showAbout() {
 <style lang="scss" scoped>
 .mine-page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: var(--bg);
 }
 
 .mine-nav {
-  background: #fff;
-  border-bottom: 1rpx solid #eee;
+  background: var(--surface);
+  border-bottom: 1rpx solid var(--border);
 
   .nav-content {
     display: flex;
@@ -247,7 +247,7 @@ function showAbout() {
   .nav-title {
     font-size: 34rpx;
     font-weight: 600;
-    color: #1d1d1f;
+    color: var(--text);
   }
 }
 
@@ -257,9 +257,9 @@ function showAbout() {
   gap: 24rpx;
   margin: 24rpx;
   padding: 32rpx;
-  background: linear-gradient(135deg, #336cff 0%, #5b8def 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
   border-radius: 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(51, 108, 255, 0.2);
+  box-shadow: 0 4rpx 20rpx rgba(59, 130, 246, 0.25);
 }
 
 .user-avatar {
@@ -305,27 +305,28 @@ function showAbout() {
   align-items: center;
   gap: 8rpx;
   padding: 24rpx 0;
-  background: #fff;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   border-radius: 20rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
 }
 
 .stat-num {
   font-size: 44rpx;
   font-weight: 800;
-  color: #336cff;
+  color: var(--accent);
 
   &.online {
-    color: #07c160;
+    color: var(--green);
   }
   &.tasks {
-    color: #f59e0b;
+    color: var(--amber);
   }
 }
 
 .stat-label {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .menu-section {
@@ -337,15 +338,16 @@ function showAbout() {
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #65686f;
+  color: var(--muted);
   margin-bottom: 12rpx;
   padding-left: 8rpx;
 }
 
 .menu-list {
-  background: #fff;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   border-radius: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
@@ -354,14 +356,14 @@ function showAbout() {
   align-items: center;
   gap: 20rpx;
   padding: 28rpx 24rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid var(--border);
   transition: background 0.15s ease;
 
   &:last-child {
     border-bottom: none;
   }
   &:active {
-    background: #f5f5f7;
+    background: var(--surface-h);
   }
 }
 
@@ -383,12 +385,12 @@ function showAbout() {
 .menu-name {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 .menu-desc {
   font-size: 24rpx;
-  color: #9d9ea3;
+  color: var(--dim);
 }
 
 .logout-section {
@@ -398,21 +400,21 @@ function showAbout() {
 
 .logout-btn {
   padding: 28rpx 0;
-  background: #fff;
-  border: 1rpx solid #ffd6d6;
+  background: var(--surface);
+  border: 1rpx solid rgba(239, 68, 68, 0.15);
   border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:active {
-    background: #fff5f5;
+    background: rgba(239, 68, 68, 0.08);
   }
 }
 
 .logout-text {
   font-size: 30rpx;
   font-weight: 600;
-  color: #ff4d4f;
+  color: #ef4444;
 }
 </style>

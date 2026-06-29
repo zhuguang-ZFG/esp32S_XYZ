@@ -30,7 +30,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
       clearable
       :maxlength="40"
       :placeholder="t('v2.detail.writePlaceholder')"
-      custom-class="!bg-[#f5f5f7] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"
@@ -55,7 +55,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
       clearable
       :maxlength="60"
       :placeholder="t('v2.detail.drawPlaceholder')"
-      custom-class="!bg-[#f5f5f7] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"
@@ -82,23 +82,25 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
 
 <style lang="scss" scoped>
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 8rpx;
 }
 
 .hint-text {
   display: block;
   font-size: 24rpx;
-  color: #9d9ea3;
+  color: var(--dim);
   margin-bottom: 20rpx;
 }
 

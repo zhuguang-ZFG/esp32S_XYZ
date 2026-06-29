@@ -86,7 +86,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <view class="min-h-screen" style="background: #07070f;">
+  <view class="min-h-screen page-enter" style="background: #07070f;">
     <wd-navbar
       :title="t('deviceConfig.pageTitle')" safe-area-inset-top
       custom-class="!bg-[#07070f]"

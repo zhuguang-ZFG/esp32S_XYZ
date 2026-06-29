@@ -37,16 +37,18 @@ defineProps<{
 
 <style lang="scss" scoped>
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 .task-header {
@@ -62,14 +64,14 @@ defineProps<{
 
 .progress-track {
   height: 12rpx;
-  background: #edf1f7;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 6rpx;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: #336cff;
+  background: var(--accent);
   border-radius: 6rpx;
   transition: width 0.3s ease;
 }
@@ -78,6 +80,6 @@ defineProps<{
   display: block;
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 </style>

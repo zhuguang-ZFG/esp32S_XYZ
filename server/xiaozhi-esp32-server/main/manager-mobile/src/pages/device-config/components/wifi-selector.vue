@@ -46,7 +46,7 @@ const networkDisplayText = computed(() => {
   return selectedNetwork.value.ssid
 })
 
-// 检查xiaozhi连接状态
+// 检查 DLC 连接状态
 async function checkESP32Connection() {
   checkingConnection.value = true
   try {
@@ -70,7 +70,7 @@ async function checkESP32Connection() {
 // 扫描WiFi网络
 async function scanWifi() {
   if (!isConnectedToESP32.value) {
-    toast.error(t('deviceConfig.connectXiaozhiHotspot'))
+    toast.error(t('deviceConfig.connectDlcHotspot'))
     return
   }
 
@@ -125,11 +125,11 @@ async function scanWifi() {
 
 // 显示网络选择器
 async function showNetworkSelector() {
-  // 实时检测xiaozhi连接状态
+  // 实时检测 DLC 连接状态
   await checkESP32Connection()
 
   if (!isConnectedToESP32.value) {
-    toast.error(t('deviceConfig.connectXiaozhiHotspot'))
+    toast.error(t('deviceConfig.connectDlcHotspot'))
     return
   }
 
@@ -213,12 +213,12 @@ onMounted(() => {
 
 <template>
   <view class="wifi-selector">
-    <!-- Xiaozhi连接状态 -->
+    <!-- DLC 连接状态 -->
     <view v-if="props.autoConnect" class="connection-status">
       <view v-if="!isConnectedToESP32" class="status-warning">
         <view class="status-content">
           <text class="warning-text">
-            {{ t('deviceConfig.connectXiaozhiHotspot') }} (xiaozhi-XXXXXX)
+            {{ t('deviceConfig.connectDlcHotspot') }} (DLC-XXXXXX)
           </text>
           <wd-button
             size="small"
@@ -233,7 +233,7 @@ onMounted(() => {
       <view v-else class="status-success">
         <view class="status-content">
           <text class="success-text">
-            {{ t('deviceConfig.connectedXiaozhiHotspot') }}
+            {{ t('deviceConfig.connectedDlcHotspot') }}
           </text>
           <wd-button
             size="small"
@@ -392,21 +392,21 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx;
-  background: #f5f7fb;
+  background: var(--bg2);
   border-radius: 12rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--border);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .selector-item:active {
-  background: #eef3ff;
-  border-color: #336cff;
+  background: var(--bg2);
+  border-color: var(--accent);
 }
 
 .selector-label {
   font-size: 28rpx;
-  color: #232338;
+  color: var(--text);
   font-weight: 500;
 }
 
@@ -414,7 +414,7 @@ onMounted(() => {
   flex: 1;
   text-align: right;
   font-size: 26rpx;
-  color: #65686f;
+  color: var(--muted);
   margin: 0 16rpx;
 }
 
@@ -438,7 +438,7 @@ onMounted(() => {
 .network-list-container {
   width: 100%;
   max-height: 70vh;
-  background-color: #ffffff;
+  background-color: var(--surface);
   border-radius: 20rpx 20rpx 0 0;
   padding: 32rpx;
   box-sizing: border-box;
@@ -450,13 +450,13 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 24rpx;
   padding-bottom: 16rpx;
-  border-bottom: 1rpx solid #eeeeee;
+  border-bottom: 1rpx solid var(--border);
 }
 
 .list-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #232338;
+  color: var(--text);
 }
 
 .list-actions {
@@ -474,14 +474,14 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 80rpx 20rpx;
-  background-color: #fbfbfb;
+  background-color: var(--bg2);
   border-radius: 16rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--border);
 }
 
 .empty-text {
   font-size: 32rpx;
-  color: #65686f;
+  color: var(--muted);
   margin-bottom: 16rpx;
 }
 
@@ -501,8 +501,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 32rpx 24rpx;
-  background-color: #fbfbfb;
-  border: 2rpx solid #eeeeee;
+  background-color: var(--bg2);
+  border: 2rpx solid var(--border);
   border-radius: 16rpx;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -510,8 +510,8 @@ onMounted(() => {
 
 .wifi-item:active {
   transform: scale(0.98);
-  background-color: #f0f6ff;
-  border-color: #336cff;
+  background-color: var(--bg2);
+  border-color: var(--accent);
 }
 
 .wifi-info {
@@ -521,7 +521,7 @@ onMounted(() => {
 .wifi-name {
   font-size: 32rpx;
   font-weight: 600;
-  color: #232338;
+  color: var(--text);
   margin-bottom: 8rpx;
 }
 
@@ -533,12 +533,12 @@ onMounted(() => {
 .wifi-signal,
 .wifi-channel {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .security-icon {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
   margin-left: 20rpx;
 }
 
@@ -554,7 +554,7 @@ onMounted(() => {
 
 .password-label {
   font-size: 28rpx;
-  color: #232338;
+  color: var(--text);
   font-weight: 500;
 }
 </style>

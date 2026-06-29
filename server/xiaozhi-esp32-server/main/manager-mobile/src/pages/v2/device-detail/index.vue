@@ -244,7 +244,7 @@ async function loadSelfCheckHistoryData() {
 // --- Computed labels ---
 const phaseColor = computed(() => {
   if (['running', 'accepted', 'progress'].includes(latestPhase.value))
-    return '#336cff'
+    return '#3b82f6'
   if (latestPhase.value === 'done')
     return '#07c160'
   if (latestPhase.value === 'failed')
@@ -490,10 +490,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <wd-config-provider theme-color="#336cff" />
+  <wd-config-provider theme-color="#3b82f6" />
   <wd-navbar :title="t('v2.deviceDetail.title')" left-arrow placeholder safe-area-inset-top fixed @click-left="navigateBack" />
 
-  <view class="bento-page">
+  <view class="bento-page page-enter">
     <device-info-card :device-info="deviceInfo" :device-id="deviceId" :connected="connected" :workspace-label="workspaceLabel" :info-loading="infoLoading" />
     <supplies-panel v-model:supplies-loading="suppliesLoading" :device-supplies="deviceSupplies" :paper-slot-state-label="paperSlotStateLabel" :pen-state-label="penStateLabel" @update-paper="updatePaper" @new-pen="markNewPen" />
 
@@ -520,17 +520,17 @@ onUnmounted(() => {
       </view>
       <view class="quick-links">
         <view class="quick-link" @click="goToChatHistory">
-          <wd-icon name="chat" size="20" color="#336cff" />
+          <wd-icon name="chat" size="20" color="#3b82f6" />
           <text>{{ t('v2.detail.chatHistory') }}</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
         <view class="quick-link" @click="goToVoiceprint">
-          <wd-icon name="volume" size="20" color="#336cff" />
+          <wd-icon name="volume" size="20" color="#3b82f6" />
           <text>{{ t('v2.detail.voiceprintMgmt') }}</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
         <view class="quick-link" @click="goToAgents">
-          <wd-icon name="robot" size="20" color="#336cff" />
+          <wd-icon name="robot" size="20" color="#3b82f6" />
           <text>{{ t('v2.detail.manageAgents') }}</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
@@ -560,7 +560,7 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .bento-page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: var(--bg);
   padding: 20rpx;
   display: flex;
   flex-direction: column;
@@ -568,16 +568,18 @@ onUnmounted(() => {
 }
 
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 20rpx;
 }
 
@@ -605,21 +607,21 @@ onUnmounted(() => {
   padding: 20rpx 12rpx;
   border-radius: 16rpx;
   font-size: 28rpx;
-  color: #232338;
+  color: var(--text);
   transition: background 0.15s ease;
 
   &:active {
-    background: #f5f5f7;
+    background: var(--bg2);
   }
 
   & + & {
-    border-top: 1rpx solid #f0f0f0;
+    border-top: 1rpx solid var(--border);
   }
 }
 
 .wss-log {
   max-height: 280rpx;
-  background: #f8f9fc;
+  background: var(--bg2);
   border-radius: 16rpx;
   padding: 16rpx;
 }

@@ -30,14 +30,14 @@ const transferAcceptId = defineModel<string>('transferAcceptId', { default: '' }
       clearable
       :maxlength="80"
       :placeholder="t('v2.detail.targetUnionid')"
-      custom-class="!bg-[#f5f5f7] !rounded-[16rpx] !px-[20rpx] !mt-[16rpx] !mb-[12rpx]"
+      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mt-[16rpx] !mb-[12rpx]"
     />
     <wd-input
       v-model="transferAcceptId"
       clearable
       type="number"
       placeholder="transferId"
-      custom-class="!bg-[#f5f5f7] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <view class="transfer-actions">
       <wd-button type="primary" round size="small" :loading="transferLoading" @click="emit('requestTransfer')">
@@ -55,22 +55,24 @@ const transferAcceptId = defineModel<string>('transferAcceptId', { default: '' }
 
 <style lang="scss" scoped>
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 8rpx;
 }
 
 .state-label {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .transfer-actions {

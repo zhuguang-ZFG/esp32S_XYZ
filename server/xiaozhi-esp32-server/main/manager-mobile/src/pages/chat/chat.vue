@@ -228,18 +228,18 @@ function clearHistory() {
 </script>
 
 <template>
-  <view class="chat-page">
+  <view class="chat-page page-enter">
     <!-- 导航栏 -->
     <view class="chat-nav" :style="{ paddingTop: `${statusBarHeight}px` }">
       <view class="nav-content">
         <view class="nav-back" @click="navigateBack">
-          <wd-icon name="arrow-left" size="20" color="#1d1d1f" />
+          <wd-icon name="arrow-left" size="20" color="var(--text)" />
         </view>
         <text class="nav-title">
           {{ t('chat.title') }}
         </text>
         <view class="nav-action" @click="clearHistory">
-          <wd-icon name="delete" size="18" color="#999" />
+          <wd-icon name="delete" size="18" color="var(--dim)" />
         </view>
       </view>
     </view>
@@ -313,12 +313,12 @@ function clearHistory() {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #f5f5f7;
+  background: var(--bg);
 }
 
 .chat-nav {
-  background: #fff;
-  border-bottom: 1rpx solid #eee;
+  background: var(--bg2);
+  border-bottom: 1rpx solid var(--border);
   flex-shrink: 0;
 
   .nav-content {
@@ -338,7 +338,7 @@ function clearHistory() {
   .nav-title {
     font-size: 34rpx;
     font-weight: 600;
-    color: #1d1d1f;
+    color: var(--text);
   }
 
   .nav-action {
@@ -367,7 +367,7 @@ function clearHistory() {
   &.user {
     justify-content: flex-end;
     .msg-bubble {
-      background: #336cff;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
       border-bottom-right-radius: 4rpx;
     }
     .msg-content {
@@ -381,8 +381,10 @@ function clearHistory() {
   &.assistant {
     justify-content: flex-start;
     .msg-bubble {
-      background: #fff;
-      box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+      background: var(--surface);
+      border: 1rpx solid var(--border);
+      backdrop-filter: blur(24rpx);
+      box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
       border-bottom-left-radius: 4rpx;
     }
   }
@@ -410,11 +412,11 @@ function clearHistory() {
   align-self: flex-end;
 }
 
-/* rich-text 渲染（浅色主题） */
+/* rich-text 渲染（暗色主题） */
 .msg-rich-text {
   font-size: 28rpx;
   line-height: 1.7;
-  color: #1d1d1f;
+  color: var(--text);
 
   :deep(pre) {
     background: #1e1e2e;
@@ -436,28 +438,28 @@ function clearHistory() {
   }
 
   :deep(.inline-code) {
-    background: rgba(51, 108, 255, 0.1);
+    background: rgba(51, 108, 255, 0.15);
     padding: 2rpx 10rpx;
     border-radius: 6rpx;
-    color: #336cff;
+    color: var(--accent);
     font-size: 26rpx;
   }
 
   :deep(strong) {
     font-weight: 700;
-    color: #1d1d1f;
+    color: var(--text);
   }
 
   :deep(em) {
     font-style: italic;
-    color: #65686f;
+    color: var(--muted);
   }
 
   :deep(blockquote) {
-    border-left: 4rpx solid #336cff;
+    border-left: 4rpx solid var(--accent);
     padding-left: 20rpx;
     margin: 12rpx 0;
-    color: #65686f;
+    color: var(--muted);
   }
 
   :deep(ul),
@@ -471,7 +473,7 @@ function clearHistory() {
   }
 
   :deep(a) {
-    color: #336cff;
+    color: var(--accent);
     text-decoration: underline;
   }
 
@@ -491,7 +493,7 @@ function clearHistory() {
 
   .msg-time {
     font-size: 20rpx;
-    color: #9d9ea3;
+    color: var(--dim);
   }
 
   .msg-actions {
@@ -501,9 +503,9 @@ function clearHistory() {
 
   .action-btn {
     font-size: 22rpx;
-    color: #336cff;
+    color: var(--accent);
     padding: 4rpx 12rpx;
-    background: rgba(51, 108, 255, 0.08);
+    background: rgba(51, 108, 255, 0.12);
     border-radius: 8rpx;
 
     &:active {
@@ -518,7 +520,7 @@ function clearHistory() {
   bottom: 20rpx;
   width: 4rpx;
   height: 28rpx;
-  background: #336cff;
+  background: var(--accent);
   animation: blink 1s infinite;
   border-radius: 2rpx;
 }
@@ -539,33 +541,33 @@ function clearHistory() {
   gap: 16rpx;
   padding: 20rpx 24rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-  background: #fff;
-  border-top: 1rpx solid #eee;
+  background: var(--bg2);
+  border-top: 1rpx solid var(--border);
   flex-shrink: 0;
 }
 
 .input-box {
   flex: 1;
-  background: #f5f5f7;
+  background: var(--bg);
   border-radius: 40rpx;
   padding: 16rpx 28rpx;
 }
 
 .input-field {
   font-size: 30rpx;
-  color: #1d1d1f;
+  color: var(--text);
   height: 48rpx;
   line-height: 48rpx;
 }
 .input-placeholder {
-  color: #9d9ea3;
+  color: var(--dim);
 }
 
 .send-btn {
   width: 80rpx;
   height: 80rpx;
   border-radius: 50%;
-  background: #336cff;
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -581,7 +583,7 @@ function clearHistory() {
   width: 80rpx;
   height: 80rpx;
   border-radius: 50%;
-  background: #ff4d4f;
+  background: #ef4444;
   display: flex;
   align-items: center;
   justify-content: center;

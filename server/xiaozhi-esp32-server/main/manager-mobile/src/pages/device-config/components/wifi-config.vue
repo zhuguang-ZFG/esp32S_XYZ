@@ -55,7 +55,7 @@ async function submitConfig() {
   // 检查ESP32连接
   const connected = await checkESP32Connection()
   if (!connected) {
-    toast.error(t('deviceConfig.connectXiaozhiHotspot'))
+    toast.error(t('deviceConfig.connectDlcHotspot'))
     return
   }
 
@@ -76,7 +76,7 @@ async function submitConfig() {
     })
 
     if (response.statusCode === 200 && (response.data as any)?.success) {
-      toast.success(`${t('deviceConfig.configSuccess')}！${t('deviceConfig.deviceWillConnectTo')} ${props.selectedNetwork.ssid}，${t('deviceConfig.deviceWillRestart')}。${t('deviceConfig.pleaseDisconnectXiaozhiHotspot')}`)
+      toast.success(`${t('deviceConfig.configSuccess')}！${t('deviceConfig.deviceWillConnectTo')} ${props.selectedNetwork.ssid}，${t('deviceConfig.deviceWillRestart')}。${t('deviceConfig.pleaseDisconnectDlcHotspot')}`)
       // 设备退出配网模式
       setTimeout(() => {
         uni.request({
@@ -141,7 +141,7 @@ async function submitConfig() {
       </view>
       <view class="help-content">
         <text class="help-item">
-          1. {{ t('deviceConfig.phoneConnectXiaozhiHotspot') }} (xiaozhi-XXXXXX)
+          1. {{ t('deviceConfig.phoneConnectDlcHotspot') }} (DLC-XXXXXX)
         </text>
         <text class="help-item">
           2. {{ t('deviceConfig.selectTargetWifiNetwork') }}
@@ -171,15 +171,15 @@ async function submitConfig() {
 
 .network-info {
   padding: 24rpx;
-  background-color: #f0f6ff;
-  border: 1rpx solid #336cff;
+  background-color: var(--bg2);
+  border: 1rpx solid var(--accent);
   border-radius: 16rpx;
 }
 
 .network-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #232338;
+  color: var(--text);
   margin-bottom: 8rpx;
 }
 
@@ -191,7 +191,7 @@ async function submitConfig() {
 .network-signal,
 .network-security {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .submit-section {
@@ -200,15 +200,15 @@ async function submitConfig() {
 
 .help-section {
   padding: 32rpx 24rpx;
-  background-color: #fbfbfb;
+  background-color: var(--bg2);
   border-radius: 16rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--border);
 }
 
 .help-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #232338;
+  color: var(--text);
   margin-bottom: 20rpx;
 }
 
@@ -220,13 +220,13 @@ async function submitConfig() {
 
 .help-item {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
   line-height: 1.5;
 }
 
 .help-tip {
   font-size: 24rpx;
-  color: #336cff;
+  color: var(--accent);
   font-weight: 500;
   margin-top: 8rpx;
 }

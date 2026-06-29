@@ -393,10 +393,10 @@ defineExpose({
 </script>
 
 <template>
-  <view class="voiceprint-container" style="background: #f5f7fb; min-height: 100%;">
+  <view class="voiceprint-container page-enter" style="background: var(--bg); min-height: 100%;">
     <!-- 加载状态 -->
     <view v-if="loading && voicePrintList.length === 0" class="loading-container">
-      <wd-loading color="#336cff" />
+      <wd-loading color="#3b82f6" />
       <text class="loading-text">
         {{ t('voiceprint.loading') }}
       </text>
@@ -411,15 +411,15 @@ defineExpose({
             :model-value="swipeStates[item.id] || 'close'"
             @update:model-value="swipeStates[item.id] = $event"
           >
-            <view class="bg-[#fbfbfb] p-[32rpx]" @click="handleEdit(item)">
+            <view class="bg-[var(--surface)] border border-[1rpx] border-[var(--border)] p-[32rpx] shadow-[0_4rpx_20rpx_rgba(0,0,0,0.2)]" @click="handleEdit(item)">
               <view>
-                <text class="mb-[12rpx] block text-[32rpx] text-[#232338] font-semibold">
+                <text class="mb-[12rpx] block text-[32rpx] text-[var(--text)] font-semibold">
                   {{ item.sourceName }}
                 </text>
-                <text class="mb-[12rpx] block text-[28rpx] text-[#65686f] leading-[1.4]">
+                <text class="mb-[12rpx] block text-[28rpx] text-[var(--muted)] leading-[1.4]">
                   {{ item.introduce || '暂无描述' }}
                 </text>
-                <text class="block text-[24rpx] text-[#9d9ea3]">
+                <text class="block text-[24rpx] text-[var(--dim)]">
                   {{ item.createDate }}
                 </text>
               </view>
@@ -444,11 +444,11 @@ defineExpose({
     <!-- 空状态 -->
     <view v-else-if="!loading" class="empty-container">
       <view class="flex flex-col items-center justify-center p-[100rpx_40rpx] text-center">
-        <wd-icon name="voice" custom-class="text-[120rpx] text-[#d9d9d9] mb-[32rpx]" />
-        <text class="mb-[32rpx] text-[32rpx] text-[#666666] font-medium">
+        <wd-icon name="voice" custom-class="text-[120rpx] text-[var(--dim)] mb-[32rpx]" />
+        <text class="mb-[32rpx] text-[32rpx] text-[var(--muted)] font-medium">
           {{ t('voiceprint.emptyTitle') }}
         </text>
-        <text class="text-[26rpx] text-[#999999] leading-[1.5]">
+        <text class="text-[26rpx] text-[var(--dim)] leading-[1.5]">
           {{ t('voiceprint.emptyDesc') }}
         </text>
       </view>
@@ -474,7 +474,7 @@ defineExpose({
       <view class="p-[32rpx]">
         <!-- 成员选择 -->
         <view class="mb-[32rpx]">
-          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+          <text class="mb-[16rpx] block text-[28rpx] text-[var(--text)] font-medium">
             <text class="text-red">
               *
             </text>
@@ -482,44 +482,44 @@ defineExpose({
           </text>
           <picker mode="selector" :range="memberPickerRange" @change="onMemberChange">
             <view
-              class="flex cursor-pointer items-center justify-between border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[20rpx] transition-all duration-300 active:bg-[#eef3ff]"
+              class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] transition-all duration-300 active:bg-[#0a0a14]"
             >
               <text
-                class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[#232338]"
-                :class="{ 'text-[#9d9ea3]': !addForm.memberId }"
+                class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[var(--text)]"
+                :class="{ 'text-[var(--dim)]': !addForm.memberId }"
               >
                 {{ selectedMemberName || t('voiceprint.pleaseSelectMember') }}
               </text>
-              <wd-icon name="arrow-down" custom-class="text-[20rpx] text-[#9d9ea3]" />
+              <wd-icon name="arrow-down" custom-class="text-[20rpx] text-[var(--dim)]" />
             </view>
           </picker>
         </view>
 
         <!-- 声纹向量选择 -->
         <view class="mb-[32rpx]">
-          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+          <text class="mb-[16rpx] block text-[28rpx] text-[var(--text)] font-medium">
             <text class="text-red">
               *
             </text>
             {{ t('voiceprint.voiceVector') }}
           </text>
           <view
-            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[20rpx] transition-all duration-300 active:bg-[#eef3ff]"
+            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] transition-all duration-300 active:bg-[#0a0a14]"
             @click="showChatHistoryDialog = true"
           >
             <text
-              class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[#232338]"
-              :class="{ 'text-[#9d9ea3]': !addForm.audioId }"
+              class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[var(--text)]"
+              :class="{ 'text-[var(--dim)]': !addForm.audioId }"
             >
               {{ getSelectedAudioContent(addForm.audioId) }}
             </text>
-            <wd-icon name="arrow-down" custom-class="text-[20rpx] text-[#9d9ea3]" />
+            <wd-icon name="arrow-down" custom-class="text-[20rpx] text-[var(--dim)]" />
           </view>
         </view>
 
         <!-- 姓名 -->
         <view class="mb-[32rpx]">
-          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+          <text class="mb-[16rpx] block text-[28rpx] text-[var(--text)] font-medium">
             <text class="text-red">
               *
             </text>
@@ -527,14 +527,14 @@ defineExpose({
           </text>
           <input
             v-model="addForm.sourceName"
-            class="box-border h-[80rpx] w-full border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[16rpx_20rpx] text-[28rpx] text-[#232338] leading-[1.4] outline-none focus:border-[#336cff] focus:bg-white placeholder:text-[#9d9ea3]"
+            class="box-border h-[80rpx] w-full border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[16rpx_20rpx] text-[28rpx] text-[var(--text)] leading-[1.4] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
             type="text" :placeholder="t('voiceprint.pleaseInputName')"
           >
         </view>
 
         <!-- 描述 -->
         <view>
-          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+          <text class="mb-[16rpx] block text-[28rpx] text-[var(--text)] font-medium">
             <text class="text-red">
               *
             </text>
@@ -542,15 +542,15 @@ defineExpose({
           </text>
           <textarea
             v-model="addForm.introduce" :maxlength="100" :placeholder="t('voiceprint.pleaseInputDescription')"
-            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[20rpx] text-[26rpx] text-[#232338] leading-[1.6] outline-none focus:border-[#336cff] focus:bg-white placeholder:text-[#9d9ea3]"
+            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] text-[26rpx] text-[var(--text)] leading-[1.6] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
           />
-          <view class="mt-[8rpx] text-right text-[22rpx] text-[#9d9ea3]">
+          <view class="mt-[8rpx] text-right text-[22rpx] text-[var(--dim)]">
             {{ (addForm.introduce || '').length }}/100
           </view>
         </view>
       </view>
 
-      <view class="flex gap-[16rpx] border-t-[2rpx] border-[#eeeeee] p-[24rpx_32rpx_32rpx]">
+      <view class="flex gap-[16rpx] border-t-[2rpx] border-[var(--border)] p-[24rpx_32rpx_32rpx]">
         <wd-button type="info" custom-class="flex-1" @click="showAddDialog = false">
           {{ t('voiceprint.cancel') }}
         </wd-button>
@@ -567,8 +567,8 @@ defineExpose({
     safe-area-inset-bottom
   >
     <view>
-      <view class="box-border w-full flex items-center justify-between border-b-[2rpx] border-[#eeeeee] p-[32rpx_32rpx_24rpx]">
-        <text class="w-full text-center text-[32rpx] text-[#232338] font-semibold">
+      <view class="box-border w-full flex items-center justify-between border-b-[2rpx] border-[var(--border)] p-[32rpx_32rpx_24rpx]">
+        <text class="w-full text-center text-[32rpx] text-[var(--text)] font-semibold">
           {{ t('voiceprint.editSpeaker') }}
         </text>
       </view>
@@ -576,29 +576,29 @@ defineExpose({
       <view class="p-[32rpx]">
         <!-- 声纹向量选择 -->
         <view class="mb-[32rpx]">
-          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+          <text class="mb-[16rpx] block text-[28rpx] text-[var(--text)] font-medium">
             <text class="text-red">
               *
             </text>
             {{ t('voiceprint.voiceVector') }}
           </text>
           <view
-            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[20rpx] transition-all duration-300 active:bg-[#eef3ff]"
+            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] transition-all duration-300 active:bg-[#0a0a14]"
             @click="showChatHistoryDialog = true"
           >
             <text
-              class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[#232338]"
-              :class="{ 'text-[#9d9ea3]': !editForm.audioId }"
+              class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[var(--text)]"
+              :class="{ 'text-[var(--dim)]': !editForm.audioId }"
             >
               {{ getSelectedAudioContent(editForm.audioId) }}
             </text>
-            <wd-icon name="arrow-down" custom-class="text-[20rpx] text-[#9d9ea3]" />
+            <wd-icon name="arrow-down" custom-class="text-[20rpx] text-[var(--dim)]" />
           </view>
         </view>
 
         <!-- 姓名 -->
         <view class="mb-[32rpx]">
-          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+          <text class="mb-[16rpx] block text-[28rpx] text-[var(--text)] font-medium">
             <text class="text-red">
               *
             </text>
@@ -606,14 +606,14 @@ defineExpose({
           </text>
           <input
             v-model="editForm.sourceName"
-            class="box-border h-[80rpx] w-full border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[16rpx_20rpx] text-[28rpx] text-[#232338] leading-[1.4] outline-none focus:border-[#336cff] focus:bg-white placeholder:text-[#9d9ea3]"
+            class="box-border h-[80rpx] w-full border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[16rpx_20rpx] text-[28rpx] text-[var(--text)] leading-[1.4] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
             type="text" :placeholder="t('voiceprint.pleaseInputName')"
           >
         </view>
 
         <!-- 描述 -->
         <view>
-          <text class="mb-[16rpx] block text-[28rpx] text-[#232338] font-medium">
+          <text class="mb-[16rpx] block text-[28rpx] text-[var(--text)] font-medium">
             <text class="text-red">
               *
             </text>
@@ -621,15 +621,15 @@ defineExpose({
           </text>
           <textarea
             v-model="editForm.introduce" :maxlength="100" :placeholder="t('voiceprint.pleaseInputDescription')"
-            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[#eeeeee] rounded-[12rpx] bg-[#f5f7fb] p-[20rpx] text-[26rpx] text-[#232338] leading-[1.6] outline-none focus:border-[#336cff] focus:bg-white placeholder:text-[#9d9ea3]"
+            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] text-[26rpx] text-[var(--text)] leading-[1.6] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
           />
-          <view class="mt-[8rpx] text-right text-[22rpx] text-[#9d9ea3]">
+          <view class="mt-[8rpx] text-right text-[22rpx] text-[var(--dim)]">
             {{ (editForm.introduce || '').length }}/100
           </view>
         </view>
       </view>
 
-      <view class="flex gap-[16rpx] border-t-[2rpx] border-[#eeeeee] p-[24rpx_32rpx_32rpx]">
+      <view class="flex gap-[16rpx] border-t-[2rpx] border-[var(--border)] p-[24rpx_32rpx_32rpx]">
         <wd-button type="info" custom-class="flex-1" @click="showEditDialog = false">
           {{ t('voiceprint.cancel') }}
         </wd-button>
@@ -642,22 +642,22 @@ defineExpose({
 
   <!-- 自定义语音对话记录选择弹出层 -->
   <wd-popup v-model="showChatHistoryDialog" class="custom-popup" position="bottom" @close="stopAudio">
-    <view class="rounded-[20rpx] bg-white pb-[20rpx] pt-[20rpx]">
+    <view class="rounded-[20rpx] bg-[var(--surface)] pb-[20rpx] pt-[20rpx]">
       <view class="max-h-[600rpx] overflow-y-auto rounded-[20rpx]">
         <view
           v-for="item in chatHistoryActions"
           :key="item.audioId"
-          class="flex items-center justify-between border-b border-[#f5f5f5] p-[32rpx] transition-all active:bg-[#f5f7fb]"
+          class="flex items-center justify-between border-b border-[var(--border)] p-[32rpx] transition-all active:bg-[#0a0a14]"
           @click="handleItemClick(item)"
         >
-          <text class="flex-1 text-[28rpx] text-[#232338]">
+          <text class="flex-1 text-[28rpx] text-[var(--text)]">
             {{ item.name }}
           </text>
           <view class="ml-[20rpx]" @click.stop="playAudio(item.audioId, $event)">
             <wd-icon
               :name="playingAudioId === item.audioId ? 'pause-circle' : 'play-circle'"
               size="24px"
-              :custom-class="playingAudioId === item.audioId ? 'text-[#336cff]' : 'text-[#9d9ea3]'"
+              :custom-class="playingAudioId === item.audioId ? 'text-[#3b82f6]' : 'text-[var(--dim)]'"
             />
           </view>
         </view>
@@ -682,13 +682,13 @@ defineExpose({
 .loading-text {
   margin-top: 20rpx;
   font-size: 28rpx;
-  color: #666666;
+  color: var(--muted);
 }
 
 ::v-deep .custom-popup {
   .wd-popup {
     padding: 20rpx !important;
-    background: transparent;
+    background: var(--surface);
   }
 }
 </style>

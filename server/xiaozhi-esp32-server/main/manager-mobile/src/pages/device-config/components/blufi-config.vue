@@ -308,27 +308,27 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--border);
   border-radius: 12rpx;
-  background: #fbfbfb;
+  background: var(--bg2);
 }
 
 .device-item:active {
-  border-color: #336cff;
-  background: #eef3ff;
+  border-color: var(--accent);
+  background: var(--bg2);
 }
 
 .device-name {
   min-width: 0;
   flex: 1;
   font-size: 28rpx;
-  color: #232338;
+  color: var(--text);
   word-break: break-all;
 }
 
 .device-rssi {
   margin-left: 16rpx;
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 </style>

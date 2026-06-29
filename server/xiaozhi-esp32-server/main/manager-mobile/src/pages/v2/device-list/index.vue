@@ -121,7 +121,7 @@ function deviceIconName(model?: string) {
 </script>
 
 <template>
-  <view class="device-list-page">
+  <view class="device-list-page page-enter">
     <wd-navbar :title="t('v2.deviceList.title')" placeholder safe-area-inset-top fixed />
 
     <wd-status-tip v-if="loading" image="loading" tip="" />
@@ -167,7 +167,7 @@ function deviceIconName(model?: string) {
       <view v-for="d in devices" :key="d.deviceId" class="bento-card device-card" @click="openDevice(d.deviceId)">
         <view class="device-card-header">
           <view class="device-icon-wrap">
-            <wd-icon :name="deviceIconName(d.model)" size="24" color="#336cff" />
+            <wd-icon :name="deviceIconName(d.model)" size="24" color="#3b82f6" />
           </view>
           <wd-tag :type="d.status === 'online' ? 'success' : 'default'" size="small" round>
             {{ d.status === 'online' ? t('v2.deviceList.online') : t('v2.deviceList.offline') }}
@@ -184,25 +184,25 @@ function deviceIconName(model?: string) {
         <!-- Quick Controls -->
         <view class="device-controls" @click.stop>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-draw`] }" @click="quickControl(d.deviceId, 'draw')">
-            <wd-icon name="photo" size="20" color="#336cff" />
+            <wd-icon name="photo" size="20" color="#3b82f6" />
             <text class="control-label">
               {{ t('v2.deviceList.quickDraw') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-write`] }" @click="quickControl(d.deviceId, 'write')">
-            <wd-icon name="edit-2" size="20" color="#336cff" />
+            <wd-icon name="edit-2" size="20" color="#3b82f6" />
             <text class="control-label">
               {{ t('v2.deviceList.quickWrite') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-home`] }" @click="quickControl(d.deviceId, 'home')">
-            <wd-icon name="home" size="20" color="#336cff" />
+            <wd-icon name="home" size="20" color="#3b82f6" />
             <text class="control-label">
               {{ t('v2.deviceList.quickHome') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-pause`] }" @click="quickControl(d.deviceId, 'pause')">
-            <wd-icon name="pause-circle" size="20" color="#336cff" />
+            <wd-icon name="pause-circle" size="20" color="#3b82f6" />
             <text class="control-label">
               {{ t('v2.deviceList.quickPause') }}
             </text>
@@ -242,22 +242,23 @@ function deviceIconName(model?: string) {
 <style lang="scss" scoped>
 .device-list-page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: var(--bg);
   padding-bottom: 24rpx;
 }
 
 .bento-card {
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 24rpx;
-  margin: 0 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
+  padding: 28rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 /* Transfer */
@@ -275,7 +276,7 @@ function deviceIconName(model?: string) {
   justify-content: space-between;
   align-items: center;
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid var(--border);
   &:last-child {
     border-bottom: none;
   }
@@ -287,12 +288,12 @@ function deviceIconName(model?: string) {
 }
 .transfer-device {
   font-size: 28rpx;
-  color: #1d1d1f;
+  color: var(--text);
   font-weight: 600;
 }
 .transfer-label {
   font-size: 22rpx;
-  color: #9d9ea3;
+  color: var(--dim);
 }
 
 /* Empty */
@@ -305,7 +306,7 @@ function deviceIconName(model?: string) {
   .empty-title {
     margin-top: 24rpx;
     font-size: 30rpx;
-    color: #9d9ea3;
+    color: var(--dim);
     font-weight: 500;
   }
 }
@@ -333,7 +334,7 @@ function deviceIconName(model?: string) {
   width: 64rpx;
   height: 64rpx;
   border-radius: 18rpx;
-  background: rgba(51, 108, 255, 0.08);
+  background: rgba(59, 130, 246, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -347,11 +348,11 @@ function deviceIconName(model?: string) {
 .device-model {
   font-size: 32rpx;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--text);
 }
 .device-id {
   font-size: 22rpx;
-  color: #9d9ea3;
+  color: var(--dim);
   font-family: monospace;
 }
 
@@ -367,18 +368,18 @@ function deviceIconName(model?: string) {
   align-items: center;
   gap: 8rpx;
   padding: 16rpx 0;
-  background: #f5f5f7;
+  background: var(--bg);
   border-radius: 16rpx;
   transition: all 0.15s;
   &:active:not(.disabled) {
-    background: #eef3ff;
+    background: rgba(59, 130, 246, 0.15);
   }
   &.disabled {
     opacity: 0.3;
   }
   .control-label {
     font-size: 22rpx;
-    color: #65686f;
+    color: var(--muted);
   }
 }
 
@@ -390,7 +391,7 @@ function deviceIconName(model?: string) {
   display: block;
   font-size: 32rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   text-align: center;
   margin-bottom: 24rpx;
 }

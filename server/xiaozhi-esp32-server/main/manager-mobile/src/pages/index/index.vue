@@ -72,7 +72,7 @@ function deviceIcon(model?: string) {
 </script>
 
 <template>
-  <view class="nebula-center" :style="{ paddingTop: `${safeAreaTop}px` }">
+  <view class="nebula-center page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
     <view class="hero-banner">
       <view class="hero-content">
         <text class="hero-title">
@@ -91,7 +91,7 @@ function deviceIcon(model?: string) {
       <view class="cap-grid">
         <view class="cap-card" @click="goChat">
           <view class="cap-icon blue">
-            <wd-icon name="chat" size="24" color="#336cff" />
+            <wd-icon name="chat" size="24" color="#3b82f6" />
           </view>
           <text class="cap-name">
             {{ t('nebula.aiChat') }}
@@ -157,7 +157,7 @@ function deviceIcon(model?: string) {
       <view v-else class="device-list">
         <view v-for="d in devices" :key="d.deviceId" class="device-card" @click="goDeviceDetail(d.deviceId)">
           <view class="device-icon-wrap">
-            <wd-icon :name="deviceIcon(d.model)" size="22" color="#336cff" />
+            <wd-icon :name="deviceIcon(d.model)" size="22" color="#3b82f6" />
           </view>
           <view class="device-info">
             <text class="device-name">
@@ -180,19 +180,19 @@ function deviceIcon(model?: string) {
       </text>
       <view class="quick-actions">
         <view class="quick-btn" @click="goDevices">
-          <wd-icon name="add-circle" size="24" color="#336cff" />
+          <wd-icon name="add-circle" size="24" color="#3b82f6" />
           <text class="quick-text">
             {{ t('nebula.addDevice') }}
           </text>
         </view>
         <view class="quick-btn" @click="goConfig">
-          <wd-icon name="wifi" size="24" color="#336cff" />
+          <wd-icon name="wifi" size="24" color="#3b82f6" />
           <text class="quick-text">
             {{ t('nebula.config') }}
           </text>
         </view>
         <view class="quick-btn" @click="goSettings">
-          <wd-icon name="setting" size="24" color="#336cff" />
+          <wd-icon name="setting" size="24" color="#3b82f6" />
           <text class="quick-text">
             {{ t('nebula.systemSettings') }}
           </text>
@@ -207,10 +207,10 @@ function deviceIcon(model?: string) {
 <style lang="scss" scoped>
 .nebula-center {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: var(--bg);
 }
 .hero-banner {
-  background: linear-gradient(135deg, #336cff 0%, #5b8def 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
   padding: 48rpx 32rpx 60rpx;
   border-radius: 0 0 32rpx 32rpx;
   margin-bottom: 24rpx;
@@ -241,12 +241,12 @@ function deviceIcon(model?: string) {
 .section-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 16rpx;
 }
 .section-more {
   font-size: 26rpx;
-  color: #336cff;
+  color: var(--accent);
 }
 .cap-grid {
   display: grid;
@@ -254,10 +254,11 @@ function deviceIcon(model?: string) {
   gap: 16rpx;
 }
 .cap-card {
-  background: #fff;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   border-radius: 20rpx;
   padding: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 10rpx;
@@ -274,7 +275,7 @@ function deviceIcon(model?: string) {
   align-items: center;
   justify-content: center;
   &.blue {
-    background: rgba(51, 108, 255, 0.1);
+    background: rgba(59, 130, 246, 0.1);
   }
   &.purple {
     background: rgba(139, 92, 246, 0.1);
@@ -289,16 +290,16 @@ function deviceIcon(model?: string) {
 .cap-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
 }
 .cap-desc {
   font-size: 22rpx;
-  color: #9d9ea3;
+  color: var(--dim);
 }
 .empty-tip {
   text-align: center;
   padding: 32rpx 0;
-  color: #9d9ea3;
+  color: var(--dim);
   font-size: 28rpx;
   .empty-sub {
     font-size: 24rpx;
@@ -314,19 +315,20 @@ function deviceIcon(model?: string) {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  background: #fff;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   border-radius: 16rpx;
   padding: 20rpx 24rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   &:active {
-    background: #f9f9fb;
+    background: rgba(255, 255, 255, 0.05);
   }
 }
 .device-icon-wrap {
   width: 56rpx;
   height: 56rpx;
   border-radius: 14rpx;
-  background: rgba(51, 108, 255, 0.08);
+  background: rgba(59, 130, 246, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -341,11 +343,11 @@ function deviceIcon(model?: string) {
 .device-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
 }
 .device-id {
   font-size: 22rpx;
-  color: #9d9ea3;
+  color: var(--dim);
 }
 .device-status {
   font-size: 24rpx;
@@ -367,16 +369,17 @@ function deviceIcon(model?: string) {
   flex-direction: column;
   align-items: center;
   gap: 10rpx;
-  background: #fff;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   border-radius: 16rpx;
   padding: 24rpx 0;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   &:active {
-    background: #f9f9fb;
+    background: rgba(255, 255, 255, 0.05);
   }
 }
 .quick-text {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 </style>

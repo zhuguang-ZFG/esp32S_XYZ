@@ -524,10 +524,10 @@ async function stopAudio() {
           2. {{ t('deviceConfig.clickGenerateAndPlaySoundWave') }}
         </text>
         <text class="help-item">
-          3. {{ t('deviceConfig.bringPhoneCloseToXiaozhiDevice') }}
+          3. {{ t('deviceConfig.bringPhoneCloseToDlcDevice') }}
         </text>
         <text class="help-item">
-          4. {{ t('deviceConfig.duringAudioPlaybackXiaozhiWillReceive') }}
+          4. {{ t('deviceConfig.duringAudioPlaybackDlcWillReceive') }}
         </text>
         <text class="help-item">
           5. {{ t('deviceConfig.afterConfigSuccessDeviceWillConnect') }}
@@ -554,15 +554,15 @@ async function stopAudio() {
 
 .network-info {
   padding: 24rpx;
-  background-color: #f0f6ff;
-  border: 1rpx solid #336cff;
+  background-color: var(--bg2);
+  border: 1rpx solid var(--accent);
   border-radius: 16rpx;
 }
 
 .network-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #232338;
+  color: var(--text);
   margin-bottom: 8rpx;
 }
 
@@ -575,12 +575,12 @@ async function stopAudio() {
 .network-signal,
 .network-security {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .network-password {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .submit-section {
@@ -598,9 +598,9 @@ async function stopAudio() {
 .audio-options {
   margin-bottom: 32rpx;
   padding: 24rpx;
-  background-color: #fbfbfb;
+  background-color: var(--bg2);
   border-radius: 16rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--border);
 }
 
 .option-item {
@@ -610,8 +610,8 @@ async function stopAudio() {
 .audio-player {
   margin-bottom: 32rpx;
   padding: 24rpx;
-  background-color: #f0f6ff;
-  border: 1rpx solid #336cff;
+  background-color: var(--bg2);
+  border: 1rpx solid var(--accent);
   border-radius: 16rpx;
 }
 
@@ -624,25 +624,25 @@ async function stopAudio() {
 .audio-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #232338;
+  color: var(--text);
 }
 
 .audio-duration {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
 }
 
 .help-section {
   padding: 32rpx 24rpx;
-  background-color: #fbfbfb;
+  background-color: var(--bg2);
   border-radius: 16rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--border);
 }
 
 .help-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #232338;
+  color: var(--text);
   margin-bottom: 20rpx;
 }
 
@@ -654,13 +654,13 @@ async function stopAudio() {
 
 .help-item {
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
   line-height: 1.5;
 }
 
 .help-tip {
   font-size: 24rpx;
-  color: #336cff;
+  color: var(--accent);
   font-weight: 500;
   margin-top: 8rpx;
 }

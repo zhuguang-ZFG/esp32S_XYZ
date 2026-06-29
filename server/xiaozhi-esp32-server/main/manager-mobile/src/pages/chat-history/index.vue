@@ -186,10 +186,10 @@ defineExpose({
 </script>
 
 <template>
-  <view class="chat-history-container" style="background: #f5f7fb; min-height: 100%;">
+  <view class="chat-history-container page-enter" style="background: var(--bg); min-height: 100%;">
     <!-- 加载状态 -->
     <view v-if="loading && sessionList.length === 0" class="loading-container">
-      <wd-loading color="#336cff" />
+      <wd-loading color="#3b82f6" />
       <text class="loading-text">
         {{ t('chatHistory.loading') }}
       </text>
@@ -228,7 +228,7 @@ defineExpose({
 
       <!-- 加载更多状态 -->
       <view v-if="loadingMore" class="loading-more">
-        <wd-loading color="#336cff" size="24" />
+        <wd-loading color="#3b82f6" size="24" />
         <text class="loading-more-text">
           {{ t('chatHistory.loading') }}
         </text>
@@ -271,7 +271,7 @@ defineExpose({
 .loading-text {
   margin-top: 20rpx;
   font-size: 28rpx;
-  color: #666666;
+  color: var(--muted);
 }
 
 .loading-more {
@@ -283,7 +283,7 @@ defineExpose({
 
   .loading-more-text {
     font-size: 26rpx;
-    color: #666666;
+    color: var(--muted);
   }
 }
 
@@ -295,16 +295,16 @@ defineExpose({
 
   .no-more-text {
     font-size: 26rpx;
-    color: #999999;
+    color: var(--dim);
   }
 }
 
 .navbar-section {
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .status-bar {
-  background: #ffffff;
+  background: var(--surface);
   width: 100%;
 }
 
@@ -317,16 +317,16 @@ defineExpose({
 }
 
 .session-item {
-  background: #fbfbfb;
+  background: var(--surface);
   border-radius: 20rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-  border: 1rpx solid #eeeeee;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  border: 1rpx solid var(--border);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:active {
-    background: #f8f9fa;
+    background: var(--surface);
   }
 }
 
@@ -348,7 +348,7 @@ defineExpose({
       .session-title {
         font-size: 32rpx;
         font-weight: 600;
-        color: #232338;
+        color: var(--text);
         width: 70%;
         word-break: break-all;
         white-space: nowrap;
@@ -358,21 +358,21 @@ defineExpose({
 
       .session-time {
         font-size: 24rpx;
-        color: #9d9ea3;
+        color: var(--dim);
       }
     }
 
     .session-meta {
       .chat-count {
         font-size: 28rpx;
-        color: #65686f;
+        color: var(--muted);
       }
     }
   }
 
   :deep(.arrow-icon) {
     font-size: 24rpx;
-    color: #c7c7cc;
+    color: var(--dim);
     margin-left: 16rpx;
   }
 }
@@ -387,20 +387,20 @@ defineExpose({
 
   :deep(.empty-icon) {
     font-size: 120rpx;
-    color: #d9d9d9;
+    color: var(--dim);
     margin-bottom: 32rpx;
   }
 
   .empty-text {
     font-size: 32rpx;
-    color: #666666;
+    color: var(--muted);
     margin-bottom: 16rpx;
     font-weight: 500;
   }
 
   .empty-desc {
     font-size: 26rpx;
-    color: #999999;
+    color: var(--dim);
     line-height: 1.5;
   }
 }

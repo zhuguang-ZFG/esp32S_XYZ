@@ -43,14 +43,16 @@ defineProps<{
 
 <style lang="scss" scoped>
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .device-header {
-  background: linear-gradient(135deg, #336cff 0%, #5b8def 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
   color: #ffffff;
 }
 

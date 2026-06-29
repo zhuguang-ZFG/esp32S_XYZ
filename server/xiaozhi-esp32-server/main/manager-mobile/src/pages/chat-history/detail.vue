@@ -304,9 +304,9 @@ onUnload(() => {
 </script>
 
 <template>
-  <view class="h-screen flex flex-col bg-[#f5f7fb]">
+  <view class="page-enter h-screen flex flex-col" style="background: var(--bg)">
     <!-- 状态栏背景 -->
-    <view class="w-full bg-white" :style="{ height: `${safeAreaInsets?.top}px` }" />
+    <view class="w-full" :style="{ height: `${safeAreaInsets?.top}px`, background: 'var(--bg)' }" />
 
     <!-- 导航栏 -->
     <wd-navbar :title="t('chatHistory.pageTitle')">
@@ -319,12 +319,13 @@ onUnload(() => {
     <scroll-view
       scroll-y
       :style="{ height: `calc(100vh - ${safeAreaInsets?.top || 0}px - 120rpx)` }"
-      class="box-border flex-1 bg-[#f5f7fb] p-[20rpx]"
+      class="box-border flex-1 p-[20rpx]"
+      style="background: var(--bg2)"
       :scroll-into-view="`message-${messageList.length - 1}`"
     >
       <view v-if="loading" class="flex flex-col items-center justify-center gap-[20rpx] p-[100rpx_0]">
         <wd-loading />
-        <text class="text-[28rpx] text-[#65686f]">
+        <text class="text-[28rpx]" style="color: var(--muted)">
           {{ t('chatHistory.loading') }}
         </text>
       </view>
@@ -352,8 +353,8 @@ onUnload(() => {
             <view
               class="shadow-message break-words rounded-[20rpx] p-[24rpx] leading-[1.4]"
               :class="{
-                'bg-[#336cff] text-white': message.chatType === 1,
-                'bg-white text-[#232338] border border-[#eeeeee]': [2, 3].includes(message.chatType),
+                'bg-[#3b82f6] text-white': message.chatType === 1,
+                'ai-bubble text-[#232338]': [2, 3].includes(message.chatType),
               }"
             >
               <template v-if="Array.isArray(extractContentFromString(message.content))">
@@ -393,10 +394,10 @@ onUnload(() => {
                   :class="{
                     'text-white animate-pulse-audio': message.chatType === 1 && playingAudioId === message.audioId,
                     'text-[#ffd700]': message.chatType === 1 && playingAudioId === message.audioId && playingAudioId,
-                    'text-[#336cff] animate-pulse-audio': message.chatType === 2 && playingAudioId === message.audioId,
+                    'text-[#3b82f6] animate-pulse-audio': message.chatType === 2 && playingAudioId === message.audioId,
                     'text-[#ff6b35]': message.chatType === 2 && playingAudioId === message.audioId && playingAudioId,
                     'text-white': message.chatType === 1 && playingAudioId !== message.audioId,
-                    'text-[#336cff]': message.chatType === 2 && playingAudioId !== message.audioId,
+                    'text-[#3b82f6]': message.chatType === 2 && playingAudioId !== message.audioId,
                   }"
                   @click="playAudio(message.audioId)"
                 >
@@ -418,7 +419,8 @@ onUnload(() => {
 
             <!-- 说话人信息 -->
             <text
-              class="mx-[12rpx] text-[22rpx] text-[#9d9ea3]"
+              class="mx-[12rpx] text-[22rpx]"
+              style="color: var(--dim)"
               :class="{
                 'text-right': message.chatType === 1,
                 'text-left': message.chatType === 2,
@@ -436,7 +438,27 @@ onUnload(() => {
 <style>
 /* 自定义阴影和动画效果，无法用UnoCSS表示的样式 */
 .shadow-message {
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+}
+
+.ai-bubble {
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+}
+
+.page-enter {
+  animation: page-enter 0.3s ease-out;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse-audio {
@@ -459,7 +481,7 @@ onUnload(() => {
 }
 
 .tool-call-text {
-  color: #1890ff;
+  color: var(--accent);
   font-family: 'Courier New', monospace;
   font-weight: 500;
   font-size: 24rpx;
@@ -468,11 +490,11 @@ onUnload(() => {
 }
 
 .user-message .tool-call-text {
-  color: #e6f7ff;
+  color: #bfdbfe;
 }
 
 .tool-message .message-content {
-  background-color: #f0f0f0;
+  background-color: var(--surface);
 }
 
 .tool-result-wrapper {
@@ -491,7 +513,7 @@ onUnload(() => {
   right: 0;
   top: 0;
   cursor: pointer;
-  color: #1890ff;
+  color: var(--accent);
   font-size: 24rpx;
 }
 </style>

@@ -87,16 +87,18 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
 
 <style lang="scss" scoped>
 .bento-card {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   padding: 28rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 .voice-header {
@@ -115,12 +117,12 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
 .voice-subtitle {
   display: block;
   font-size: 24rpx;
-  color: #65686f;
+  color: var(--muted);
   margin-bottom: 20rpx;
 }
 
 .task-card {
-  background: #f5f5f7;
+  background: var(--bg2);
   border-radius: 16rpx;
   padding: 20rpx;
   margin-bottom: 12rpx;
@@ -136,20 +138,20 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
 .task-capability {
   font-size: 28rpx;
   font-weight: 500;
-  color: #222;
+  color: var(--text);
 }
 
 .task-id {
   display: block;
   font-size: 22rpx;
-  color: #65686f;
+  color: var(--muted);
   margin-bottom: 4rpx;
 }
 
 .task-params {
   display: block;
   font-size: 22rpx;
-  color: #65686f;
+  color: var(--muted);
   margin-bottom: 8rpx;
 }
 
@@ -162,7 +164,7 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
 
 .constraint-text {
   font-size: 22rpx;
-  color: #4b5563;
+  color: var(--muted);
 }
 
 .task-actions {
@@ -175,6 +177,6 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
   text-align: center;
   padding: 32rpx 0;
   font-size: 24rpx;
-  color: #9d9ea3;
+  color: var(--dim);
 }
 </style>
