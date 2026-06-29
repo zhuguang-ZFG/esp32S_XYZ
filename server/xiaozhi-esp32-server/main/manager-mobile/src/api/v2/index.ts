@@ -186,6 +186,81 @@ export async function v2DeleteAccount() {
   return { status: 'deleted', affectedRows: res.accountId ? 1 : 0, auditRetentionDays: 0 } as V2DeletionResponse
 }
 
+// ── 设备分享（AUDIT gap 实现）──
+
+export interface V2ShareResponse {
+  shareId: string
+  deviceId: string
+  shareToken: string
+  permission: string
+  status: string
+  expiresAt: string
+}
+
+export function v2CreateShare(deviceId: string, permission: string, expiresAt: string) {
+  return http.Post<V2ShareResponse>(
+    `${appPrefix}/devices/${deviceId}/share`,
+    { permission, expiresAt },
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
+export function v2RevokeShare(deviceId: string, shareToken?: string, shareId?: string) {
+  return http.Post<V2ShareResponse>(
+    `${appPrefix}/devices/${deviceId}/share/revoke`,
+    { shareToken: shareToken || '', shareId: shareId || '' },
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
+export async function v2ListShares(deviceId: string) {
+  const res = await http.Get<{ shares: V2ShareResponse[], count: number }>(
+    `${appPrefix}/devices/${deviceId}/shares`,
+    { meta: { ignoreAuth: false, toast: false }, cacheFor: { expire: 0 } },
+  )
+  return res.shares || []
+}
+
+// ── 设备解绑 ──
+
+export function v2UnbindDevice(deviceId: string) {
+  return http.Post<{ ok: boolean, message: string }>(
+    `${appPrefix}/devices/${deviceId}/unbind`,
+    {},
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
+// ── 通知订阅 ──
+
+export interface V2NotificationSubscription {
+  subscriptionId: string
+  status: string
+}
+
+export function v2SubscribeNotifications(openid: string, templateIds: string[], deviceIds: string[]) {
+  return http.Post<V2NotificationSubscription>(
+    `${appPrefix}/notifications/subscribe`,
+    { openid, templateIds, deviceIds },
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
+export async function v2ListNotificationSubscriptions() {
+  const res = await http.Get<{ subscriptions: V2NotificationSubscription[], count: number }>(
+    `${appPrefix}/notifications/subscriptions`,
+    { meta: { ignoreAuth: false, toast: false }, cacheFor: { expire: 0 } },
+  )
+  return res.subscriptions || []
+}
+
+export function v2UnsubscribeNotification(subscriptionId: string) {
+  return http.Delete<V2NotificationSubscription>(
+    `${appPrefix}/notifications/subscriptions/${subscriptionId}`,
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
 function toDeviceInfo(raw: unknown): V2DeviceInfo {
   const row = raw as Record<string, any>
   return {

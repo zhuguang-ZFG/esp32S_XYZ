@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { V2ShareResponse } from '@/api/v2'
 import type { V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceTransferResponse, V2SelfCheckHistoryResponse } from '@/api/v2/types'
 import { onLoad } from '@dcloudio/uni-app'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -6,15 +7,20 @@ import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import {
   v2AcceptDeviceTransfer,
   v2CancelDeviceTransfer,
+  v2CreateShare,
   v2GetDeviceInfo,
   v2ListSelfCheckHistory,
+  v2ListShares,
   v2RequestDeviceTransfer,
+  v2RevokeShare,
   v2SubmitTask,
+  v2UnbindDevice,
   v2UpdateDeviceSupplies,
 } from '@/api/v2'
 import { t } from '@/i18n'
 import DeviceInfoCard from './components/device-info-card.vue'
 import HealthCheck from './components/health-check.vue'
+import SharePanel from './components/share-panel.vue'
 import SuppliesPanel from './components/supplies-panel.vue'
 import TaskStatus from './components/task-status.vue'
 import TransferPanel from './components/transfer-panel.vue'
@@ -47,6 +53,11 @@ const latestDiagnosticStatus = ref('pending')
 const latestDiagnosticSummary = ref('No self-check result yet')
 const latestDiagnosticAt = ref('')
 const selfCheckHistory = ref<V2SelfCheckHistoryResponse[]>([])
+const shares = ref<V2ShareResponse[]>([])
+const shareLoading = ref(false)
+const sharePermission = ref('view')
+const shareExpiry = ref('7d')
+const unbindLoading = ref(false)
 let infoLoadingTimer: ReturnType<typeof setTimeout> | null = null
 
 const defaultWriteTextFontId = 'kai_basic_v1'
@@ -468,6 +479,80 @@ function goToAgents() {
   uni.switchTab({ url: '/pages/index/index' })
 }
 
+// ── 设备分享（AUDIT gap 实现）──
+async function loadShares() {
+  if (!deviceId.value)
+    return
+  try {
+    shares.value = await v2ListShares(deviceId.value)
+  }
+  catch (e: any) {
+    console.warn('load shares failed:', e?.message || e)
+  }
+}
+
+async function handleCreateShare() {
+  if (!deviceId.value)
+    return
+  shareLoading.value = true
+  try {
+    const days = Number.parseInt(shareExpiry.value.replace('d', ''), 10) || 7
+    const expiresAt = new Date(Date.now() + days * 86400000).toISOString()
+    await v2CreateShare(deviceId.value, sharePermission.value, expiresAt)
+    uni.showToast({ title: t('v2.detail.shareCreated'), icon: 'success' })
+    await loadShares()
+  }
+  catch (e: any) {
+    message.alert(e?.message || t('v2.detail.shareFailed'))
+  }
+  finally {
+    shareLoading.value = false
+  }
+}
+
+async function handleRevokeShare(shareToken: string) {
+  if (!deviceId.value)
+    return
+  shareLoading.value = true
+  try {
+    await v2RevokeShare(deviceId.value, shareToken)
+    uni.showToast({ title: t('v2.detail.shareRevoked'), icon: 'success' })
+    await loadShares()
+  }
+  catch (e: any) {
+    message.alert(e?.message || t('v2.detail.revokeFailed'))
+  }
+  finally {
+    shareLoading.value = false
+  }
+}
+
+// ── 设备解绑 ──
+async function handleUnbind() {
+  if (!deviceId.value)
+    return
+  try {
+    const confirmed = await message.confirm(t('v2.detail.unbindConfirm'))
+    if (!confirmed)
+      return
+  }
+  catch {
+    return
+  }
+  unbindLoading.value = true
+  try {
+    await v2UnbindDevice(deviceId.value)
+    uni.showToast({ title: t('v2.detail.unbindSuccess'), icon: 'success' })
+    setTimeout(() => uni.navigateBack(), 1000)
+  }
+  catch (e: any) {
+    message.alert(e?.message || t('v2.detail.unbindFailed'))
+  }
+  finally {
+    unbindLoading.value = false
+  }
+}
+
 onLoad((opt: any) => {
   deviceId.value = opt?.deviceId || ''
 })
@@ -482,6 +567,7 @@ onMounted(async () => {
   }
   await loadPendingVoiceTasks()
   await loadSelfCheckHistoryData()
+  await loadShares()
   wsConnect()
 })
 onUnmounted(() => {
@@ -491,7 +577,7 @@ onUnmounted(() => {
 
 <template>
   <wd-config-provider theme-color="#3b82f6" />
-  <wd-navbar :title="t('v2.deviceDetail.title')" left-arrow placeholder safe-area-inset-top fixed @click-left="navigateBack" />
+  <wd-navbar :title="t('v2.deviceDetail.title')" safe-area-inset-top left-arrow placeholder fixed @click-left="navigateBack" />
 
   <view class="bento-page page-enter">
     <device-info-card :device-info="deviceInfo" :device-id="deviceId" :connected="connected" :workspace-label="workspaceLabel" :info-loading="infoLoading" />
@@ -511,6 +597,7 @@ onUnmounted(() => {
     <write-draw-panel v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
     <health-check v-model:health-check-loading="healthCheckLoading" :latest-diagnostic-status="latestDiagnosticStatus" :latest-diagnostic-summary="latestDiagnosticSummary" :latest-diagnostic-at="latestDiagnosticAt" :self-check-history="selfCheckHistory" @run-health-check="handleHealthCheck" />
     <transfer-panel v-model:transfer-loading="transferLoading" v-model:transfer-target-unionid="transferTargetUnionid" v-model:transfer-accept-id="transferAcceptId" :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />
+    <share-panel v-model:share-loading="shareLoading" v-model:share-permission="sharePermission" v-model:share-expiry="shareExpiry" :shares="shares" @create-share="handleCreateShare" @revoke-share="handleRevokeShare" />
     <voice-approval v-model:voice-approval-loading="voiceApprovalLoading" :pending-voice-tasks="pendingVoiceTasks" :pending-voice-approval-count="pendingVoiceApprovalCount" :pending-voice-approval-badge-text="pendingVoiceApprovalBadgeText" :voiceprint-approval-label="voiceprintApprovalLabel" :voiceprint-reenroll-required="voiceprintReenrollRequired" :voiceprint-has-unknown-speaker="voiceprintHasUnknownSpeaker" @refresh-voice-tasks="loadPendingVoiceTasks" @approve="handleApproveVoiceTask" @reject="handleRejectVoiceTask" />
 
     <!-- 快捷功能 -->
@@ -553,6 +640,16 @@ onUnmounted(() => {
       </scroll-view>
     </view>
 
+    <!-- 设备管理（解绑） -->
+    <view class="bento-card danger-zone">
+      <view class="bento-title danger-title">
+        {{ t('v2.detail.deviceManagement') }}
+      </view>
+      <wd-button type="error" plain round block size="small" :loading="unbindLoading" @click="handleUnbind">
+        {{ t('v2.detail.unbindDevice') }}
+      </wd-button>
+    </view>
+
     <view style="height: env(safe-area-inset-bottom);" />
   </view>
 </template>
@@ -561,54 +658,56 @@ onUnmounted(() => {
 .bento-page {
   min-height: 100vh;
   background: var(--bg);
-  padding: 20rpx;
+  padding: 24rpx 20rpx 40rpx;
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: 20rpx;
 }
 
 .bento-card {
   background: var(--surface);
   border: 1rpx solid var(--border);
   border-radius: var(--r);
-  padding: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  padding: 32rpx 28rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(24rpx);
 }
 
 .bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
+  font-size: 32rpx;
+  font-weight: 700;
   color: var(--text);
-  margin-bottom: 20rpx;
+  margin-bottom: 16rpx;
 }
 
 .action-row {
   display: flex;
   gap: 20rpx;
+  padding: 24rpx 28rpx;
 
   .action-btn {
     flex: 1;
     height: 96rpx !important;
     font-size: 32rpx !important;
+    font-weight: 600 !important;
   }
 }
 
 .quick-links {
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
+  gap: 2rpx;
 }
 
 .quick-link {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  padding: 20rpx 12rpx;
+  gap: 20rpx;
+  padding: 24rpx 16rpx;
   border-radius: 16rpx;
   font-size: 28rpx;
   color: var(--text);
-  transition: background 0.15s ease;
+  transition: background 0.2s ease;
 
   &:active {
     background: var(--bg2);
@@ -623,6 +722,31 @@ onUnmounted(() => {
   max-height: 280rpx;
   background: var(--bg2);
   border-radius: 16rpx;
-  padding: 16rpx;
+  padding: 20rpx;
+}
+
+.danger-zone {
+  border: 1rpx solid rgba(239, 68, 68, 0.2);
+}
+
+.danger-title {
+  color: #ef4444;
+  margin-bottom: 16rpx;
+}
+
+/* 页面入场动画 */
+.page-enter {
+  animation: pageFadeIn 0.3s ease-out;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

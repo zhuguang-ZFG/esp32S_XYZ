@@ -611,6 +611,30 @@ export default {
   'v2.detail.errorNotEntitled': 'This resource is not available, please choose an enabled font or pattern',
   'v2.detail.errorNoPaper': 'Paper not ready, please mark paper as loaded in supplies first',
 
+  // Device sharing (gap implementation)
+  'v2.detail.shareTitle': 'Device Sharing',
+  'v2.detail.shareDesc': 'Share device with family or colleagues (view/control)',
+  'v2.detail.sharePermission': 'Permission',
+  'v2.detail.shareView': 'View only',
+  'v2.detail.shareControl': 'Can control',
+  'v2.detail.shareExpiry': 'Validity',
+  'v2.detail.createShare': 'Create Share',
+  'v2.detail.activeShares': 'Active Shares',
+  'v2.detail.shareToken': 'Token',
+  'v2.detail.expiresAt': 'Expires',
+  'v2.detail.revokeShare': 'Revoke',
+  'v2.detail.shareCreated': 'Share created',
+  'v2.detail.shareFailed': 'Failed to create share',
+  'v2.detail.shareRevoked': 'Share revoked',
+  'v2.detail.revokeFailed': 'Failed to revoke',
+
+  // Device unbind
+  'v2.detail.deviceManagement': 'Device Management',
+  'v2.detail.unbindDevice': 'Unbind Device',
+  'v2.detail.unbindConfirm': 'Are you sure you want to unbind this device? It will be removed from your account.',
+  'v2.detail.unbindSuccess': 'Device unbound',
+  'v2.detail.unbindFailed': 'Unbind failed',
+
   // Settings page hardcodes
   'settings.privacyTitle': 'Privacy & Permissions',
   'settings.privacyDesc': 'Manage microphone, Bluetooth, Wi-Fi permissions',

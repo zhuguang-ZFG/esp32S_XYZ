@@ -612,6 +612,30 @@ export default {
   'v2.detail.errorNotEntitled': '这个资源还未开通，请选择已开通的字体或图案',
   'v2.detail.errorNoPaper': '纸张未就绪，请先在耗材状态中标记纸张已放好',
 
+  // 设备分享（gap 实现）
+  'v2.detail.shareTitle': '设备分享',
+  'v2.detail.shareDesc': '分享设备给家人或同事，支持查看/控制权限',
+  'v2.detail.sharePermission': '权限',
+  'v2.detail.shareView': '仅查看',
+  'v2.detail.shareControl': '可控制',
+  'v2.detail.shareExpiry': '有效期',
+  'v2.detail.createShare': '生成分享',
+  'v2.detail.activeShares': '活跃分享',
+  'v2.detail.shareToken': '分享码',
+  'v2.detail.expiresAt': '过期时间',
+  'v2.detail.revokeShare': '撤销',
+  'v2.detail.shareCreated': '分享已创建',
+  'v2.detail.shareFailed': '创建分享失败',
+  'v2.detail.shareRevoked': '分享已撤销',
+  'v2.detail.revokeFailed': '撤销失败',
+
+  // 设备解绑
+  'v2.detail.deviceManagement': '设备管理',
+  'v2.detail.unbindDevice': '解绑设备',
+  'v2.detail.unbindConfirm': '确定要解绑此设备吗？解绑后此设备将从你的账户移除。',
+  'v2.detail.unbindSuccess': '设备已解绑',
+  'v2.detail.unbindFailed': '解绑失败',
+
   // Settings page hardcodes
   'settings.privacyTitle': '隐私与权限',
   'settings.privacyDesc': '单独管理麦克风、蓝牙、Wi-Fi 权限',
