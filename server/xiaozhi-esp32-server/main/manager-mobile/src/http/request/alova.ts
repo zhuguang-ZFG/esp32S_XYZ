@@ -83,7 +83,7 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
 const alovaInstance = createAlova({
   baseURL: getEnvBaseUrl(),
   ...AdapterUniapp(),
-  timeout: 5000,
+  timeout: 15000,
   statesHook: VueHook,
 
   beforeRequest: onAuthRequired((method) => {

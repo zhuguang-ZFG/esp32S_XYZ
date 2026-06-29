@@ -3,6 +3,8 @@ export interface IResponse<T = any> {
   code: number | string
   data: T
   msg: string
+  // LiMa 后端错误 envelope 使用 `message` 字段
+  message?: string
   status: string | number
 }
 

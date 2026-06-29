@@ -1,12 +1,31 @@
 import type { V2BindResponse, V2DeletionResponse, V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceSupplyUpdateRequest, V2DeviceTransferRequest, V2DeviceTransferResponse, V2LoginResponse, V2MeResponse, V2PendingVoiceTaskResponse, V2SelfCheckHistoryResponse, V2SubmitTaskResponse, V2TaskInfo, V2TaskListResponse } from './types'
 import { http } from '@/http/request/alova'
+import { getEnvBaseUrl } from '@/utils'
 
 const appPrefix = '/device/v1/app'
 
-export function v2Login(code: string) {
-  // meta.authRole:'login' 标记此请求为登录请求，alova onAuthRequired 会跳过鉴权与刷新等待，
-  // 避免在 refreshTokenOnSuccess.handler 内调用本函数时陷入 tokenRefreshing 死锁。
-  return http.Post<V2LoginResponse>(`${appPrefix}/auth/login`, { code }, { meta: { ignoreAuth: true, authRole: 'login', toast: true, isExposeError: true } })
+/**
+ * 微信小程序一键登录。
+ *
+ * 注意：此接口 bypass alova，直接使用 uni.request。
+ * 原因：alova 在部分响应格式/网络环境下会把登录成功响应解析为 undefined，
+ * 导致 token 无法写入。uni.request 更可控，且登录接口不需要 alova 的鉴权/刷新能力。
+ */
+export async function v2Login(code: string): Promise<V2LoginResponse> {
+  const baseUrl = getEnvBaseUrl()
+  const res = await uni.request({
+    url: `${baseUrl}${appPrefix}/auth/login`,
+    method: 'POST',
+    header: { 'Content-Type': 'application/json' },
+    data: { code },
+    timeout: 15000,
+  })
+  const data = res.data as V2LoginResponse | undefined
+  if (res.statusCode !== 200 || !data || !data.token) {
+    const detail = `statusCode=${res.statusCode}, data=${JSON.stringify(res.data)}, errMsg=${res.errMsg || 'none'}`
+    throw new Error(`WeChat login failed: ${detail}`)
+  }
+  return data
 }
 
 /**
@@ -14,19 +33,14 @@ export function v2Login(code: string) {
  *
  * 调用时机：alova refreshTokenOnSuccess.handler 在 token 临近过期/已过期时调用。
  * 关键点：
- * 1. 此函数内部发起的 v2Login 请求 meta 带 authRole:'login'，
- *    alova onAuthRequired 会跳过对其的鉴权检查，避免递归刷新（见 clienthook isLoginRole 分支）。
- * 2. 微信 code 一次性使用，过期后无法复用，故每次刷新都重新 uni.login 拿新 code。
- * 3. 抛错时由调用方（alova handler）决定是否回退到登录页；此处只负责刷新失败抛出。
+ * 1. 微信 code 一次性使用，过期后无法复用，故每次刷新都重新 uni.login 拿新 code。
+ * 2. 抛错时由调用方（alova handler）决定是否回退到登录页；此处只负责刷新失败抛出。
  */
 export async function v2RefreshToken(): Promise<{ token: string, expireAt: number }> {
   const res = await uni.login({ provider: 'weixin' })
   if (!res.code)
     throw new Error('wechat code unavailable')
   const data = await v2Login(res.code)
-  if (!data || !data.token) {
-    throw new Error('WeChat login returned invalid response')
-  }
   const expireAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 86400)
   uni.setStorageSync('token', JSON.stringify({ token: data.token, expireAt }))
   return { token: data.token, expireAt }

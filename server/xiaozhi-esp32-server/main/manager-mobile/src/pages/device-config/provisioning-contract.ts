@@ -1,7 +1,7 @@
 export const provisioningContract = {
   primaryChannel: 'ble_blufi',
   fallbackChannel: 'softap_http',
-  blufiDeviceName: 'Xiaozhi-Blufi',
+  blufiDeviceName: 'DLC-Blufi',
   legacyBlufiDeviceName: 'BLUFI_DEVICE',
   blufiServiceUuidCandidates: ['0000ffff-0000-1000-8000-00805f9b34fb', 'ffff'],
   blufiWriteCharacteristicUuidCandidates: ['0000ff01-0000-1000-8000-00805f9b34fb', 'ff01'],
@@ -10,7 +10,7 @@ export const provisioningContract = {
   softApScanPath: '/scan',
   softApSubmitPath: '/submit',
   softApExitPath: '/exit',
-  softApSsidHint: 'xiaozhi-XXXXXX',
+  softApSsidHint: 'DLC-XXXXXX',
   submitPayloadFields: ['ssid', 'password', 'server_host', 'device_secret'] as const,
 }
 

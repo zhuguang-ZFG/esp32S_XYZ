@@ -38,7 +38,7 @@ export const useConfigStore = defineStore(
     }
 
     // 获取公共配置
-    // 旧版 /user/pub-config 已随小智后端退役；LiMa v2 目前通过构建时 env 注入核心配置。
+    // 旧版 /user/pub-config 已随原后端退役；LiMa v2 目前通过构建时 env 注入核心配置。
     const fetchPublicConfig = async () => {
       setConfig({ ...initialConfigState })
       return config.value
