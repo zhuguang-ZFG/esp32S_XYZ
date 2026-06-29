@@ -433,7 +433,15 @@ bool Ota::Upgrade(const std::string& firmware_url, const std::string& expected_s
 }
 
 bool Ota::Upgrade(const std::string& firmware_url, const std::string& expected_sha256, const std::string& expected_signature, std::function<void(int progress, size_t speed)> callback) {
-    ESP_LOGI(TAG, "Upgrading firmware from %s", firmware_url.c_str());
+    // AUDIT-12：日志脱敏——不打印完整 URL（可能含 token query），只打印 host+path
+    {
+        std::string safe_url = firmware_url;
+        size_t qpos = safe_url.find('?');
+        if (qpos != std::string::npos) {
+            safe_url = safe_url.substr(0, qpos);
+        }
+        ESP_LOGI(TAG, "Upgrading firmware from %s", safe_url.c_str());
+    }
     if (!IsHttpsUrl(firmware_url)) {
         ESP_LOGE(TAG, "Refusing non-HTTPS firmware URL");
         return false;
@@ -745,7 +753,8 @@ std::string Ota::GetActivationPayload() {
     cJSON_free(json_str);
     cJSON_Delete(payload);
 
-    ESP_LOGI(TAG, "Activation payload: %s", json.c_str());
+    // AUDIT-12：日志脱敏——不打印完整 activation payload（含 hmac/challenge 凭证）
+    ESP_LOGI(TAG, "Activation payload built (serial=%s, fields redacted)", serial_number_.c_str());
     return json;
 }
 

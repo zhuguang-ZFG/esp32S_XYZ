@@ -100,7 +100,8 @@ esp_err_t WebSocketControlServer::ws_handler(httpd_req_t *req) {
             free(buf);
             return ret;
         }
-        ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
+        // AUDIT-12：日志脱敏——不打印 WS 消息内容（可能含控制指令/敏感数据），只打印长度
+        ESP_LOGI(TAG, "Got packet, length: %d", ws_pkt.len);
     }
     
     ESP_LOGI(TAG, "Packet type: %d", ws_pkt.type);
