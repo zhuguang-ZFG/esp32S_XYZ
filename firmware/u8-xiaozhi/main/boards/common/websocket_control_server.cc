@@ -1,11 +1,13 @@
 #include "websocket_control_server.h"
 #include "mcp_server.h"
+#include "settings.h"  // AUDIT-12-F3：Settings for control_ws_token NVS key
 #include <esp_log.h>
 #include <esp_http_server.h>
 #include <sys/param.h>
 #include <cstring>
 #include <cstdlib>
 #include <map>
+#include <string>
 
 static const char* TAG = "WSControl";
 
@@ -24,8 +26,47 @@ esp_err_t WebSocketControlServer::ws_handler(httpd_req_t *req) {
     if (instance_ == nullptr) {
         return ESP_FAIL;
     }
-    
+
     if (req->method == HTTP_GET) {
+        // AUDIT-12-F3：本地控制 WS 鉴权——校验 Authorization Bearer token 或 ?token= 参数。
+        // token 存储在 NVS（Settings "control_ws_token"）。未配置 token 时放行（向后兼容），
+        // 但会 ESP_LOGW 提示建议配置。配置后，同局域网攻击者无 token 无法控制设备。
+        std::string expected_token;
+        {
+            Settings settings("websocket", true);
+            expected_token = settings.GetString("control_ws_token", "");
+        }
+        if (!expected_token.empty()) {
+            // 从 Authorization 头读取
+            char auth_header[128] = {0};
+            size_t auth_len = httpd_req_get_hdr_value_len(req, "Authorization");
+            std::string provided;
+            if (auth_len > 0 && auth_len < sizeof(auth_header)) {
+                httpd_req_get_hdr_value_str(req, "Authorization", auth_header, sizeof(auth_header));
+                std::string auth_str(auth_header);
+                const std::string prefix = "Bearer ";
+                if (auth_str.compare(0, prefix.size(), prefix) == 0) {
+                    provided = auth_str.substr(prefix.size());
+                }
+            }
+            // 回退：?token= 查询参数
+            if (provided.empty()) {
+                char query[128] = {0};
+                if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+                    char token_val[96] = {0};
+                    if (httpd_query_key_value(query, "token", token_val, sizeof(token_val)) == ESP_OK) {
+                        provided = token_val;
+                    }
+                }
+            }
+            if (provided != expected_token) {
+                ESP_LOGW(TAG, "WebSocket auth failed: invalid or missing token");
+                httpd_resp_send_err(req, HTTP_RESP_401, "Unauthorized");
+                return ESP_FAIL;
+            }
+        } else {
+            ESP_LOGW(TAG, "control_ws_token not set; local WS unauthenticated (set NVS 'control_ws_token' to secure)");
+        }
         ESP_LOGI(TAG, "Handshake done, the new connection was opened");
         instance_->AddClient(req);
         return ESP_OK;

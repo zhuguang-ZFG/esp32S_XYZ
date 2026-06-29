@@ -31,6 +31,28 @@ static bool IsHttpsUrl(const std::string& url) {
     return url.rfind("https://", 0) == 0;
 }
 
+// AUDIT-12-F2：OTA 固件下载源域名白名单，防后端被攻破后下发恶意服务器固件。
+// 允许的主机：chat.donglicao.com（LiMa 主 OTA 源）。localhost/127.0.0.1 仅供本地调试。
+static bool IsAllowedOtaHost(const std::string& url) {
+    static const std::vector<std::string> kAllowedHosts = {
+        "chat.donglicao.com",
+        "donglicao.com",
+        "127.0.0.1",
+        "localhost",
+    };
+    for (const auto& host : kAllowedHosts) {
+        std::string prefix = "https://" + host;
+        if (url.compare(0, prefix.size(), prefix) == 0) {
+            // 确保 host 段精确匹配（避免 "chat.donglicao.com.evil.com" 绕过）
+            char next = url.size() > prefix.size() ? url[prefix.size()] : '\0';
+            if (next == '\0' || next == '/' || next == ':' || next == '?') {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 static bool IsLowerHexSha256(const std::string& value) {
     if (value.size() != 64) {
         return false;
@@ -386,6 +408,11 @@ bool Ota::HasValidFirmwareMetadata() const {
         ESP_LOGE(TAG, "Firmware URL must use HTTPS");
         return false;
     }
+    // AUDIT-12-F2：OTA 源必须在域名白名单内
+    if (!IsAllowedOtaHost(firmware_url_)) {
+        ESP_LOGE(TAG, "Firmware URL host not in allowlist");
+        return false;
+    }
     if (!IsLowerHexSha256(firmware_sha256_)) {
         ESP_LOGE(TAG, "Firmware metadata must include lowercase hex sha256");
         return false;
@@ -411,8 +438,19 @@ bool Ota::Upgrade(const std::string& firmware_url, const std::string& expected_s
         ESP_LOGE(TAG, "Refusing non-HTTPS firmware URL");
         return false;
     }
-    if (!expected_sha256.empty() && !IsLowerHexSha256(expected_sha256)) {
-        ESP_LOGE(TAG, "Invalid expected firmware sha256");
+    // AUDIT-12-F2：OTA 源必须在域名白名单内（防恶意服务器固件）
+    if (!IsAllowedOtaHost(firmware_url)) {
+        ESP_LOGE(TAG, "Refusing firmware URL: host not in allowlist");
+        return false;
+    }
+    // AUDIT-12-F1/F4：强制要求 sha256 + 签名，杜绝无签名刷入任意固件（完全设备接管）。
+    // 原 allow_optional 签名校验（空签名跳过）已移除——生产环境签名缺失即拒绝。
+    if (expected_sha256.empty() || !IsLowerHexSha256(expected_sha256)) {
+        ESP_LOGE(TAG, "Refusing firmware upgrade: sha256 required and must be lowercase hex");
+        return false;
+    }
+    if (expected_signature.empty() || !IsLikelyBase64(expected_signature)) {
+        ESP_LOGE(TAG, "Refusing firmware upgrade: signature required and must be base64");
         return false;
     }
 
@@ -529,17 +567,16 @@ bool Ota::Upgrade(const std::string& firmware_url, const std::string& expected_s
     unsigned char digest[32];
     mbedtls_sha256_finish(&sha256_ctx, digest);
     mbedtls_sha256_free(&sha256_ctx);
-    if (expected_sha256.empty()) {
-        ESP_LOGW(TAG, "Firmware sha256 not provided; debug upgrade path cannot verify release metadata");
-    } else {
-        std::string actual_sha256 = Sha256ToHex(digest);
-        if (actual_sha256 != expected_sha256) {
-            ESP_LOGE(TAG, "Firmware sha256 mismatch");
-            esp_ota_abort(update_handle);
-            return false;
-        }
+    // AUDIT-12-F1：sha256 强制校验（入口已要求非空，此处为防御性双重确认）
+    std::string actual_sha256 = Sha256ToHex(digest);
+    if (actual_sha256 != expected_sha256) {
+        ESP_LOGE(TAG, "Firmware sha256 mismatch");
+        esp_ota_abort(update_handle);
+        return false;
     }
-    if (!expected_signature.empty() && !VerifyFirmwareSignature(digest, expected_signature)) {
+    // AUDIT-12-F1：签名强制校验（入口已要求非空，此处必须验证通过）
+    if (!VerifyFirmwareSignature(digest, expected_signature)) {
+        ESP_LOGE(TAG, "Firmware signature verification failed");
         esp_ota_abort(update_handle);
         return false;
     }

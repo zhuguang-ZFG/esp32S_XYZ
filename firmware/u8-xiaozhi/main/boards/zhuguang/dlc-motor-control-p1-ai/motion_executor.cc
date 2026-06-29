@@ -1,5 +1,6 @@
 #include "motion_executor.h"
 
+#include <cmath>
 #include <esp_log.h>
 
 #define TAG_EXECUTOR "MotionExecutor"
@@ -218,6 +219,21 @@ ReturnValue MotionExecutor::RunPathWithTaskId(const std::string& task_id,
         if (!cJSON_IsNumber(x_item) || !cJSON_IsNumber(y_item)) {
             cJSON_Delete(root);
             return std::string("path segment missing x/y");
+        }
+        // AUDIT-10-V1/F5：固件侧坐标边界双重防线（不依赖后端 path_validator）。
+        // NaN/Inf 经 isfinite 拦截；超 ±500mm 物理边界拒绝，防撞机。
+        {
+            double xv = x_item->valuedouble;
+            double yv = y_item->valuedouble;
+            if (!std::isfinite(xv) || !std::isfinite(yv)) {
+                cJSON_Delete(root);
+                return std::string("path segment has non-finite x/y");
+            }
+            constexpr double kMaxCoord = 500.0;
+            if (xv < -kMaxCoord || xv > kMaxCoord || yv < -kMaxCoord || yv > kMaxCoord) {
+                cJSON_Delete(root);
+                return std::string("path segment x/y out of physical bounds");
+            }
         }
 
         std::string cmd;
