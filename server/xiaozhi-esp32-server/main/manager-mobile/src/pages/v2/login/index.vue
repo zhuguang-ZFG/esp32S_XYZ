@@ -38,7 +38,9 @@ async function handleLogin() {
     // #endif
   }
   catch (e: any) {
-    message.alert(e?.message || t('v2.login.loginFailed'))
+    const detail = e?.message || e?.errMsg || (typeof e === 'string' ? e : JSON.stringify(e))
+    console.error('[wx login error]', e)
+    message.alert(detail || t('v2.login.loginFailed'))
   }
   finally {
     loading.value = false

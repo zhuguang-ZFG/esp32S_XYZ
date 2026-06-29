@@ -177,7 +177,7 @@ const alovaInstance = createAlova({
       }
 
       if (config.meta?.isExposeError) {
-        return Promise.reject(errorMsg)
+        return Promise.reject(new Error(errorMsg))
       }
 
       if (config.meta?.toast !== false) {
