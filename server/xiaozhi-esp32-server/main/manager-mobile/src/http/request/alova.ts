@@ -161,7 +161,9 @@ const alovaInstance = createAlova({
     }
 
     // 处理业务逻辑错误
-    const { code, msg, data } = rawData as IResponse
+    const { code, msg, message: messageText, data } = rawData as IResponse
+    // LiMa 后端错误 envelope 使用 `message` 字段，兼容 `msg`
+    const errorMsg = msg || messageText || ''
     if (code === undefined) {
       return rawData
     }
@@ -171,17 +173,17 @@ const alovaInstance = createAlova({
         // 清除token并跳转到登录页
         uni.removeStorageSync('token')
         uni.reLaunch({ url: '/pages/v2/login/index' })
-        throw new Error(`请求错误[${code}]：${msg}`)
+        throw new Error(`请求错误[${code}]：${errorMsg}`)
       }
 
       if (config.meta?.isExposeError) {
-        return Promise.reject(msg)
+        return Promise.reject(errorMsg)
       }
 
       if (config.meta?.toast !== false) {
-        toast.warning(msg)
+        toast.warning(errorMsg)
       }
-      throw new Error(`请求错误[${code}]：${msg}`)
+      throw new Error(`请求错误[${code}]：${errorMsg}`)
     }
     // 处理成功响应，返回业务数据
     return data

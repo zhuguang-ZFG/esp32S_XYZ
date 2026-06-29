@@ -24,6 +24,9 @@ export async function v2RefreshToken(): Promise<{ token: string, expireAt: numbe
   if (!res.code)
     throw new Error('wechat code unavailable')
   const data = await v2Login(res.code)
+  if (!data || !data.token) {
+    throw new Error('WeChat login returned invalid response')
+  }
   const expireAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 86400)
   uni.setStorageSync('token', JSON.stringify({ token: data.token, expireAt }))
   return { token: data.token, expireAt }

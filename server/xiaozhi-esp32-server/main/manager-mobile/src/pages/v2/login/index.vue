@@ -24,6 +24,10 @@ async function handleLogin() {
       return
     }
     const data = await v2Login(res.code)
+    if (!data || !data.token) {
+      message.alert(t('v2.login.loginFailed'))
+      return
+    }
     // 存绝对过期时间戳（秒），用于 alova isExpired 判断与静默刷新
     const expireAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 86400)
     uni.setStorageSync('token', JSON.stringify({ token: data.token, expireAt }))
