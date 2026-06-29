@@ -9,10 +9,11 @@
 </route>
 
 <script lang="ts" setup>
+import type { V2NotificationSubscription } from '@/api/v2'
 import type { Language } from '@/store/lang'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useToast } from 'wot-design-uni/components/wd-toast'
-import { v2DeleteAccount } from '@/api/v2'
+import { v2DeleteAccount, v2ListNotificationSubscriptions, v2SubscribeNotifications, v2UnsubscribeNotification } from '@/api/v2'
 import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
 import { useConfigStore } from '@/store'
 import {
@@ -332,12 +333,93 @@ async function submitAccountDeletion() {
   }
 }
 
+// 通知订阅
+const notificationSubs = ref<V2NotificationSubscription[]>([])
+const notificationLoading = ref(false)
+const notificationEnabled = ref(false)
+
+// 微信订阅消息模板（需在公众平台创建后填入真实 template_id）
+const NOTIFICATION_TEMPLATES = [
+  'task_completed',
+  'task_failed',
+  'device_offline',
+  'firmware_update',
+]
+
+async function loadNotificationSubs() {
+  try {
+    notificationSubs.value = await v2ListNotificationSubscriptions()
+    notificationEnabled.value = notificationSubs.value.some(s => s.status === 'active')
+  }
+  catch {
+    notificationSubs.value = []
+  }
+}
+
+async function handleToggleNotifications() {
+  if (notificationLoading.value)
+    return
+  notificationLoading.value = true
+  try {
+    if (notificationEnabled.value) {
+      // 关闭：取消所有活跃订阅
+      for (const sub of notificationSubs.value) {
+        if (sub.status === 'active') {
+          await v2UnsubscribeNotification(sub.subscriptionId)
+        }
+      }
+      notificationEnabled.value = false
+      toast.success(t('settings.notificationsOff'))
+    }
+    else {
+      // 开启：请求微信订阅授权 → 后端订阅
+      // #ifdef MP-WEIXIN
+      const reqTemplateIds = NOTIFICATION_TEMPLATES.map(tid => `tmpl_${tid}`)
+      const wxRes = await uni.requestSubscribeMessage({ tmplIds: reqTemplateIds })
+      const accepted = reqTemplateIds.filter(tid => (wxRes as any)[tid] === 'accept')
+      if (!accepted.length) {
+        toast.warning(t('settings.notificationsRejected'))
+        return
+      }
+      const openid = uni.getStorageSync('openid') || ''
+      if (!openid) {
+        toast.warning(t('settings.notificationsNeedLogin'))
+        return
+      }
+      // 获取所有设备 ID
+      const devices = uni.getStorageSync('device_ids') || []
+      if (!devices.length) {
+        toast.warning(t('settings.notificationsNoDevices'))
+        return
+      }
+      await v2SubscribeNotifications(openid, accepted, devices)
+      notificationEnabled.value = true
+      toast.success(t('settings.notificationsOn'))
+      // #endif
+      // #ifndef MP-WEIXIN
+      toast.info(t('settings.notificationsMpOnly'))
+      // #endif
+      await loadNotificationSubs()
+    }
+  }
+  catch (e: any) {
+    console.error('toggle notifications failed:', e)
+    toast.error(e?.message || t('settings.notificationsFailed'))
+  }
+  finally {
+    notificationLoading.value = false
+  }
+}
+
 onMounted(async () => {
   // 仅在非小程序环境加载服务端地址设置
   if (!isMp) {
     loadServerBaseUrl()
   }
   getCacheInfo()
+
+  // 加载通知订阅状态
+  loadNotificationSubs()
 
   // 动态设置导航栏标题为国际化文本
   uni.setNavigationBarTitle({
@@ -347,9 +429,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <view class="min-h-screen page-enter" style="background: #07070f;">
+  <view class="page-enter min-h-screen" style="background: #07070f;">
     <wd-navbar
-      :title="t('settings.title')" placeholder safe-area-inset-top fixed
+      :title="t('settings.title')" safe-area-inset-top placeholder fixed
       custom-class="!bg-[#07070f]"
       title-class="!text-[#f0f4f8]"
     />
@@ -491,6 +573,39 @@ onMounted(async () => {
               </text>
             </view>
             <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+          </view>
+        </view>
+      </view>
+
+      <!-- 通知订阅 -->
+      <view class="mb-[32rpx]">
+        <view class="mb-[24rpx] flex items-center">
+          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
+            {{ t('settings.notificationsTitle') }}
+          </text>
+        </view>
+
+        <view
+          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
+          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
+        >
+          <view
+            class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+            style="background: #0a0a14;"
+          >
+            <view>
+              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+                {{ t('settings.pushNotifications') }}
+              </text>
+              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+                {{ t('settings.pushNotificationsDesc') }}
+              </text>
+            </view>
+            <wd-switch
+              v-model="notificationEnabled"
+              :loading="notificationLoading"
+              @change="handleToggleNotifications"
+            />
           </view>
         </view>
       </view>
