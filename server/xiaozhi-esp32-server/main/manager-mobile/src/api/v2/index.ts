@@ -10,22 +10,51 @@ const appPrefix = '/device/v1/app'
  * 注意：此接口 bypass alova，直接使用 uni.request。
  * 原因：alova 在部分响应格式/网络环境下会把登录成功响应解析为 undefined，
  * 导致 token 无法写入。uni.request 更可控，且登录接口不需要 alova 的鉴权/刷新能力。
+ *
+ * 超时与重试：
+ * - timeout 设为 30s，覆盖微信 jscode2session 偶发慢响应 + 网络抖动。
+ * - 对 timeout / network 类错误自动重试 1 次，避免单次网络抖动导致登录失败。
  */
-export async function v2Login(code: string): Promise<V2LoginResponse> {
+const LOGIN_TIMEOUT_MS = 30000
+const LOGIN_MAX_RETRIES = 2
+
+async function _doLoginRequest(code: string): Promise<UniApp.RequestSuccessCallbackResult> {
   const baseUrl = getEnvBaseUrl()
-  const res = await uni.request({
+  return uni.request({
     url: `${baseUrl}${appPrefix}/auth/login`,
     method: 'POST',
     header: { 'Content-Type': 'application/json' },
     data: { code },
-    timeout: 15000,
+    timeout: LOGIN_TIMEOUT_MS,
   })
-  const data = res.data as V2LoginResponse | undefined
-  if (res.statusCode !== 200 || !data || !data.token) {
-    const detail = `statusCode=${res.statusCode}, data=${JSON.stringify(res.data)}, errMsg=${res.errMsg || 'none'}`
-    throw new Error(`WeChat login failed: ${detail}`)
+}
+
+function _isRetryableError(res: UniApp.RequestSuccessCallbackResult): boolean {
+  // uni.request 成功回调里 statusCode 为 0 或 errMsg 含 fail/timeout 时视为网络层失败
+  if (!res.statusCode || res.statusCode <= 0)
+    return true
+  const errMsg = (res.errMsg || '').toLowerCase()
+  return errMsg.includes('fail') || errMsg.includes('timeout') || errMsg.includes('abort')
+}
+
+export async function v2Login(code: string): Promise<V2LoginResponse> {
+  let lastError = ''
+  for (let attempt = 1; attempt <= LOGIN_MAX_RETRIES; attempt++) {
+    const res = await _doLoginRequest(code)
+    if (_isRetryableError(res)) {
+      lastError = `network/timeout (attempt ${attempt}, statusCode=${res.statusCode}, errMsg=${res.errMsg || 'none'})`
+      if (attempt < LOGIN_MAX_RETRIES)
+        continue
+      throw new Error(`WeChat login failed: ${lastError}`)
+    }
+    const data = res.data as V2LoginResponse | undefined
+    if (res.statusCode !== 200 || !data || !data.token) {
+      const detail = `statusCode=${res.statusCode}, data=${JSON.stringify(res.data)}, errMsg=${res.errMsg || 'none'}`
+      throw new Error(`WeChat login failed: ${detail}`)
+    }
+    return data
   }
-  return data
+  throw new Error(`WeChat login failed: ${lastError}`)
 }
 
 /**
