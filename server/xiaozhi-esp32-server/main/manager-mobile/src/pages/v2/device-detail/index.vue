@@ -531,6 +531,7 @@ async function handleRevokeShare(shareToken: string) {
 async function handleUnbind() {
   if (!deviceId.value)
     return
+  uni.vibrateShort({ type: 'medium' })
   try {
     const confirmed = await message.confirm(t('v2.detail.unbindConfirm'))
     if (!confirmed)
@@ -635,8 +636,8 @@ onUnmounted(() => {
         </wd-button>
       </view>
       <scroll-view scroll-y class="wss-log">
-        <wd-text v-for="(l, i) in logLines" :key="i" :text="l" size="20rpx" color="#666" custom-class="!leading-[36rpx]" />
-        <wd-text v-if="!logLines.length" :text="t('v2.detail.waitingEvents')" size="24rpx" color="#999" />
+        <wd-text v-for="(l, i) in logLines" :key="i" :text="l" size="20rpx" color="var(--dim)" custom-class="!leading-[36rpx]" />
+        <wd-text v-if="!logLines.length" :text="t('v2.detail.waitingEvents')" size="24rpx" color="var(--faint)" />
       </scroll-view>
     </view>
 
@@ -645,7 +646,7 @@ onUnmounted(() => {
       <view class="bento-title danger-title">
         {{ t('v2.detail.deviceManagement') }}
       </view>
-      <wd-button type="error" plain round block size="small" :loading="unbindLoading" @click="handleUnbind">
+      <wd-button type="error" plain round block size="medium" :loading="unbindLoading" @click="handleUnbind">
         {{ t('v2.detail.unbindDevice') }}
       </wd-button>
     </view>

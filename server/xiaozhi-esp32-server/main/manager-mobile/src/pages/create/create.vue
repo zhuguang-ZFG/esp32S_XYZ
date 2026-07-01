@@ -51,7 +51,10 @@ async function loadDevices() {
     const online = devices.value.find(d => d.status === 'online')
     selectedDeviceId.value = online?.deviceId || devices.value[0]?.deviceId || ''
   }
-  catch (e) { /* ignore load error; empty list is handled by UI */ }
+  catch (e) {
+    console.error('loadDevices failed', e)
+    uni.showToast({ title: t('create.loadDevicesFailed'), icon: 'none' })
+  }
 }
 
 async function handleSubmit() {
@@ -134,20 +137,37 @@ function sendImageToDevice() {
 function startPolling(taskId: string) {
   if (pollTimer.value)
     clearInterval(pollTimer.value)
+  let failCount = 0
+  const MAX_POLL_FAILS = 5
   pollTimer.value = setInterval(async () => {
     try {
       const task = await v2GetTask(taskId)
+      failCount = 0 // 成功后重置失败计数
       const idx = tasks.value.findIndex(t => t.taskId === taskId)
-      if (idx >= 0) {
-        tasks.value[idx] = { ...tasks.value[idx], ...task }
-        if (['completed', 'failed', 'error'].includes(task.status)) {
-          if (pollTimer.value)
-            clearInterval(pollTimer.value)
-          pollTimer.value = null
-        }
+      if (idx < 0) {
+        // 任务已被删除，停止轮询避免泄漏
+        if (pollTimer.value)
+          clearInterval(pollTimer.value)
+        pollTimer.value = null
+        return
+      }
+      tasks.value[idx] = { ...tasks.value[idx], ...task }
+      if (['completed', 'failed', 'error'].includes(task.status)) {
+        if (pollTimer.value)
+          clearInterval(pollTimer.value)
+        pollTimer.value = null
       }
     }
-    catch (e) { console.error('poll failed', e) }
+    catch (e) {
+      failCount++
+      console.error('poll failed', e)
+      if (failCount >= MAX_POLL_FAILS) {
+        if (pollTimer.value)
+          clearInterval(pollTimer.value)
+        pollTimer.value = null
+        uni.showToast({ title: t('create.pollFailed'), icon: 'none' })
+      }
+    }
   }, 3000)
 }
 
@@ -446,7 +466,7 @@ function clearAllTasks() {
     padding: 0 24rpx;
   }
   .nav-back {
-    width: 60rpx;
+    width: 80rpx;
     display: flex;
     align-items: center;
   }
@@ -456,7 +476,7 @@ function clearAllTasks() {
     color: var(--text);
   }
   .nav-placeholder {
-    width: 60rpx;
+    width: 80rpx;
   }
 }
 .mode-tabs {
@@ -691,7 +711,7 @@ function clearAllTasks() {
 .clear-btn {
   font-size: 26rpx;
   color: #ff4d4f;
-  padding: 8rpx 16rpx;
+  padding: 16rpx 24rpx;
 }
 
 .result-actions {
@@ -702,7 +722,7 @@ function clearAllTasks() {
 .save-btn {
   font-size: 24rpx;
   color: var(--accent);
-  padding: 6rpx 16rpx;
+  padding: 16rpx 24rpx;
   background: rgba(59, 130, 246, 0.1);
   border-radius: 8rpx;
 }
@@ -736,7 +756,7 @@ function clearAllTasks() {
 .task-delete-btn {
   font-size: 24rpx;
   color: var(--dim);
-  padding: 8rpx 16rpx;
+  padding: 16rpx 24rpx;
 }
 .image-result-section {
   margin-top: 32rpx;

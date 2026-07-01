@@ -17,9 +17,9 @@ export default defineUniPages({
   globalStyle: {
     navigationStyle: 'default',
     navigationBarTitleText: VITE_APP_TITLE || 'LiMa 星云',
-    navigationBarBackgroundColor: '#f8f8f8',
-    navigationBarTextStyle: 'black',
-    backgroundColor: '#FFFFFF',
+    navigationBarBackgroundColor: '#07070f',
+    navigationBarTextStyle: 'white',
+    backgroundColor: '#07070f',
   },
   easycom: {
     autoscan: true,

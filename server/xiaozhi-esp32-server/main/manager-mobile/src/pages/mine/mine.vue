@@ -38,16 +38,11 @@ async function loadData() {
     devices.value = res.rows || []
     onlineCount.value = devices.value.filter(d => d.status === 'online').length
 
-    // Count active tasks across all devices
-    let activeTasks = 0
-    for (const d of devices.value) {
-      try {
-        const tasks = await v2ListTasks(d.deviceId, 'running', 100)
-        activeTasks += tasks.count
-      }
-      catch { /* device may be offline */ }
-    }
-    taskCount.value = activeTasks
+    // 并行查询所有设备的活跃任务数（替代串行 for...of）
+    const taskResults = await Promise.all(
+      devices.value.map(d => v2ListTasks(d.deviceId, 'running', 100).catch(() => ({ count: 0 }))),
+    )
+    taskCount.value = taskResults.reduce((sum, r) => sum + (r.count || 0), 0)
   }
   catch (e) { console.error(e) }
   finally { loading.value = false }
@@ -66,6 +61,7 @@ function goDigitalHuman() {
   uni.showToast({ title: t('nebula.digitalHumanComingSoon'), icon: 'none' })
 }
 function goLogout() {
+  uni.vibrateShort({ type: 'medium' })
   uni.showModal({
     title: t('mine.logoutConfirmTitle'),
     content: t('mine.logoutConfirmContent'),
@@ -111,7 +107,8 @@ function showAbout() {
     <!-- Stats -->
     <view class="stats-row">
       <view class="stat-card">
-        <text class="stat-num">
+        <view v-if="loading" class="skeleton" style="width: 60rpx; height: 48rpx;" />
+        <text v-else class="stat-num">
           {{ devices.length }}
         </text>
         <text class="stat-label">
@@ -119,7 +116,8 @@ function showAbout() {
         </text>
       </view>
       <view class="stat-card">
-        <text class="stat-num online">
+        <view v-if="loading" class="skeleton" style="width: 60rpx; height: 48rpx;" />
+        <text v-else class="stat-num online">
           {{ onlineCount }}
         </text>
         <text class="stat-label">
@@ -127,7 +125,8 @@ function showAbout() {
         </text>
       </view>
       <view class="stat-card">
-        <text class="stat-num tasks">
+        <view v-if="loading" class="skeleton" style="width: 60rpx; height: 48rpx;" />
+        <text v-else class="stat-num tasks">
           {{ taskCount }}
         </text>
         <text class="stat-label">

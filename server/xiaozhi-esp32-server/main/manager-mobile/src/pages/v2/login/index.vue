@@ -58,8 +58,12 @@ async function handleLogin() {
     console.error('[wx login error]', e)
     if (isDev) {
       errorInfo.value = `[${new Date().toLocaleTimeString()}]\nbaseUrl: ${getEnvBaseUrl()}\n${detail}`
+      message.alert(detail || t('v2.login.loginFailed'))
     }
-    message.alert(detail || t('v2.login.loginFailed'))
+    else {
+      // 生产环境不泄漏 stack trace / 内部错误结构
+      message.alert(t('v2.login.loginFailed'))
+    }
   }
   finally {
     loading.value = false

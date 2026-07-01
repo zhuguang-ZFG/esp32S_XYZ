@@ -712,6 +712,12 @@ export default {
   'chat.title': 'AI Chat',
   'chat.welcome': 'Hello! I am LiMa Nebula AI assistant. Ask me anything and I will answer in real time.',
   'chat.inputPlaceholder': 'Type a message...',
+  'chat.requestFailed': 'Request failed, please try again later',
+  'chat.copy': 'Copy',
+  'chat.copied': 'Copied',
+  'chat.regenerate': 'Regenerate',
+  'chat.clearTitle': 'Clear Chat',
+  'chat.clearConfirm': 'Are you sure you want to clear all chat history?',
 
   // Create page
   'create.title': 'AI Create',
@@ -735,6 +741,8 @@ export default {
   'create.submitFailed': 'Submit failed',
   'create.imageFailed': 'Generation failed',
   'create.imageNoResult': 'No image returned',
+  'create.loadDevicesFailed': 'Failed to load devices',
+  'create.pollFailed': 'Task status polling failed, stopped',
   'create.imageSelectDeviceFirst': 'Please select a device before sending',
   'create.imageResult': 'Generation Result',
   'create.sendToDevice': 'Send to Device',

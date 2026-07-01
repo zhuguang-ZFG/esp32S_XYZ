@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { Member } from '@/api/member'
 import type { ChatHistory, CreateSpeakerData, VoicePrint } from '@/api/voiceprint'
+import { onLoad } from '@dcloudio/uni-app'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import { useToast } from 'wot-design-uni/components/wd-toast'
@@ -12,16 +13,7 @@ defineOptions({
   name: 'VoicePrintManage',
 })
 
-const props = withDefaults(defineProps<Props>(), {
-  deviceId: '',
-})
-
 const emits = defineEmits(['update-refresher-enabled'])
-
-// 接收props
-interface Props {
-  deviceId?: string
-}
 
 // 获取屏幕边界到安全区域距离
 let safeAreaInsets: any
@@ -59,9 +51,14 @@ const loading = ref(false)
 const audioRef = ref<UniApp.InnerAudioContext | null>(null)
 const playingAudioId = ref<string>('')
 
-// 使用传入的设备ID
+// 通过路由 query 参数接收 deviceId（页面导航用 onLoad，不是 props）
+const routeDeviceId = ref('')
+onLoad((opt: any) => {
+  routeDeviceId.value = opt?.deviceId || ''
+})
+
 const currentDeviceId = computed(() => {
-  return props.deviceId
+  return routeDeviceId.value
 })
 
 // 弹窗相关

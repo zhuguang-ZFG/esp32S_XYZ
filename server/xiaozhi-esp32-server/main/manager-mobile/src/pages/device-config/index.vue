@@ -86,21 +86,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <view class="min-h-screen page-enter" style="background: #07070f;">
+  <view class="min-h-screen page-enter dc-page">
     <wd-navbar
       :title="t('deviceConfig.pageTitle')" safe-area-inset-top
-      custom-class="!bg-[#07070f]"
-      title-class="!text-[#f0f4f8]"
+      custom-class="dc-navbar"
+      title-class="dc-navbar-title"
     />
 
     <view class="box-border px-[20rpx]">
-      <view class="mb-[24rpx] mt-[20rpx] border rounded-[16rpx] p-[20rpx]" style="background: rgba(59,130,246,0.06); border-color: rgba(59,130,246,0.12);">
+      <view class="mb-[24rpx] mt-[20rpx] border rounded-[16rpx] p-[20rpx] dc-permission-card">
         <view class="flex items-center justify-between gap-[20rpx]">
           <view class="flex-1">
-            <text class="block text-[26rpx] text-[#f0f4f8] font-medium">
+            <text class="block text-[26rpx] font-medium dc-text">
               {{ t('deviceConfig.permissionNotice') }}
             </text>
-            <text class="mt-[6rpx] block text-[22rpx] text-[#5a6372] leading-[1.5]">
+            <text class="mt-[6rpx] block text-[22rpx] leading-[1.5] dc-dim">
               {{ t('deviceConfig.permissionNoticeSub') }}
             </text>
           </view>
@@ -111,31 +111,31 @@ onMounted(() => {
       </view>
       <!-- 配网方式选择 -->
       <view class="pb-[20rpx] first:pt-[20rpx]">
-        <text class="text-[32rpx] text-[#f0f4f8] font-bold">
+        <text class="text-[32rpx] font-bold dc-text">
           {{ t('deviceConfig.configMethod') }}
         </text>
       </view>
 
-      <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx]" style="background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.04); box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.2);">
-        <view class="flex cursor-pointer items-center justify-between border rounded-[12rpx] p-[20rpx] transition-all duration-300" style="background: #0a0a14; border-color: rgba(255,255,255,0.04);" @click="showConfigTypeSelector">
-          <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+      <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx] dc-card">
+        <view class="flex cursor-pointer items-center justify-between border rounded-[12rpx] p-[20rpx] transition-all duration-300 dc-selector" @click="showConfigTypeSelector">
+          <text class="text-[28rpx] font-medium dc-text">
             {{ t('deviceConfig.configMethod') }}
           </text>
-          <text class="mx-[16rpx] flex-1 text-right text-[26rpx] text-[#8b95a8]">
+          <text class="mx-[16rpx] flex-1 text-right text-[26rpx] dc-muted">
             {{ configType === 'ble_blufi' ? 'BLE / BluFi' : configType === 'softap_http' || configType === 'wifi' ? 'SoftAP HTTP' : t('deviceConfig.ultrasonicConfig') }}
           </text>
-          <wd-icon name="arrow-right" custom-class="text-[20rpx] text-[#5a6372]" />
+          <wd-icon name="arrow-right" custom-class="text-[20rpx] dc-dim" />
         </view>
       </view>
 
       <!-- WiFi网络选择 -->
       <view class="pb-[20rpx]">
-        <text class="text-[32rpx] text-[#f0f4f8] font-bold">
+        <text class="text-[32rpx] font-bold dc-text">
           {{ t('deviceConfig.networkConfig') }}
         </text>
       </view>
 
-      <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx]" style="background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.04); box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.2);">
+      <view class="mb-[24rpx] border rounded-[20rpx] p-[24rpx] dc-card">
         <wifi-selector
           ref="wifiSelectorRef"
           @network-selected="onNetworkSelected"
@@ -185,3 +185,37 @@ onMounted(() => {
   }
 }
 </route>
+
+<style lang="scss" scoped>
+.dc-page {
+  background: var(--bg);
+}
+.dc-navbar {
+  background: var(--bg) !important;
+}
+.dc-navbar-title {
+  color: var(--text) !important;
+}
+.dc-text {
+  color: var(--text);
+}
+.dc-muted {
+  color: var(--muted);
+}
+.dc-dim {
+  color: var(--dim);
+}
+.dc-card {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.2);
+}
+.dc-selector {
+  background: var(--bg2);
+  border-color: var(--border);
+}
+.dc-permission-card {
+  background: var(--accent-g);
+  border-color: rgba(59, 130, 246, 0.12);
+}
+</style>

@@ -713,6 +713,12 @@ export default {
   'chat.title': 'AI 对话',
   'chat.welcome': '你好！我是 LiMa 星云 AI 助手。你可以问我任何问题，我会实时为你解答。',
   'chat.inputPlaceholder': '输入消息...',
+  'chat.requestFailed': '请求失败，请稍后重试',
+  'chat.copy': '复制',
+  'chat.copied': '已复制',
+  'chat.regenerate': '重新生成',
+  'chat.clearTitle': '清空对话',
+  'chat.clearConfirm': '确定要清空所有对话记录吗？',
 
   // Create page
   'create.title': 'AI 创作',
@@ -736,6 +742,8 @@ export default {
   'create.submitFailed': '提交失败',
   'create.imageFailed': '生成失败',
   'create.imageNoResult': '未获取到图片',
+  'create.loadDevicesFailed': '加载设备失败',
+  'create.pollFailed': '任务状态查询失败，已停止',
   'create.imageSelectDeviceFirst': '请选择设备后再发送',
   'create.imageResult': '生成结果',
   'create.sendToDevice': '发送到设备绘制',

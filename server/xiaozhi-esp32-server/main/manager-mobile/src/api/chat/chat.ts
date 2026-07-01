@@ -20,6 +20,7 @@ export interface ChatCompletionChunk {
 export function chatCompletionStream(
   messages: ChatMessage[],
   onChunk: (text: string, done: boolean) => void,
+  onError?: (errMsg: string) => void,
   model = 'lima-1.3',
   temperature = 0.7,
   max_tokens = 2048,
@@ -45,9 +46,21 @@ export function chatCompletionStream(
     },
     timeout: 120000,
     enableChunked: true,
-    success: () => {},
+    success: (res) => {
+      // HTTP 错误状态码走 onError 而非静默
+      if (res.statusCode && res.statusCode !== 200) {
+        onError?.(`HTTP ${res.statusCode}`)
+      }
+    },
     fail: (err) => {
-      onChunk(`请求失败：${err.errMsg || '未知错误'}`, true)
+      const errMsg = err.errMsg || '未知错误'
+      if (onError) {
+        onError(errMsg)
+      }
+      else {
+        // 向后兼容：无 onError 时仍通过 onChunk 通知完成
+        onChunk('', true)
+      }
     },
   })
 

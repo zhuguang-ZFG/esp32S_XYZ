@@ -20,6 +20,12 @@ interface DisplayMessage {
   content: string
   time: string
   streaming?: boolean
+  error?: boolean
+  id: string
+}
+
+function genMsgId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 const CHAT_HISTORY_KEY = 'lima_chat_history'
@@ -37,6 +43,7 @@ onLoad(() => {
   loadHistory()
   if (!messages.value.length) {
     messages.value.push({
+      id: genMsgId(),
       role: 'assistant',
       content: t('chat.welcome'),
       time: formatTime(new Date()),
@@ -71,7 +78,7 @@ function handleSend() {
   if (!text || sending.value)
     return
 
-  messages.value.push({ role: 'user', content: text, time: formatTime(new Date()) })
+  messages.value.push({ id: genMsgId(), role: 'user', content: text, time: formatTime(new Date()) })
   inputText.value = ''
   scrollToBottom()
   saveHistory()
@@ -79,7 +86,7 @@ function handleSend() {
   sending.value = true
 
   const aiIndex = messages.value.length
-  messages.value.push({ role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
+  messages.value.push({ id: genMsgId(), role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
   scrollToBottom()
 
   const chatMessages: ChatMessage[] = messages.value
@@ -100,11 +107,24 @@ function handleSend() {
       abortController = null
       saveHistory()
     }
+  }, (errMsg) => {
+    // 流式请求失败：标记错误，不保存到历史，提示用户
+    const msg = messages.value[aiIndex]
+    if (msg) {
+      msg.streaming = false
+      msg.error = true
+      msg.content = t('chat.requestFailed')
+      msg.time = formatTime(new Date())
+    }
+    sending.value = false
+    abortController = null
+    uni.showToast({ title: errMsg, icon: 'none' })
   })
 }
 
 function handleStop() {
   if (abortController) {
+    uni.vibrateShort({ type: 'light' })
     abortController.abort()
     abortController = null
     sending.value = false
@@ -121,12 +141,6 @@ function scrollToBottom() {
   nextTick(() => {
     const id = `msg-${messages.value.length - 1}`
     scrollToView.value = id
-    setTimeout(() => {
-      scrollToView.value = ''
-      nextTick(() => {
-        scrollToView.value = id
-      })
-    }, 50)
   })
 }
 
@@ -177,7 +191,7 @@ function regenerate(aiIndex: number) {
 
   messages.value.splice(aiIndex)
   sending.value = true
-  messages.value.push({ role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
+  messages.value.push({ id: genMsgId(), role: 'assistant', content: '', time: formatTime(new Date()), streaming: true })
   const newAiIndex = messages.value.length - 1
   scrollToBottom()
 
@@ -199,6 +213,17 @@ function regenerate(aiIndex: number) {
       abortController = null
       saveHistory()
     }
+  }, (errMsg) => {
+    const msg = messages.value[newAiIndex]
+    if (msg) {
+      msg.streaming = false
+      msg.error = true
+      msg.content = t('chat.requestFailed')
+      msg.time = formatTime(new Date())
+    }
+    sending.value = false
+    abortController = null
+    uni.showToast({ title: errMsg, icon: 'none' })
   })
 }
 
@@ -215,11 +240,12 @@ function clearHistory() {
     content: t('chat.clearConfirm'),
     success: (res) => {
       if (res.confirm) {
-        messages.value = [{
-          role: 'assistant',
-          content: t('chat.welcome'),
-          time: formatTime(new Date()),
-        }]
+            messages.value = [{
+              id: genMsgId(),
+              role: 'assistant',
+              content: t('chat.welcome'),
+              time: formatTime(new Date()),
+            }]
         saveHistory()
       }
     },
@@ -249,10 +275,10 @@ function clearHistory() {
       <view class="chat-list">
         <view
           v-for="(msg, index) in messages"
-          :id="`msg-${index}`"
-          :key="index"
+          :id="`msg-${msg.id}`"
+          :key="msg.id"
           class="msg-row"
-          :class="msg.role"
+          :class="[msg.role, { 'msg-error': msg.error }]"
           @longpress="onLongPressMessage(msg, index)"
         >
           <!-- 用户消息 -->
@@ -330,7 +356,7 @@ function clearHistory() {
   }
 
   .nav-back {
-    width: 60rpx;
+    width: 80rpx;
     display: flex;
     align-items: center;
   }
@@ -342,7 +368,7 @@ function clearHistory() {
   }
 
   .nav-action {
-    width: 60rpx;
+    width: 80rpx;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -504,13 +530,22 @@ function clearHistory() {
   .action-btn {
     font-size: 22rpx;
     color: var(--accent);
-    padding: 4rpx 12rpx;
+    padding: 12rpx 20rpx;
     background: rgba(51, 108, 255, 0.12);
     border-radius: 8rpx;
 
     &:active {
       opacity: 0.7;
     }
+  }
+}
+
+/* 错误消息样式 */
+.msg-error .msg-bubble {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.06) !important;
+  .msg-rich-text {
+    color: #f87171 !important;
   }
 }
 
@@ -564,8 +599,8 @@ function clearHistory() {
 }
 
 .send-btn {
-  width: 80rpx;
-  height: 80rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: 50%;
   background: var(--accent);
   display: flex;
@@ -580,8 +615,8 @@ function clearHistory() {
 }
 
 .stop-btn {
-  width: 80rpx;
-  height: 80rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: 50%;
   background: #ef4444;
   display: flex;
