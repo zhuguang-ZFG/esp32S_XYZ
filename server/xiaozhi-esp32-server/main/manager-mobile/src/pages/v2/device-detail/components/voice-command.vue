@@ -36,7 +36,7 @@ const {
   dispose: disposeStream,
 } = useVoiceStream()
 
-const isStreaming = computed(() => ['connecting', 'streaming', 'finalizing'].includes(streamStatus.value))
+const isStreaming = computed(() => ['connecting', 'streaming'].includes(streamStatus.value))
 
 async function onStreamStart() {
   await startStream()

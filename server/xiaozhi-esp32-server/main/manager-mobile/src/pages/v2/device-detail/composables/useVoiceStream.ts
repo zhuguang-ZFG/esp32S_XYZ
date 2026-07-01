@@ -4,7 +4,7 @@ import { requestVoiceTicket } from '@/api/voice/voice'
 import { t } from '@/i18n'
 import { getEnvBaseUrl } from '@/utils'
 
-export type StreamStatus = 'idle' | 'connecting' | 'streaming' | 'finalizing'
+export type StreamStatus = 'idle' | 'connecting' | 'streaming'
 
 /**
  * 实时流语音指令 composable（M2）。
@@ -48,16 +48,25 @@ export function useVoiceStream() {
     return `${proto}://${rest}/v1/voice?ticket=${encodeURIComponent(ticket)}`
   }
 
-  /** 最小前端意图规则（与后端 device_gateway.intent 的中文模式对齐）。 */
+  /**
+   * 最小前端意图规则（与后端 device_gateway.intent 的中文模式对齐）。
+   * 注意：fallback 必须与后端 resolve_voice_task 一致 —— 未知输入默认 write_text，
+   * 否则 M1（后端解析）与 M2（前端解析）对同一段语音会给出不同意图，用户困惑。
+   */
   function frontendIntent(text: string): VoiceIntent {
     const s = text.trim()
     if (/^(?:归零|回零|home)$/i.test(s))
       return { capability: 'home', params: {}, source: 'voice', explanation: 'frontend: home' }
-    if (/^写/.test(s))
-      return { capability: 'write_text', params: { text: s.replace(/^写/, '') }, source: 'voice', explanation: 'frontend: write_text' }
-    // 默认按绘图处理（去掉「画」前缀）。
-    const prompt = s.replace(/^画/, '')
-    return { capability: 'draw_generated', params: { prompt }, source: 'voice', explanation: 'frontend: draw_generated' }
+    if (/^画/.test(s)) {
+      const prompt = s.replace(/^画/, '')
+      return { capability: 'draw_generated', params: { prompt }, source: 'voice', explanation: 'frontend: draw_generated' }
+    }
+    if (/^写/.test(s)) {
+      const writeText = s.replace(/^写/, '')
+      return { capability: 'write_text', params: { text: writeText }, source: 'voice', explanation: 'frontend: write_text' }
+    }
+    // 与后端 intent.py 的 fallback 对齐：未知输入默认 write_text（用原文作为待写文字）。
+    return { capability: 'write_text', params: { text: s }, source: 'voice', explanation: 'frontend: fallback write_text' }
   }
 
   function cleanupSocket() {
@@ -108,8 +117,8 @@ export function useVoiceStream() {
     socketTask.onOpen(() => {
       opened = true
       status.value = 'streaming'
-      // PCM 分帧：1280 字节 ≈ 640 样本 @16kHz 16-bit。
-      recorder.start({ format: 'pcm', sampleRate: 16000, numberOfChannels: 1, frameSize: 1 })
+      // frameSize 单位为 KB。5KB ≈ 后端 FRAME_BYTES(1024B) 的整数倍，平衡延迟与回调频率。
+      recorder.start({ format: 'pcm', sampleRate: 16000, numberOfChannels: 1, frameSize: 5 })
     })
 
     socketTask.onMessage(({ data }) => {

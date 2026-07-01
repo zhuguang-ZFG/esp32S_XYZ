@@ -23,6 +23,8 @@ export function useVoiceCommand(deviceId: () => string) {
   const editableText = ref('')
 
   // 转写结果到达后，同步初始化可编辑文本。
+  // 注意：beginConfirm()（M2 流式接入）也会触发此 watch，把 editableText 重置为新结果文本。
+  // 这是预期行为 —— 每次进入确认对话框都应以新转写文本为起点，覆盖上次可能编辑过的内容。
   watch(result, (next) => {
     editableText.value = next?.text ?? ''
   })
