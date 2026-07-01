@@ -2,8 +2,8 @@
   "name": "LiMa 星云",
   "appid": "__UNI__36A515E",
   "description": "",
-  "versionName": "1.0.0",
-  "versionCode": "100",
+  "versionName": "3.6.0",
+  "versionCode": "360",
   "transformPx": false,
   "app-plus": {
     "usingComponents": true,
