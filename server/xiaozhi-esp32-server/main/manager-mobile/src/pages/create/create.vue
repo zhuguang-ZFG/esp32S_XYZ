@@ -14,12 +14,13 @@ import { onUnmounted, ref } from 'vue'
 import { generateImage } from '@/api/images'
 import { v2GetDevices, v2GetTask, v2SubmitTask } from '@/api/v2'
 import { t } from '@/i18n'
+import DrawParamsPanel from './components/draw-params-panel.vue'
 
 const safeAreaTop = ref(0)
 const systemInfo = uni.getSystemInfoSync()
 safeAreaTop.value = systemInfo.statusBarHeight || 0
 
-const mode = ref<'draw' | 'write' | 'image'>('draw')
+const mode = ref<'draw' | 'write' | 'handwrite' | 'image'>('draw')
 const imageGenerating = ref(false)
 const imageResultUrl = ref('')
 // 品牌标签（「LiMa 生图」），非真实后端名；后端真实模型对外不可见。
@@ -30,6 +31,11 @@ const prompt = ref('')
 const submitting = ref(false)
 const tasks = ref<V2TaskInfo[]>([])
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
+// 参数面板传入的附加参数（feed/font_type/mistake_rate/messy_ratio 等）
+const drawParams = ref<Record<string, unknown>>({})
+// 预览弹窗
+const previewSvgContent = ref('')
+const showPreview = ref(false)
 
 onLoad((options: any) => {
   const allowed: Array<'draw' | 'write' | 'image'> = ['draw', 'write', 'image']
@@ -68,11 +74,21 @@ async function handleSubmit() {
   }
   submitting.value = true
   try {
-    const capability = mode.value === 'draw' ? 'draw_generated' : 'write_text'
-    // write_text 后端读 params.text；draw_generated 读 params.prompt
-    const params = capability === 'write_text'
-      ? { text: prompt.value.trim() }
-      : { prompt: prompt.value.trim() }
+    // 按 mode 映射 capability + 参数
+    // draw → draw_generated {prompt}；write → write_text {text}；handwrite → handwriting {text,font_type,...}
+    let capability: string
+    let params: Record<string, unknown>
+    const extra = drawParams.value || {}
+    if (mode.value === 'handwrite') {
+      capability = 'handwriting'
+      params = { text: prompt.value.trim(), ...extra }
+    } else if (mode.value === 'draw') {
+      capability = 'draw_generated'
+      params = { prompt: prompt.value.trim(), ...extra }
+    } else {
+      capability = 'write_text'
+      params = { text: prompt.value.trim(), ...extra }
+    }
     const res = await v2SubmitTask(selectedDeviceId.value, capability, params)
     const newTask: V2TaskInfo = {
       taskId: res.taskId || 'unknown',
@@ -256,6 +272,35 @@ function saveImageToAlbum(url: string) {
   })
 }
 
+// SVG 字符串转 data URI（用于 image 标签渲染）
+function svgToDataUri(svg: string): string {
+  if (!svg) return ''
+  try {
+    // #ifdef MP-WEIXIN
+    return `data:image/svg+xml;base64,${uni.arrayBufferToBase64(stringToArrayBuffer(svg))}`
+    // #endif
+    // #ifndef MP-WEIXIN
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+    // #endif
+  }
+  catch {
+    return ''
+  }
+}
+
+function stringToArrayBuffer(str: string): ArrayBuffer {
+  const bytes = new Uint8Array(str.length)
+  for (let i = 0; i < str.length; i++)
+    bytes[i] = str.charCodeAt(i)
+  return bytes.buffer
+}
+
+// 全屏预览 SVG 路径
+function openPreview(svg: string) {
+  previewSvgContent.value = svg
+  showPreview.value = true
+}
+
 // 删除单个任务
 function deleteTask(taskId: string) {
   uni.showModal({
@@ -314,6 +359,12 @@ function clearAllTasks() {
           {{ t('create.writeTab') }}
         </text>
       </view>
+      <view class="mode-tab" :class="{ active: mode === 'handwrite' }" @click="mode = 'handwrite'">
+        <wd-icon name="mark" size="28" :color="mode === 'handwrite' ? 'var(--accent)' : 'var(--dim)'" />
+        <text class="tab-label">
+          {{ t('create.handwriteTab') }}
+        </text>
+      </view>
       <view class="mode-tab" :class="{ active: mode === 'image' }" @click="mode = 'image'">
         <wd-icon name="cloud" size="28" :color="mode === 'image' ? 'var(--accent)' : 'var(--dim)'" />
         <text class="tab-label">
@@ -351,11 +402,16 @@ function clearAllTasks() {
         {{ t('create.promptTitle') }}
       </text>
       <view class="prompt-box">
-        <textarea v-model="prompt" class="prompt-textarea" :placeholder="mode === 'image' ? t('create.imagePlaceholder') : (mode === 'draw' ? t('create.drawPlaceholder') : t('create.writePlaceholder'))" placeholder-class="prompt-placeholder" :maxlength="500" :disabled="submitting || imageGenerating" />
+        <textarea v-model="prompt" class="prompt-textarea" :placeholder="mode === 'image' ? t('create.imagePlaceholder') : (mode === 'draw' ? t('create.drawPlaceholder') : (mode === 'handwrite' ? t('create.handwritePlaceholder') : t('create.writePlaceholder')))" placeholder-class="prompt-placeholder" :maxlength="500" :disabled="submitting || imageGenerating" />
         <text class="prompt-count">
           {{ prompt.length }}/500
         </text>
       </view>
+    </view>
+
+    <!-- 参数面板（速度/字体/失误率/潦草度） -->
+    <view class="section">
+      <DrawParamsPanel :mode="mode" @update:params="drawParams = $event" />
     </view>
 
     <view class="submit-section">
@@ -366,7 +422,7 @@ function clearAllTasks() {
       </view>
       <view v-else class="submit-btn" :class="{ disabled: !selectedDeviceId || !prompt.trim() || submitting }" @click="handleSubmit">
         <text class="submit-text">
-          {{ submitting ? t('create.submitting') : (mode === 'draw' ? t('create.submitDraw') : t('create.submitWrite')) }}
+          {{ submitting ? t('create.submitting') : (mode === 'draw' ? t('create.submitDraw') : (mode === 'handwrite' ? t('create.submitHandwrite') : t('create.submitWrite'))) }}
         </text>
       </view>
     </view>
@@ -413,7 +469,7 @@ function clearAllTasks() {
         <view v-for="task in tasks" :key="task.taskId" class="task-card">
           <view class="task-header">
             <text class="task-cap">
-              {{ task.capability === 'draw_generated' ? t('create.drawTab') : t('create.writeTab') }}
+              {{ task.capability === 'draw_generated' ? t('create.drawTab') : (task.capability === 'handwriting' ? t('create.handwriteTab') : t('create.writeTab')) }}
             </text>
             <view class="task-status" :style="{ color: getStatusColor(task.status) }">
               <view class="status-dot" :style="{ background: getStatusColor(task.status) }" />
@@ -421,8 +477,19 @@ function clearAllTasks() {
             </view>
           </view>
           <text class="task-prompt">
-            {{ task.params?.prompt || '' }}
+            {{ task.params?.text || task.params?.prompt || '' }}
           </text>
+          <!-- 落笔路径预览（后端返回的 preview_svg） -->
+          <view v-if="task.params?.preview_svg" class="task-preview" @click="openPreview(task.params.preview_svg)">
+            <image
+              class="preview-thumb"
+              :src="svgToDataUri(task.params.preview_svg)"
+              mode="aspectFit"
+            />
+            <text class="preview-hint">
+              {{ t('create.previewHint') }}
+            </text>
+          </view>
           <view v-if="!['completed', 'failed', 'error'].includes(task.status)" class="task-progress">
             <view class="progress-bar">
               <view class="progress-fill" :style="{ width: `${getProgressPercent(task.status)}%`, background: getStatusColor(task.status) }" />
@@ -468,6 +535,22 @@ function clearAllTasks() {
     </view>
 
     <view style="height: 40rpx;" />
+
+    <!-- SVG 路径预览弹窗 -->
+    <view v-if="showPreview" class="preview-modal" @click="showPreview = false">
+      <view class="preview-modal-content" @click.stop>
+        <view class="preview-modal-header">
+          <text class="preview-modal-title">{{ t('create.previewTitle') }}</text>
+          <text class="preview-modal-close" @click="showPreview = false">✕</text>
+        </view>
+        <image
+          v-if="previewSvgContent"
+          class="preview-modal-img"
+          :src="svgToDataUri(previewSvgContent)"
+          mode="aspectFit"
+        />
+      </view>
+    </view>
   </view>
 </template>
 
@@ -811,5 +894,67 @@ function clearAllTasks() {
     background: rgba(45, 212, 167, 0.1);
     color: var(--accent);
   }
+}
+
+/* 任务路径预览缩略图 */
+.task-preview {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 12rpx;
+  padding: 12rpx;
+  background: var(--bg);
+  border-radius: 12rpx;
+}
+.preview-thumb {
+  width: 120rpx;
+  height: 80rpx;
+  border-radius: 8rpx;
+  background: #fafafa;
+}
+.preview-hint {
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+/* SVG 全屏预览弹窗 */
+.preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+}
+.preview-modal-content {
+  width: 100%;
+  max-width: 600rpx;
+  background: var(--surface);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.preview-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 28rpx;
+  border-bottom: 1rpx solid var(--border);
+}
+.preview-modal-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+.preview-modal-close {
+  font-size: 32rpx;
+  color: var(--muted);
+  padding: 8rpx 16rpx;
+}
+.preview-modal-img {
+  width: 100%;
+  height: 500rpx;
+  background: #fafafa;
 }
 </style>

@@ -108,6 +108,15 @@ export async function v2GetDeviceInfo(deviceId: string) {
   return toDeviceInfo(res)
 }
 
+export function v2GetHandwritingOptions() {
+  return http.Get<{
+    fonts: Record<string, string>
+    papers: Record<string, string>
+    defaults: Record<string, string>
+    maxTextLength: number
+  }>(`${appPrefix}/handwriting/options`, { meta: { ignoreAuth: false, toast: false } })
+}
+
 export function v2SubmitTask(deviceId: string, capability: string, params?: Record<string, unknown>, requestId = createTaskRequestId(capability)) {
   return http.Post<V2SubmitTaskResponse>(
     `${appPrefix}/devices/${deviceId}/tasks`,
