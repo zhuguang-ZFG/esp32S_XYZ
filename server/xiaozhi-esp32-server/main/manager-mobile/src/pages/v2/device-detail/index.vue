@@ -25,6 +25,7 @@ import SuppliesPanel from './components/supplies-panel.vue'
 import TaskStatus from './components/task-status.vue'
 import TransferPanel from './components/transfer-panel.vue'
 import VoiceApproval from './components/voice-approval.vue'
+import VoiceCommand from './components/voice-command.vue'
 import WriteDrawPanel from './components/write-draw-panel.vue'
 import { useDeviceWebSocket } from './composables/useDeviceWebSocket'
 import { useVoiceApproval } from './composables/useVoiceApproval'
@@ -295,6 +296,14 @@ async function handleHome() {
   finally {
     homeLoading.value = false
   }
+}
+// 语音指令派发成功（voice-command 组件内部已确认 + 派发）。
+function handleVoiceDispatched(taskId: string, capability: string) {
+  showSubmitToast('v2.detail.voiceSubmitted')
+  appendLog(`voice ${capability}: ${taskId}`)
+}
+function handleVoiceError(msg: string) {
+  message.alert(msg)
 }
 async function handleWriteText() {
   const text = writeTextInput.value.trim()
@@ -596,6 +605,7 @@ onUnmounted(() => {
 
     <task-status :latest-phase="latestPhase" :latest-progress-percent="latestProgressPercent" :latest-progress-label="latestProgressLabel" :phase-color="phaseColor" :progress-bar-style="progressBarStyle" />
     <write-draw-panel v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
+    <voice-command :device-id="deviceId" @dispatched="handleVoiceDispatched" @error="handleVoiceError" />
     <health-check v-model:health-check-loading="healthCheckLoading" :latest-diagnostic-status="latestDiagnosticStatus" :latest-diagnostic-summary="latestDiagnosticSummary" :latest-diagnostic-at="latestDiagnosticAt" :self-check-history="selfCheckHistory" @run-health-check="handleHealthCheck" />
     <transfer-panel v-model:transfer-loading="transferLoading" v-model:transfer-target-phone="transferTargetPhone" v-model:transfer-accept-id="transferAcceptId" :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />
     <share-panel v-model:share-loading="shareLoading" v-model:share-permission="sharePermission" v-model:share-expiry="shareExpiry" :shares="shares" @create-share="handleCreateShare" @revoke-share="handleRevokeShare" />
