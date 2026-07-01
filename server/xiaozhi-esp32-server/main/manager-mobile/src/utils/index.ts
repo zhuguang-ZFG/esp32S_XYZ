@@ -202,6 +202,18 @@ export function getEnvBaseUrl() {
 }
 
 /**
+ * 获取 AI 对话 baseUrl。
+ * 未登录且使用默认模型时，走阿里云 pilot（仅免费后端），降低主节点压力。
+ */
+export function getChatBaseUrl(model = 'lima-1.3'): string {
+  const token = getBearerToken()
+  if (!token && (model === 'lima' || model === 'lima-1.3')) {
+    return 'https://aliyun.donglicao.com'
+  }
+  return getEnvBaseUrl()
+}
+
+/**
  * Edge-A（M2.7）：由 HTTP baseURL 推导 WSS `.../ws/v1/client`（与 manager-api `context-path` 一致）。
  *
  * 注意：`/ws/v1/client` 是 Edge-A 多设备订阅协议，当前服务端未实现。

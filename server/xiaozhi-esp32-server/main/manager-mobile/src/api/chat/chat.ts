@@ -1,4 +1,4 @@
-import { getBearerToken, getEnvBaseUrl } from '@/utils'
+import { getBearerToken, getChatBaseUrl } from '@/utils'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
@@ -25,7 +25,7 @@ export function chatCompletionStream(
   temperature = 0.7,
   max_tokens = 2048,
 ): { abort: () => void } {
-  const baseUrl = getEnvBaseUrl().replace(/\/$/, '')
+  const baseUrl = getChatBaseUrl(model).replace(/\/$/, '')
   const token = getBearerToken()
 
   let buffer = ''
@@ -130,7 +130,7 @@ export async function chatCompletion(
   temperature = 0.7,
   max_tokens = 2048,
 ): Promise<string> {
-  const baseUrl = getEnvBaseUrl().replace(/\/$/, '')
+  const baseUrl = getChatBaseUrl(model).replace(/\/$/, '')
   const token = getBearerToken()
 
   return new Promise((resolve, reject) => {
