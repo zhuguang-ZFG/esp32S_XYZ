@@ -862,4 +862,9 @@ export default {
   'voice.emptyResult': '未识别到有效语音，请重试',
   'voice.dispatchFailed': '派发失败，请重试',
   'voice.noDevice': '未选择目标设备',
+  'voice.streamMode': '实时语音',
+  'voice.streaming': '正在聆听…松开结束',
+  'voice.listening': '聆听中',
+  'voice.ticketFailed': '连接凭证获取失败，请重试',
+  'voice.streamError': '实时连接异常，请重试',
 }

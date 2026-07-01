@@ -861,4 +861,9 @@ export default {
   'voice.emptyResult': 'No speech recognized, please retry',
   'voice.dispatchFailed': 'Dispatch failed',
   'voice.noDevice': 'No target device',
+  'voice.streamMode': 'Real-time streaming',
+  'voice.streaming': 'Listening... release to finish',
+  'voice.listening': 'Listening',
+  'voice.ticketFailed': 'Failed to get connection ticket, please retry',
+  'voice.streamError': 'Streaming connection error',
 }

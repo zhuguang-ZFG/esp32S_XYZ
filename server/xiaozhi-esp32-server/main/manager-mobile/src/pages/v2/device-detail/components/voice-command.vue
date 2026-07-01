@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import type { VoiceIntent } from '@/api/voice/voice'
-import { computed } from 'vue'
+import { computed, onUnmounted } from 'vue'
 import { t } from '@/i18n'
 import { useVoiceCommand } from '../composables/useVoiceCommand'
+import { useVoiceStream } from '../composables/useVoiceStream'
 
 const props = defineProps<{
   deviceId: string
@@ -21,8 +22,38 @@ const {
   stopRecording,
   cancelRecording,
   confirm,
+  beginConfirm,
   reset,
 } = useVoiceCommand(() => props.deviceId)
+
+// 实时流模式（M2）：边说边显，松开后把最终文本交给同一确认对话框。
+const {
+  status: streamStatus,
+  liveText,
+  errorMsg: streamErrorMsg,
+  start: startStream,
+  stop: stopStream,
+  dispose: disposeStream,
+} = useVoiceStream()
+
+const isStreaming = computed(() => ['connecting', 'streaming', 'finalizing'].includes(streamStatus.value))
+
+async function onStreamStart() {
+  await startStream()
+}
+
+// 松开：结束流，若有最终文本则进入确认对话框。
+function onStreamStop() {
+  const r = stopStream(false)
+  if (r)
+    beginConfirm(r)
+}
+
+function onStreamCancel() {
+  stopStream(true)
+}
+
+onUnmounted(() => disposeStream())
 
 // 是否显示确认对话框
 const showConfirm = computed(() => status.value === 'confirming')
@@ -111,6 +142,29 @@ const isBusy = computed(() => ['transcribing', 'dispatching'].includes(status.va
 
     <text v-if="errorMsg && status === 'idle'" class="error-text">
       {{ errorMsg }}
+    </text>
+
+    <!-- 实时流按钮（按住边说边显）-->
+    <wd-button
+      type="info" plain round block size="large"
+      :disabled="isBusy || showConfirm"
+      custom-class="!h-[96rpx] !text-[30rpx] !mt-[20rpx]"
+      @touchstart="onStreamStart"
+      @touchend="onStreamStop"
+      @touchcancel="onStreamCancel"
+    >
+      {{ isStreaming ? t('voice.streaming') : t('voice.streamMode') }}
+    </wd-button>
+
+    <!-- 实时转写文本 -->
+    <view v-if="isStreaming" class="live-box">
+      <text class="live-text">
+        {{ liveText || t('voice.listening') }}
+      </text>
+    </view>
+
+    <text v-if="streamErrorMsg && streamStatus === 'idle'" class="error-text">
+      {{ streamErrorMsg }}
     </text>
   </view>
 
@@ -211,5 +265,19 @@ const isBusy = computed(() => ['transcribing', 'dispatching'].includes(status.va
   margin-top: 16rpx;
   font-size: 24rpx;
   color: var(--danger);
+}
+
+.live-box {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background: #14181f;
+  border: 1rpx solid var(--border);
+}
+
+.live-text {
+  font-size: 28rpx;
+  color: var(--text);
+  line-height: 1.5;
 }
 </style>

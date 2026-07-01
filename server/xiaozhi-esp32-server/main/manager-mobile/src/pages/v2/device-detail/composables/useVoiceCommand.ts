@@ -138,6 +138,17 @@ export function useVoiceCommand(deviceId: () => string) {
     errorMsg.value = ''
   }
 
+  /**
+   * 接入外部产出的转写结果（如实时流 M2），进入同一确认对话框流程。
+   * 复用本 composable 的编辑/切换/派发逻辑，避免两套确认 UI。
+   */
+  function beginConfirm(next: TranscribeResult) {
+    if (!next?.text?.trim())
+      return
+    result.value = next
+    status.value = 'confirming'
+  }
+
   return {
     status,
     result,
@@ -147,6 +158,7 @@ export function useVoiceCommand(deviceId: () => string) {
     stopRecording,
     cancelRecording,
     confirm,
+    beginConfirm,
     reset,
   }
 }
