@@ -464,7 +464,7 @@ function clearHistory() {
   }
 
   :deep(.inline-code) {
-    background: rgba(51, 108, 255, 0.15);
+    background: rgba(0, 255, 170, 0.15);
     padding: 2rpx 10rpx;
     border-radius: 6rpx;
     color: var(--accent);
@@ -531,7 +531,7 @@ function clearHistory() {
     font-size: 22rpx;
     color: var(--accent);
     padding: 12rpx 20rpx;
-    background: rgba(51, 108, 255, 0.12);
+    background: rgba(0, 255, 170, 0.12);
     border-radius: 8rpx;
 
     &:active {
@@ -603,14 +603,17 @@ function clearHistory() {
   height: 88rpx;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 0 16rpx rgba(0, 255, 170, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   &:active {
     opacity: 0.8;
+    box-shadow: 0 0 8rpx rgba(0, 255, 170, 0.2);
   }
   &.disabled {
     opacity: 0.4;
+    box-shadow: none;
   }
 }
 
@@ -618,7 +621,7 @@ function clearHistory() {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: #ef4444;
+  background: #ff4d6d;
   display: flex;
   align-items: center;
   justify-content: center;

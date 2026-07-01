@@ -3,35 +3,50 @@
   "layout": "tabbar",
   "style": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "LiMa 星云"
+    "navigationBarTitleText": "LiMa 工坊"
   }
 }
 </route>
 
 <script lang="ts" setup>
-import type { V2DeviceInfo } from '@/api/v2/types'
+import type { V2DeviceInfo, V2TaskInfo } from '@/api/v2/types'
 import { onShow } from '@dcloudio/uni-app'
-import { ref } from 'vue'
-import { v2GetDevices } from '@/api/v2'
+import { computed, ref } from 'vue'
+import { v2GetDevices, v2GetTask, v2ListTasks } from '@/api/v2'
 import { t } from '@/i18n'
 
-defineOptions({ name: 'NebulaCenter' })
+defineOptions({ name: 'WorkshopHome' })
 
 const safeAreaTop = ref(0)
 const systemInfo = uni.getSystemInfoSync()
 safeAreaTop.value = systemInfo.statusBarHeight || 0
+
 const devices = ref<V2DeviceInfo[]>([])
 const loading = ref(false)
+const recentTasks = ref<V2TaskInfo[]>([])
 
-onShow(() => {
-  loadDevices()
+// 主要在线设备（取第一个在线设备用于遥测面板）
+const primaryDevice = computed(() => {
+  return devices.value.find(d => d.status === 'online') || devices.value[0] || null
 })
 
-async function loadDevices() {
+onShow(() => {
+  loadData()
+})
+
+async function loadData() {
   loading.value = true
   try {
     const res = await v2GetDevices()
     devices.value = res.rows || []
+    // 加载最近任务
+    if (primaryDevice.value) {
+      try {
+        const taskRes = await v2ListTasks(primaryDevice.value.deviceId, '', 3)
+        recentTasks.value = taskRes.tasks || []
+      }
+      catch { recentTasks.value = [] }
+    }
   }
   catch (e) { console.error(e) }
   finally { loading.value = false }
@@ -62,140 +77,200 @@ function goSettings() {
   uni.switchTab({ url: '/pages/settings/index' })
 }
 
-function deviceIcon(model?: string) {
-  if (model?.includes('draw'))
-    return 'photo'
-  if (model?.includes('write'))
-    return 'edit-2'
-  return 'phone'
+function taskStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    pending: t('create.status.pending'),
+    queued: t('create.status.queued'),
+    running: t('create.status.running'),
+    completed: t('create.status.completed'),
+    failed: t('create.status.failed'),
+    error: t('create.status.error'),
+  }
+  return map[status] || status
+}
+
+function taskStatusColor(status: string): string {
+  const map: Record<string, string> = {
+    pending: 'var(--amber)',
+    queued: 'var(--amber)',
+    running: 'var(--accent)',
+    completed: 'var(--green)',
+    failed: 'var(--danger)',
+    error: 'var(--danger)',
+  }
+  return map[status] || 'var(--muted)'
+}
+
+function taskProgress(status: string): number {
+  const map: Record<string, number> = {
+    pending: 10, queued: 20, running: 60, completed: 100, failed: 100, error: 100,
+  }
+  return map[status] ?? 0
 }
 </script>
 
 <template>
-  <view class="nebula-center page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
-    <view class="hero-banner">
-      <view class="hero-content">
-        <text class="hero-title">
-          {{ t('nebula.title') }}
-        </text>
-        <text class="hero-subtitle">
-          {{ t('nebula.subtitle') }}
-        </text>
-      </view>
-    </view>
-
-    <view class="section">
-      <text class="section-title">
-        {{ t('nebula.coreCapabilities') }}
+  <view class="workshop-home workshop-bg page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
+    <!-- 标题栏 -->
+    <view class="home-header">
+      <text class="home-title neon-text">
+        {{ t('workshop.title') }}
       </text>
-      <view class="cap-grid">
-        <view class="cap-card" @click="goChat">
-          <view class="cap-icon blue">
-            <wd-icon name="chat" size="24" color="#3b82f6" />
+      <text class="home-subtitle">
+        {{ t('workshop.subtitle') }}
+      </text>
+    </view>
+
+    <!-- ══ 设备遥测面板 ══ -->
+    <view class="section">
+      <view v-if="primaryDevice" class="telemetry-panel workshop-panel" @click="goDeviceDetail(primaryDevice.deviceId)">
+        <!-- 面板头部 -->
+        <view class="panel-header">
+          <view class="panel-title-row">
+            <text class="panel-title">
+              ◢ {{ t('workshop.status') }}
+            </text>
+            <view class="panel-status">
+              <view class="pulse-dot" :class="{ offline: primaryDevice.status !== 'online' }" />
+              <text class="panel-status-text" :class="{ online: primaryDevice.status === 'online' }">
+                {{ primaryDevice.status === 'online' ? t('workshop.online') : t('workshop.offline') }}
+              </text>
+            </view>
           </view>
-          <text class="cap-name">
-            {{ t('nebula.aiChat') }}
-          </text>
-          <text class="cap-desc">
-            {{ t('nebula.aiChatDesc') }}
+          <text class="panel-device-name">
+            {{ primaryDevice.model || t('workshop.device') }}
           </text>
         </view>
-        <view class="cap-card" @click="goDraw">
-          <view class="cap-icon purple">
-            <wd-icon name="photo" size="24" color="#8b5cf6" />
+
+        <!-- 遥测数据网格 -->
+        <view class="telemetry-grid">
+          <view class="telemetry-item">
+            <text class="telemetry-label">{{ t('workshop.workspace') }}</text>
+            <text class="telemetry-value">
+              {{ primaryDevice.workspaceMm?.x || 0 }} × {{ primaryDevice.workspaceMm?.y || 0 }} mm
+            </text>
           </view>
-          <text class="cap-name">
-            {{ t('nebula.aiDraw') }}
+          <view class="telemetry-item">
+            <text class="telemetry-label">{{ t('workshop.firmware') }}</text>
+            <text class="telemetry-value">v{{ primaryDevice.fwRev || '—' }}</text>
+          </view>
+          <view class="telemetry-item">
+            <text class="telemetry-label">{{ t('workshop.deviceId') }}</text>
+            <text class="telemetry-value mono">{{ primaryDevice.deviceId.slice(0, 12) }}</text>
+          </view>
+          <view class="telemetry-item">
+            <text class="telemetry-label">{{ t('workshop.devices') }}</text>
+            <text class="telemetry-value">{{ devices.length }} {{ t('workshop.units') }}</text>
+          </view>
+        </view>
+
+        <!-- 扫描线装饰（在线时） -->
+        <view v-if="primaryDevice.status === 'online'" class="panel-scan-line scan-line" />
+      </view>
+
+      <!-- 无设备状态 -->
+      <view v-else-if="!loading" class="empty-panel workshop-panel" @click="goDevices">
+        <text class="empty-icon">📡</text>
+        <text class="empty-text">{{ t('workshop.noDevices') }}</text>
+        <text class="empty-hint">{{ t('workshop.addDeviceHint') }}</text>
+      </view>
+    </view>
+
+    <!-- ══ AI 创作入口 ══ -->
+    <view class="section">
+      <text class="section-title neon-text">
+        ◢ {{ t('workshop.aiCreate') }}
+      </text>
+      <view class="create-grid">
+        <view class="create-card workshop-panel-interactive" @click="goDraw">
+          <view class="create-icon draw">
+            <text>✦</text>
+          </view>
+          <text class="create-name">
+            {{ t('workshop.aiDraw') }}
           </text>
-          <text class="cap-desc">
-            {{ t('nebula.aiDrawDesc') }}
+          <text class="create-desc">
+            {{ t('workshop.aiDrawDesc') }}
           </text>
         </view>
-        <view class="cap-card" @click="goWrite">
-          <view class="cap-icon cyan">
-            <wd-icon name="edit-2" size="24" color="#06b6d4" />
+        <view class="create-card workshop-panel-interactive" @click="goWrite">
+          <view class="create-icon write">
+            <text>✎</text>
           </view>
-          <text class="cap-name">
-            {{ t('nebula.aiWrite') }}
+          <text class="create-name">
+            {{ t('workshop.aiWrite') }}
           </text>
-          <text class="cap-desc">
-            {{ t('nebula.aiWriteDesc') }}
+          <text class="create-desc">
+            {{ t('workshop.aiWriteDesc') }}
           </text>
         </view>
-        <view class="cap-card" @click="goDigitalHuman">
-          <view class="cap-icon amber">
-            <wd-icon name="user" size="24" color="#f59e0b" />
+        <view class="create-card workshop-panel-interactive" @click="goChat">
+          <view class="create-icon chat">
+            <text>💬</text>
           </view>
-          <text class="cap-name">
-            {{ t('nebula.digitalHuman') }}
+          <text class="create-name">
+            {{ t('workshop.aiChat') }}
           </text>
-          <text class="cap-desc">
-            {{ t('nebula.digitalHumanDesc') }}
+          <text class="create-desc">
+            {{ t('workshop.aiChatDesc') }}
+          </text>
+        </view>
+        <view class="create-card workshop-panel-interactive" @click="goDigitalHuman">
+          <view class="create-icon human">
+            <text> humanoid</text>
+          </view>
+          <text class="create-name">
+            {{ t('workshop.digitalHuman') }}
+          </text>
+          <text class="create-desc">
+            {{ t('workshop.digitalHumanDesc') }}
           </text>
         </view>
       </view>
     </view>
 
-    <view class="section">
+    <!-- ══ 最近任务 ══ -->
+    <view v-if="recentTasks.length" class="section">
       <view class="section-header">
-        <text class="section-title">
-          {{ t('nebula.myDevices') }}
+        <text class="section-title neon-text">
+          ◢ {{ t('workshop.recentTasks') }}
         </text>
-        <text class="section-more" @click="goDevices">
-          {{ t('nebula.viewAll') }} >
-        </text>
-      </view>
-      <view v-if="loading" class="empty-tip">
-        {{ t('nebula.loading') }}
-      </view>
-      <view v-else-if="!devices.length" class="empty-tip">
-        <text>{{ t('nebula.noDevices') }}</text>
-        <text class="empty-sub">
-          {{ t('nebula.addDeviceHint') }}
+        <text class="section-more" @click="goDeviceDetail(primaryDevice?.deviceId || '')">
+          {{ t('workshop.viewAll') }} →
         </text>
       </view>
-      <view v-else class="device-list">
-        <view v-for="d in devices" :key="d.deviceId" class="device-card" @click="goDeviceDetail(d.deviceId)">
-          <view class="device-icon-wrap">
-            <wd-icon :name="deviceIcon(d.model)" size="22" color="#3b82f6" />
-          </view>
-          <view class="device-info">
-            <text class="device-name">
-              {{ d.model || t('nebula.smartDevice') }}
+      <view class="task-list">
+        <view v-for="task in recentTasks" :key="task.taskId" class="task-item workshop-panel">
+          <view class="task-info">
+            <text class="task-cap">
+              {{ task.capability === 'draw_generated' ? '✦' : '✎' }} {{ task.capability === 'draw_generated' ? t('workshop.aiDraw') : t('workshop.aiWrite') }}
             </text>
-            <text class="device-id">
-              {{ d.deviceId }}
+            <text class="task-status-text" :style="{ color: taskStatusColor(task.status) }">
+              {{ taskStatusLabel(task.status) }}
             </text>
           </view>
-          <text class="device-status" :class="[d.status === 'online' ? 'online' : 'offline']">
-            ●
-          </text>
+          <!-- 进度轨道 -->
+          <view class="task-track">
+            <view class="task-track-fill" :style="{ width: `${taskProgress(task.status)}%`, background: taskStatusColor(task.status) }" />
+          </view>
         </view>
       </view>
     </view>
 
+    <!-- ══ 快捷操作 ══ -->
     <view class="section">
-      <text class="section-title">
-        {{ t('nebula.quickActions') }}
-      </text>
-      <view class="quick-actions">
-        <view class="quick-btn" @click="goDevices">
-          <wd-icon name="add-circle" size="24" color="#3b82f6" />
-          <text class="quick-text">
-            {{ t('nebula.addDevice') }}
-          </text>
+      <view class="quick-row">
+        <view class="quick-btn workshop-panel-interactive" @click="goDevices">
+          <text class="quick-icon">📡</text>
+          <text class="quick-text">{{ t('workshop.myDevices') }}</text>
         </view>
-        <view class="quick-btn" @click="goConfig">
-          <wd-icon name="wifi" size="24" color="#3b82f6" />
-          <text class="quick-text">
-            {{ t('nebula.config') }}
-          </text>
+        <view class="quick-btn workshop-panel-interactive" @click="goConfig">
+          <text class="quick-icon">📶</text>
+          <text class="quick-text">{{ t('workshop.config') }}</text>
         </view>
-        <view class="quick-btn" @click="goSettings">
-          <wd-icon name="setting" size="24" color="#3b82f6" />
-          <text class="quick-text">
-            {{ t('nebula.systemSettings') }}
-          </text>
+        <view class="quick-btn workshop-panel-interactive" @click="goSettings">
+          <text class="quick-icon">⚙</text>
+          <text class="quick-text">{{ t('workshop.systemSettings') }}</text>
         </view>
       </view>
     </view>
@@ -205,29 +280,30 @@ function deviceIcon(model?: string) {
 </template>
 
 <style lang="scss" scoped>
-.nebula-center {
+.workshop-home {
   min-height: 100vh;
-  background: var(--bg);
+  position: relative;
+  z-index: 1;
 }
-.hero-banner {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  padding: 48rpx 32rpx 60rpx;
-  border-radius: 0 0 32rpx 32rpx;
-  margin-bottom: 24rpx;
+
+// ── 标题栏 ──
+.home-header {
+  padding: 32rpx;
 }
-.hero-title {
+.home-title {
   display: block;
   font-size: 48rpx;
   font-weight: 800;
-  color: #fff;
-  letter-spacing: 4rpx;
-  margin-bottom: 8rpx;
+  letter-spacing: 2rpx;
 }
-.hero-subtitle {
+.home-subtitle {
   display: block;
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 24rpx;
+  color: var(--muted);
+  margin-top: 8rpx;
 }
+
+// ── 分区 ──
 .section {
   padding: 0 24rpx;
   margin-bottom: 32rpx;
@@ -239,127 +315,174 @@ function deviceIcon(model?: string) {
   margin-bottom: 16rpx;
 }
 .section-title {
-  font-size: 30rpx;
+  display: block;
+  font-size: 28rpx;
   font-weight: 700;
-  color: var(--text);
   margin-bottom: 16rpx;
 }
 .section-more {
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: var(--accent);
 }
-.cap-grid {
+
+// ── 遥测面板 ──
+.telemetry-panel {
+  padding: 28rpx;
+}
+.panel-header {
+  margin-bottom: 20rpx;
+}
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 2rpx;
+}
+.panel-status {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.panel-status-text {
+  font-size: 24rpx;
+  color: var(--dim);
+  &.online { color: var(--accent); }
+}
+.panel-device-name {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 8rpx;
+}
+
+// ── 遥测数据网格 ──
+.telemetry-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16rpx;
 }
-.cap-card {
-  background: var(--surface);
+.telemetry-item {
+  background: rgba(0, 255, 170, 0.03);
   border: 1rpx solid var(--border);
-  border-radius: 20rpx;
+  border-radius: var(--r-sm);
+  padding: 16rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.telemetry-label {
+  font-size: 20rpx;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 1rpx;
+}
+.telemetry-value {
+  font-size: 26rpx;
+  color: var(--text);
+  font-weight: 600;
+  &.mono { font-family: monospace; }
+}
+
+.panel-scan-line {
+  height: 2rpx;
+  margin-top: 16rpx;
+  border-radius: 1rpx;
+}
+
+// ── 空面板 ──
+.empty-panel {
+  padding: 48rpx 28rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+.empty-icon { font-size: 64rpx; }
+.empty-text { font-size: 28rpx; color: var(--muted); }
+.empty-hint { font-size: 22rpx; color: var(--dim); }
+
+// ── AI 创作卡片 ──
+.create-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+.create-card {
   padding: 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 10rpx;
-  transition: all 0.15s;
-  &:active {
-    transform: scale(0.97);
-  }
+  min-height: 180rpx;
 }
-.cap-icon {
+.create-icon {
   width: 56rpx;
   height: 56rpx;
-  border-radius: 16rpx;
+  border-radius: 14rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  &.blue {
-    background: rgba(59, 130, 246, 0.1);
-  }
-  &.purple {
-    background: rgba(139, 92, 246, 0.1);
-  }
-  &.cyan {
-    background: rgba(6, 182, 212, 0.1);
-  }
-  &.amber {
-    background: rgba(245, 158, 11, 0.1);
-  }
-}
-.cap-name {
   font-size: 28rpx;
-  font-weight: 600;
+  margin-bottom: 4rpx;
+  &.draw { background: rgba(0, 255, 170, 0.12); color: var(--accent); }
+  &.write { background: rgba(0, 212, 255, 0.12); color: var(--accent2); }
+  &.chat { background: rgba(139, 92, 246, 0.12); color: var(--violet); }
+  &.human { background: rgba(255, 184, 0, 0.12); color: var(--amber); }
+}
+.create-name {
+  font-size: 28rpx;
+  font-weight: 700;
   color: var(--text);
 }
-.cap-desc {
-  font-size: 22rpx;
+.create-desc {
+  font-size: 20rpx;
   color: var(--dim);
+  line-height: 1.4;
 }
-.empty-tip {
-  text-align: center;
-  padding: 32rpx 0;
-  color: var(--dim);
-  font-size: 28rpx;
-  .empty-sub {
-    font-size: 24rpx;
-    color: #c7c7cc;
-  }
-}
-.device-list {
+
+// ── 任务列表 ──
+.task-list {
   display: flex;
   flex-direction: column;
   gap: 12rpx;
 }
-.device-card {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: 16rpx;
+.task-item {
   padding: 20rpx 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  &:active {
-    background: rgba(255, 255, 255, 0.05);
-  }
 }
-.device-icon-wrap {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 14rpx;
-  background: rgba(59, 130, 246, 0.08);
+.task-info {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  margin-bottom: 12rpx;
 }
-.device-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2rpx;
-}
-.device-name {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--text);
-}
-.device-id {
-  font-size: 22rpx;
-  color: var(--dim);
-}
-.device-status {
+.task-cap {
   font-size: 24rpx;
-  flex-shrink: 0;
-  &.online {
-    color: #07c160;
-  }
-  &.offline {
-    color: #c7c7cc;
-  }
+  color: var(--text);
+  font-weight: 600;
 }
-.quick-actions {
+.task-status-text {
+  font-size: 22rpx;
+  font-weight: 600;
+}
+.task-track {
+  height: 4rpx;
+  background: rgba(0, 255, 170, 0.06);
+  border-radius: 2rpx;
+  overflow: hidden;
+}
+.task-track-fill {
+  height: 100%;
+  border-radius: 2rpx;
+  transition: width 0.5s ease;
+}
+
+// ── 快捷按钮 ──
+.quick-row {
   display: flex;
   gap: 16rpx;
 }
@@ -369,17 +492,8 @@ function deviceIcon(model?: string) {
   flex-direction: column;
   align-items: center;
   gap: 10rpx;
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: 16rpx;
   padding: 24rpx 0;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  &:active {
-    background: rgba(255, 255, 255, 0.05);
-  }
 }
-.quick-text {
-  font-size: 24rpx;
-  color: var(--muted);
-}
+.quick-icon { font-size: 36rpx; }
+.quick-text { font-size: 22rpx; color: var(--muted); }
 </style>

@@ -1,78 +1,92 @@
-// LiMa 星云 — 全局深色主题变量
+// LiMa 工坊 — 全局科技工坊主题变量
 :root,
 page {
-  --bg: #07070f;
-  --bg2: #0a0a14;
-  --surface: rgba(255, 255, 255, 0.03);
-  --surface-h: rgba(255, 255, 255, 0.06);
-  --glass: rgba(255, 255, 255, 0.03);
-  --accent: #3b82f6;
-  --accent2: #60a5fa;
-  --accent-g: rgba(59, 130, 246, 0.15);
-  --cyan: #06b6d4;
-  --cyan-g: rgba(6, 182, 212, 0.12);
+  // ── 基底色 ──
+  --bg: #050810;
+  --bg2: #0a1018;
+  --surface: rgba(255, 255, 255, 0.025);
+  --surface-h: rgba(255, 255, 255, 0.05);
+  --glass: rgba(255, 255, 255, 0.02);
+
+  // ── 主色：霓虹青绿 ──
+  --accent: #00ffaa;
+  --accent2: #00d4ff;
+  --accent-g: rgba(0, 255, 170, 0.12);
+  --accent-glow: rgba(0, 255, 170, 0.4);
+
+  // ── 语义色 ──
+  --cyan: #00d4ff;
+  --cyan-g: rgba(0, 212, 255, 0.1);
   --violet: #8b5cf6;
-  --violet-g: rgba(139, 92, 246, 0.1);
-  --amber: #f59e0b;
-  --amber-g: rgba(245, 158, 11, 0.08);
+  --violet-g: rgba(139, 92, 246, 0.08);
+  --amber: #ffb800;
+  --amber-g: rgba(255, 184, 0, 0.08);
   --green: #34d399;
   --green-g: rgba(52, 211, 153, 0.1);
-  --text: #f0f4f8;
-  --muted: #8b95a8;
-  --dim: #5a6372;
-  --faint: #3a4252;
-  --border: rgba(255, 255, 255, 0.04);
-  --border-h: rgba(255, 255, 255, 0.08);
-  --r: 32rpx;
-  --r-sm: 20rpx;
+  --danger: #ff4d6d;
+  --danger-g: rgba(255, 77, 109, 0.08);
 
-  // wot-design-uni 主题覆盖
-  --wot-color-theme: #3b82f6;
-  --wot-button-primary-bg-color: #3b82f6;
-  --wot-navbar-title-color: #f0f4f8;
-  --wot-navbar-bg: #07070f;
-  --wot-cell-bg: #0a0a14;
-  --wot-cell-border-color: rgba(255, 255, 255, 0.04);
-  --wot-cell-title-color: #f0f4f8;
-  --wot-cell-label-color: #5a6372;
-  --wot-input-bg: #0a0a14;
-  --wot-input-color: #f0f4f8;
-  --wot-input-placeholder-color: #5a6372;
-  --wot-popup-bg: #0a0a14;
-  --wot-popup-title-color: #f0f4f8;
-  --wot-tag-primary-bg-color: rgba(59, 130, 246, 0.15);
-  --wot-tag-primary-color: #3b82f6;
+  // ── 文字 ──
+  --text: #e8f0f5;
+  --muted: #7a8896;
+  --dim: #4a5662;
+  --faint: #2a3340;
+
+  // ── 边框（带青色调）──
+  --border: rgba(0, 255, 170, 0.08);
+  --border-h: rgba(0, 255, 170, 0.15);
+
+  // ── 圆角 ──
+  --r: 24rpx;
+  --r-sm: 16rpx;
+
+  // ── wot-design-uni 主题覆盖 ──
+  --wot-color-theme: #00ffaa;
+  --wot-button-primary-bg-color: #00ffaa;
+  --wot-navbar-title-color: #e8f0f5;
+  --wot-navbar-bg: #050810;
+  --wot-cell-bg: #0a1018;
+  --wot-cell-border-color: rgba(0, 255, 170, 0.06);
+  --wot-cell-title-color: #e8f0f5;
+  --wot-cell-label-color: #4a5662;
+  --wot-input-bg: #0a1018;
+  --wot-input-color: #e8f0f5;
+  --wot-input-placeholder-color: #4a5662;
+  --wot-popup-bg: #0a1018;
+  --wot-popup-title-color: #e8f0f5;
+  --wot-tag-primary-bg-color: rgba(0, 255, 170, 0.12);
+  --wot-tag-primary-color: #00ffaa;
   --wot-tag-success-bg-color: rgba(52, 211, 153, 0.12);
   --wot-tag-success-color: #34d399;
-  --wot-tag-warning-bg-color: rgba(245, 158, 11, 0.12);
-  --wot-tag-warning-color: #f59e0b;
+  --wot-tag-warning-bg-color: rgba(255, 184, 0, 0.12);
+  --wot-tag-warning-color: #ffb800;
   --wot-tag-default-bg-color: rgba(255, 255, 255, 0.04);
-  --wot-tag-default-color: #5a6372;
-  --wot-action-sheet-bg: #0a0a14;
-  --wot-action-sheet-title-color: #f0f4f8;
-  --wot-action-sheet-item-color: #f0f4f8;
-  --wot-action-sheet-item-active-color: #3b82f6;
-  --wot-toast-bg: rgba(10, 10, 20, 0.9);
-  --wot-toast-color: #f0f4f8;
-  --wot-message-box-bg: #0a0a14;
-  --wot-message-box-title-color: #f0f4f8;
-  --wot-message-box-content-color: #8b95a8;
-  --wot-message-box-confirm-button-color: #3b82f6;
-  --wot-fab-bg: #3b82f6;
-  --wot-fab-color: #fff;
-  --wot-status-tip-color: #5a6372;
-  --wot-swipe-action-delete-bg: #ff4d4f;
-  --wot-icon-color: #8b95a8;
-  --wot-loading-color: #3b82f6;
-  --wot-switch-on-color: #3b82f6;
-  --wot-switch-off-color: #3a4252;
-  --wot-radio-checked-color: #3b82f6;
-  --wot-checkbox-checked-color: #3b82f6;
-  --wot-slider-active-color: #3b82f6;
-  --wot-divider-color: rgba(255, 255, 255, 0.04);
-  --wot-collapse-item-title-color: #f0f4f8;
-  --wot-collapse-item-content-color: #8b95a8;
-  --wot-collapse-item-bg: #0a0a14;
+  --wot-tag-default-color: #4a5662;
+  --wot-action-sheet-bg: #0a1018;
+  --wot-action-sheet-title-color: #e8f0f5;
+  --wot-action-sheet-item-color: #e8f0f5;
+  --wot-action-sheet-item-active-color: #00ffaa;
+  --wot-toast-bg: rgba(10, 16, 24, 0.9);
+  --wot-toast-color: #e8f0f5;
+  --wot-message-box-bg: #0a1018;
+  --wot-message-box-title-color: #e8f0f5;
+  --wot-message-box-content-color: #7a8896;
+  --wot-message-box-confirm-button-color: #00ffaa;
+  --wot-fab-bg: #00ffaa;
+  --wot-fab-color: #050810;
+  --wot-status-tip-color: #4a5662;
+  --wot-swipe-action-delete-bg: #ff4d6d;
+  --wot-icon-color: #7a8896;
+  --wot-loading-color: #00ffaa;
+  --wot-switch-on-color: #00ffaa;
+  --wot-switch-off-color: #2a3340;
+  --wot-radio-checked-color: #00ffaa;
+  --wot-checkbox-checked-color: #00ffaa;
+  --wot-slider-active-color: #00ffaa;
+  --wot-divider-color: rgba(0, 255, 170, 0.06);
+  --wot-collapse-item-title-color: #e8f0f5;
+  --wot-collapse-item-content-color: #7a8896;
+  --wot-collapse-item-bg: #0a1018;
 
   background: var(--bg);
   color: var(--text);
@@ -82,80 +96,199 @@ page {
   background-color: var(--bg) !important;
 }
 
-// 星云玻璃卡片
-.nebula-card {
-  background: var(--surface);
+// ════════════════════════════════════════
+// 工坊面板（核心卡片样式）
+// ════════════════════════════════════════
+.workshop-panel {
+  background: var(--bg2);
   border: 1rpx solid var(--border);
   border-radius: var(--r);
-  backdrop-filter: blur(24rpx);
-  -webkit-backdrop-filter: blur(24rpx);
   position: relative;
   overflow: hidden;
 }
-.nebula-card::before {
+// 面板角标装饰（左上 L 形）
+.workshop-panel::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: var(--r);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, transparent 50%, rgba(139, 92, 246, 0.04) 100%);
+  top: 0;
+  left: 0;
+  width: 24rpx;
+  height: 24rpx;
+  border-top: 2rpx solid var(--accent);
+  border-left: 2rpx solid var(--accent);
+  border-top-left-radius: var(--r);
+  opacity: 0.6;
   pointer-events: none;
 }
 
-// 星云按钮
-.nebula-btn {
-  background: linear-gradient(135deg, var(--accent), var(--violet));
-  color: #fff;
-  border-radius: var(--r-sm);
-  border: none;
+.workshop-panel-interactive {
+  background: var(--bg2);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+  &:active {
+    transform: scale(0.98);
+    border-color: var(--border-h);
+  }
 }
 
-// 状态徽章
-.status-online {
-  background: rgba(52, 211, 153, 0.12) !important;
-  color: var(--green) !important;
-}
-.status-offline {
-  background: rgba(90, 99, 114, 0.12) !important;
-  color: var(--dim) !important;
-}
-.status-busy {
-  background: rgba(245, 158, 11, 0.12) !important;
-  color: var(--amber) !important;
-}
-
-// 深空渐变背景
-.nebula-bg {
-  background: linear-gradient(180deg, #07070f 0%, #0a0a14 50%, #0d0d1a 100%);
+// ════════════════════════════════════════
+// 工坊背景（网格 + 辉光）
+// ════════════════════════════════════════
+.workshop-bg {
+  background: var(--bg);
   position: relative;
 }
-.nebula-bg::after {
+.workshop-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  // 科技网格线
+  background-image:
+    linear-gradient(rgba(0, 255, 170, 0.025) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(0, 255, 170, 0.025) 1rpx, transparent 1rpx);
+  background-size: 40rpx 40rpx;
+}
+.workshop-bg::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 600rpx 400rpx at 20% 10%, rgba(59, 130, 246, 0.04) 0%, transparent 70%),
-    radial-gradient(ellipse 500rpx 350rpx at 80% 50%, rgba(139, 92, 246, 0.03) 0%, transparent 70%),
-    radial-gradient(ellipse 400rpx 300rpx at 50% 80%, rgba(6, 182, 212, 0.02) 0%, transparent 70%);
+    radial-gradient(ellipse 600rpx 400rpx at 20% 10%, rgba(0, 255, 170, 0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 500rpx 350rpx at 80% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 70%);
 }
 
-// === 交互增强 ===
-.nebula-card-interactive {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  backdrop-filter: blur(24rpx);
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s ease;
-  &:active {
-    transform: scale(0.98);
+// ════════════════════════════════════════
+// 霓虹按钮
+// ════════════════════════════════════════
+.neon-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #050810;
+  border-radius: var(--r-sm);
+  border: none;
+  font-weight: 700;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 20rpx rgba(0, 255, 170, 0.3);
+}
+
+// ════════════════════════════════════════
+// 霓虹文字
+// ════════════════════════════════════════
+.neon-text {
+  color: var(--accent);
+  text-shadow: 0 0 8rpx rgba(0, 255, 170, 0.4);
+}
+
+// ════════════════════════════════════════
+// 状态徽章
+// ════════════════════════════════════════
+.status-online {
+  background: rgba(0, 255, 170, 0.12) !important;
+  color: var(--accent) !important;
+}
+.status-offline {
+  background: rgba(74, 86, 98, 0.12) !important;
+  color: var(--dim) !important;
+}
+.status-busy {
+  background: rgba(255, 184, 0, 0.12) !important;
+  color: var(--amber) !important;
+}
+
+// 脉冲状态灯
+.pulse-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12rpx var(--accent-glow);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+.pulse-dot.offline {
+  background: var(--dim);
+  box-shadow: none;
+  animation: none;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 8rpx var(--accent-glow);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 16rpx var(--accent-glow);
   }
 }
 
-// === 页面入场动画 ===
+// ════════════════════════════════════════
+// 遥测数据行
+// ════════════════════════════════════════
+.telemetry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0;
+  font-size: 24rpx;
+  .telemetry-label {
+    color: var(--muted);
+  }
+  .telemetry-value {
+    color: var(--text);
+    font-family: monospace;
+    font-weight: 600;
+  }
+}
+
+// 遥测进度条（刻度轨道）
+.telemetry-bar {
+  height: 6rpx;
+  background: rgba(0, 255, 170, 0.08);
+  border-radius: 3rpx;
+  overflow: hidden;
+  position: relative;
+}
+.telemetry-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 3rpx;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8rpx var(--accent-glow);
+}
+
+// ════════════════════════════════════════
+// 扫描线动画
+// ════════════════════════════════════════
+.scan-line {
+  position: relative;
+  overflow: hidden;
+}
+.scan-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4rpx;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scan 2s linear infinite;
+}
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+// ════════════════════════════════════════
+// 页面入场动画
+// ════════════════════════════════════════
 .page-enter {
   animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -171,7 +304,9 @@ page {
   }
 }
 
-// === 骨架屏 ===
+// ════════════════════════════════════════
+// 骨架屏
+// ════════════════════════════════════════
 .skeleton {
   background: linear-gradient(90deg, var(--surface) 25%, var(--surface-h) 50%, var(--surface) 75%);
   background-size: 200% 100%;
@@ -181,20 +316,14 @@ page {
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .skeleton-text {
   height: 28rpx;
   margin-bottom: 16rpx;
-  &:last-child {
-    width: 60%;
-  }
+  &:last-child { width: 60%; }
 }
 
 .skeleton-card {
@@ -202,40 +331,55 @@ page {
   margin-bottom: 24rpx;
 }
 
-// === 暗黑输入框 ===
+// ════════════════════════════════════════
+// 深色输入框
+// ════════════════════════════════════════
 .dark-input {
   background: var(--bg2) !important;
   color: var(--text) !important;
   border: 1rpx solid var(--border) !important;
   border-radius: var(--r-sm) !important;
-  &::placeholder {
-    color: var(--dim) !important;
-  }
+  &::placeholder { color: var(--dim) !important; }
   &:focus {
     border-color: var(--accent) !important;
+    box-shadow: 0 0 12rpx rgba(0, 255, 170, 0.15) !important;
   }
 }
 
-// === 暗黑标签 ===
+// ════════════════════════════════════════
+// 深色标签
+// ════════════════════════════════════════
 .dark-tag {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(0, 255, 170, 0.1);
   color: var(--accent);
-  border: 1rpx solid rgba(59, 130, 246, 0.15);
+  border: 1rpx solid rgba(0, 255, 170, 0.15);
   border-radius: 8rpx;
   padding: 4rpx 16rpx;
   font-size: 22rpx;
 }
 
-// === 渐变头部 ===
+// ════════════════════════════════════════
+// 渐变头部
+// ════════════════════════════════════════
 .gradient-header {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   border-radius: 0 0 var(--r) var(--r);
   padding: 40rpx 32rpx;
-  color: #fff;
+  color: #050810;
 }
 
-// === 全局按钮反馈 ===
+// ════════════════════════════════════════
+// 全局按钮反馈
+// ════════════════════════════════════════
 button:active {
   transform: scale(0.97);
   transition: transform 0.1s ease;
 }
+
+// ════════════════════════════════════════
+// 向后兼容：保留 nebula-* 别名（渐进迁移）
+// ════════════════════════════════════════
+.nebula-card { @extend .workshop-panel; }
+.nebula-card-interactive { @extend .workshop-panel-interactive; }
+.nebula-bg { @extend .workshop-bg; }
+.nebula-btn { @extend .neon-btn; }
