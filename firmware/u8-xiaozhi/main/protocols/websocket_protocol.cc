@@ -128,6 +128,7 @@ bool WebsocketProtocol::OpenAudioChannel() {
                         .sample_rate = server_sample_rate_,
                         .frame_duration = server_frame_duration_,
                         .timestamp = bp2->timestamp,
+                        .format = "pcm",
                         .payload = std::vector<uint8_t>(payload, payload + bp2->payload_size)
                     }));
                 } else if (version_ == 3) {
@@ -139,6 +140,7 @@ bool WebsocketProtocol::OpenAudioChannel() {
                         .sample_rate = server_sample_rate_,
                         .frame_duration = server_frame_duration_,
                         .timestamp = 0,
+                        .format = "pcm",
                         .payload = std::vector<uint8_t>(payload, payload + bp3->payload_size)
                     }));
                 } else {
@@ -146,6 +148,7 @@ bool WebsocketProtocol::OpenAudioChannel() {
                         .sample_rate = server_sample_rate_,
                         .frame_duration = server_frame_duration_,
                         .timestamp = 0,
+                        .format = "pcm",
                         .payload = std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data + len)
                     }));
                 }

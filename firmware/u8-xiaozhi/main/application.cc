@@ -502,6 +502,8 @@ void Application::InitializeProtocol() {
         protocol_ = std::make_unique<MqttProtocol>();
     }
 
+    audio_service_.SetSendPcm(protocol_->UsesPcm());
+
     protocol_->OnConnected([this]() {
         DismissAlert();
     });
