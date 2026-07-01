@@ -52,7 +52,7 @@ export interface V2DeviceSupplyResponse {
   penMileageMm?: number
 }
 export interface V2DeviceTransferRequest {
-  targetUnionid: string
+  targetPhone: string
 }
 export interface V2DeviceTransferResponse {
   transferId: string

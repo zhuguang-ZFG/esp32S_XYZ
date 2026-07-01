@@ -39,16 +39,16 @@ export default function useUpload<T extends TfileType>(options: TOptions<T> = {}
       return
     }
 
-    // const fileExtension = file?.tempFiles?.name?.split('.').pop()?.toLowerCase()
-    // const isTypeValid = accept.some((type) => type === '*' || type.toLowerCase() === fileExtension)
-
-    // if (!isTypeValid) {
-    //   uni.showToast({
-    //     title: `仅支持 ${accept.join(', ')} 格式的文件`,
-    //     icon: 'none',
-    //   })
-    //   return
-    // }
+    // 文件类型校验：从 tempFilePath 提取扩展名
+    const fileExtension = tempFilePath.split('.').pop()?.toLowerCase() || ''
+    const isTypeValid = accept.some((type) => type === '*' || type.toLowerCase() === fileExtension)
+    if (!isTypeValid) {
+      uni.showToast({
+        title: `仅支持 ${accept.join(', ')} 格式的文件`,
+        icon: 'none',
+      })
+      return
+    }
 
     loading.value = true
     uploadFile({

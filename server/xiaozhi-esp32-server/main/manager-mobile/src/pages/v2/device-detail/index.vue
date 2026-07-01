@@ -44,7 +44,7 @@ const transferLoading = ref(false)
 const drawPromptInput = ref('星星')
 const deviceSupplies = ref<V2DeviceSupplyResponse | null>(null)
 const deviceTransfer = ref<V2DeviceTransferResponse | null>(null)
-const transferTargetUnionid = ref('')
+const transferTargetPhone = ref('')
 const transferAcceptId = ref('')
 const latestPhase = ref('—')
 const latestProgressPercent = ref<number | null>(null)
@@ -408,14 +408,14 @@ async function markNewPen() {
   }
 }
 async function handleRequestTransfer() {
-  const target = transferTargetUnionid.value.trim()
+  const target = transferTargetPhone.value.trim()
   if (!target) {
-    message.alert(t('v2.detail.enterTargetUnionid'))
+    message.alert(t('v2.detail.enterTargetPhone'))
     return
   }
   transferLoading.value = true
   try {
-    deviceTransfer.value = await v2RequestDeviceTransfer(deviceId.value, { targetUnionid: target })
+    deviceTransfer.value = await v2RequestDeviceTransfer(deviceId.value, { targetPhone: target })
     transferAcceptId.value = String(deviceTransfer.value.transferId)
     showSubmitToast('v2.detail.transferCreated')
     appendLog(`transfer id=${deviceTransfer.value.transferId}`)
@@ -597,7 +597,7 @@ onUnmounted(() => {
     <task-status :latest-phase="latestPhase" :latest-progress-percent="latestProgressPercent" :latest-progress-label="latestProgressLabel" :phase-color="phaseColor" :progress-bar-style="progressBarStyle" />
     <write-draw-panel v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
     <health-check v-model:health-check-loading="healthCheckLoading" :latest-diagnostic-status="latestDiagnosticStatus" :latest-diagnostic-summary="latestDiagnosticSummary" :latest-diagnostic-at="latestDiagnosticAt" :self-check-history="selfCheckHistory" @run-health-check="handleHealthCheck" />
-    <transfer-panel v-model:transfer-loading="transferLoading" v-model:transfer-target-unionid="transferTargetUnionid" v-model:transfer-accept-id="transferAcceptId" :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />
+    <transfer-panel v-model:transfer-loading="transferLoading" v-model:transfer-target-phone="transferTargetPhone" v-model:transfer-accept-id="transferAcceptId" :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />
     <share-panel v-model:share-loading="shareLoading" v-model:share-permission="sharePermission" v-model:share-expiry="shareExpiry" :shares="shares" @create-share="handleCreateShare" @revoke-share="handleRevokeShare" />
     <voice-approval v-model:voice-approval-loading="voiceApprovalLoading" :pending-voice-tasks="pendingVoiceTasks" :pending-voice-approval-count="pendingVoiceApprovalCount" :pending-voice-approval-badge-text="pendingVoiceApprovalBadgeText" :voiceprint-approval-label="voiceprintApprovalLabel" :voiceprint-reenroll-required="voiceprintReenrollRequired" :voiceprint-has-unknown-speaker="voiceprintHasUnknownSpeaker" @refresh-voice-tasks="loadPendingVoiceTasks" @approve="handleApproveVoiceTask" @reject="handleRejectVoiceTask" />
 

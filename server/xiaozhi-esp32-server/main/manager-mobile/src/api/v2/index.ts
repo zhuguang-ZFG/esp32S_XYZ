@@ -177,7 +177,7 @@ export async function v2UpdateDeviceSupplies(deviceId: string, request: V2Device
 export function v2RequestDeviceTransfer(deviceId: string, request: V2DeviceTransferRequest) {
   return http.Post<V2DeviceTransferResponse>(
     `${appPrefix}/devices/${deviceId}/transfer`,
-    { toPhone: request.targetUnionid, reason: 'manager-mobile transfer request' },
+    { toPhone: request.targetPhone, reason: 'manager-mobile transfer request' },
     { meta: { ignoreAuth: false, toast: false } },
   ).then(toTransferResponse)
 }

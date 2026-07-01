@@ -13,7 +13,7 @@ const emit = defineEmits<{
   acceptTransfer: []
 }>()
 const transferLoading = defineModel<boolean>('transferLoading', { default: false })
-const transferTargetUnionid = defineModel<string>('transferTargetUnionid', { default: '' })
+const transferTargetPhone = defineModel<string>('transferTargetPhone', { default: '' })
 const transferAcceptId = defineModel<string>('transferAcceptId', { default: '' })
 </script>
 
@@ -26,10 +26,11 @@ const transferAcceptId = defineModel<string>('transferAcceptId', { default: '' }
       {{ transferStateLabel }}
     </text>
     <wd-input
-      v-model="transferTargetUnionid"
+      v-model="transferTargetPhone"
       clearable
-      :maxlength="80"
-      :placeholder="t('v2.detail.targetUnionid')"
+      type="number"
+      :maxlength="11"
+      :placeholder="t('v2.detail.targetPhone')"
       custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mt-[16rpx] !mb-[12rpx]"
     />
     <wd-input

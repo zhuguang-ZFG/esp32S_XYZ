@@ -132,20 +132,6 @@ async function saveServerBaseUrl() {
     return
   }
   setServerBaseUrlOverride(baseUrlInput.value)
-  // 处理config缓存无法更新的问题
-  uni.request({
-    url: `${getEnvBaseUrl()}/user/pub-config`,
-    method: 'GET',
-    success: (res: any) => {
-      if (res.statusCode === 200) {
-        configStore.setConfig(res.data.data)
-        uni.setStorageSync('config', res.data.data)
-      }
-    },
-    fail: (err) => {
-      console.error('获取SM2公钥失败:', err)
-    },
-  })
 
   // 切换请求地址后清空所有缓存
   clearAllCacheAfterUrlChange()
