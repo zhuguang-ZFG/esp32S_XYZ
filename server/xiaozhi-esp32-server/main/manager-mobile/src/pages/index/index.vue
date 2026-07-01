@@ -3,7 +3,7 @@
   "layout": "tabbar",
   "style": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "LiMa 工坊"
+    "navigationBarTitleText": "LiMa"
   }
 }
 </route>
@@ -12,7 +12,7 @@
 import type { V2DeviceInfo, V2TaskInfo } from '@/api/v2/types'
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
-import { v2GetDevices, v2GetTask, v2ListTasks } from '@/api/v2'
+import { v2GetDevices, v2ListTasks } from '@/api/v2'
 import { t } from '@/i18n'
 
 defineOptions({ name: 'WorkshopHome' })
@@ -39,7 +39,6 @@ async function loadData() {
   try {
     const res = await v2GetDevices()
     devices.value = res.rows || []
-    // 加载最近任务
     if (primaryDevice.value) {
       try {
         const taskRes = await v2ListTasks(primaryDevice.value.deviceId, '', 3)
@@ -110,10 +109,10 @@ function taskProgress(status: string): number {
 </script>
 
 <template>
-  <view class="workshop-home workshop-bg page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
-    <!-- 标题栏 -->
+  <view class="home page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
+    <!-- 顶部标题（纯文字，无装饰） -->
     <view class="home-header">
-      <text class="home-title neon-text">
+      <text class="home-title">
         {{ t('workshop.title') }}
       </text>
       <text class="home-subtitle">
@@ -121,56 +120,52 @@ function taskProgress(status: string): number {
       </text>
     </view>
 
-    <!-- ══ 设备遥测面板 ══ -->
+    <!-- ══ 设备状态卡（数据为核心）══ -->
     <view class="section">
-      <view v-if="primaryDevice" class="telemetry-panel workshop-panel" @click="goDeviceDetail(primaryDevice.deviceId)">
-        <!-- 面板头部 -->
-        <view class="panel-header">
-          <view class="panel-title-row">
-            <text class="panel-title">
-              ◢ {{ t('workshop.status') }}
+      <view v-if="primaryDevice" class="device-hero workshop-panel" @click="goDeviceDetail(primaryDevice.deviceId)">
+        <!-- 状态行：点灯 + 名称 -->
+        <view class="hero-top">
+          <view class="hero-status">
+            <view class="pulse-dot" :class="primaryDevice.status === 'online' ? 'online' : 'offline'" />
+            <text class="hero-status-text" :class="{ online: primaryDevice.status === 'online' }">
+              {{ primaryDevice.status === 'online' ? t('workshop.online') : t('workshop.offline') }}
             </text>
-            <view class="panel-status">
-              <view class="pulse-dot" :class="{ offline: primaryDevice.status !== 'online' }" />
-              <text class="panel-status-text" :class="{ online: primaryDevice.status === 'online' }">
-                {{ primaryDevice.status === 'online' ? t('workshop.online') : t('workshop.offline') }}
-              </text>
-            </view>
           </view>
-          <text class="panel-device-name">
+          <text class="hero-model">
             {{ primaryDevice.model || t('workshop.device') }}
           </text>
         </view>
 
-        <!-- 遥测数据网格 -->
-        <view class="telemetry-grid">
-          <view class="telemetry-item">
-            <text class="telemetry-label">{{ t('workshop.workspace') }}</text>
-            <text class="telemetry-value">
-              {{ primaryDevice.workspaceMm?.x || 0 }} × {{ primaryDevice.workspaceMm?.y || 0 }} mm
-            </text>
-          </view>
-          <view class="telemetry-item">
-            <text class="telemetry-label">{{ t('workshop.firmware') }}</text>
-            <text class="telemetry-value">v{{ primaryDevice.fwRev || '—' }}</text>
-          </view>
-          <view class="telemetry-item">
-            <text class="telemetry-label">{{ t('workshop.deviceId') }}</text>
-            <text class="telemetry-value mono">{{ primaryDevice.deviceId.slice(0, 12) }}</text>
-          </view>
-          <view class="telemetry-item">
-            <text class="telemetry-label">{{ t('workshop.devices') }}</text>
-            <text class="telemetry-value">{{ devices.length }} {{ t('workshop.units') }}</text>
-          </view>
+        <!-- 大数字：工作幅面（唯一的 hero number） -->
+        <view class="hero-metric">
+          <text class="metric-value">
+            {{ primaryDevice.workspaceMm?.x || 0 }}<text class="metric-x">×</text>{{ primaryDevice.workspaceMm?.y || 0 }}
+          </text>
+          <text class="metric-unit">mm 工作幅面</text>
         </view>
 
-        <!-- 扫描线装饰（在线时） -->
-        <view v-if="primaryDevice.status === 'online'" class="panel-scan-line scan-line" />
+        <!-- 次要数据行（中性色，不抢眼） -->
+        <view class="hero-sub">
+          <view class="sub-item">
+            <text class="sub-label">固件</text>
+            <text class="sub-value">v{{ primaryDevice.fwRev || '—' }}</text>
+          </view>
+          <view class="sub-divider" />
+          <view class="sub-item">
+            <text class="sub-label">设备</text>
+            <text class="sub-value">{{ devices.length }} 台</text>
+          </view>
+          <view class="sub-divider" />
+          <view class="sub-item">
+            <text class="sub-label">编号</text>
+            <text class="sub-value mono">{{ primaryDevice.deviceId.slice(0, 8) }}</text>
+          </view>
+        </view>
       </view>
 
       <!-- 无设备状态 -->
-      <view v-else-if="!loading" class="empty-panel workshop-panel" @click="goDevices">
-        <text class="empty-icon">📡</text>
+      <view v-else-if="!loading" class="empty-hero workshop-panel" @click="goDevices">
+        <text class="empty-icon">＋</text>
         <text class="empty-text">{{ t('workshop.noDevices') }}</text>
         <text class="empty-hint">{{ t('workshop.addDeviceHint') }}</text>
       </view>
@@ -178,8 +173,8 @@ function taskProgress(status: string): number {
 
     <!-- ══ AI 创作入口 ══ -->
     <view class="section">
-      <text class="section-title neon-text">
-        ◢ {{ t('workshop.aiCreate') }}
+      <text class="section-title">
+        {{ t('workshop.aiCreate') }}
       </text>
       <view class="create-grid">
         <view class="create-card workshop-panel-interactive" @click="goDraw">
@@ -217,7 +212,7 @@ function taskProgress(status: string): number {
         </view>
         <view class="create-card workshop-panel-interactive" @click="goDigitalHuman">
           <view class="create-icon human">
-            <text> humanoid</text>
+            <text>◉</text>
           </view>
           <text class="create-name">
             {{ t('workshop.digitalHuman') }}
@@ -232,11 +227,11 @@ function taskProgress(status: string): number {
     <!-- ══ 最近任务 ══ -->
     <view v-if="recentTasks.length" class="section">
       <view class="section-header">
-        <text class="section-title neon-text">
-          ◢ {{ t('workshop.recentTasks') }}
+        <text class="section-title">
+          {{ t('workshop.recentTasks') }}
         </text>
         <text class="section-more" @click="goDeviceDetail(primaryDevice?.deviceId || '')">
-          {{ t('workshop.viewAll') }} →
+          {{ t('workshop.viewAll') }}
         </text>
       </view>
       <view class="task-list">
@@ -249,7 +244,6 @@ function taskProgress(status: string): number {
               {{ taskStatusLabel(task.status) }}
             </text>
           </view>
-          <!-- 进度轨道 -->
           <view class="task-track">
             <view class="task-track-fill" :style="{ width: `${taskProgress(task.status)}%`, background: taskStatusColor(task.status) }" />
           </view>
@@ -261,11 +255,11 @@ function taskProgress(status: string): number {
     <view class="section">
       <view class="quick-row">
         <view class="quick-btn workshop-panel-interactive" @click="goDevices">
-          <text class="quick-icon">📡</text>
+          <text class="quick-icon">▣</text>
           <text class="quick-text">{{ t('workshop.myDevices') }}</text>
         </view>
         <view class="quick-btn workshop-panel-interactive" @click="goConfig">
-          <text class="quick-icon">📶</text>
+          <text class="quick-icon">⌗</text>
           <text class="quick-text">{{ t('workshop.config') }}</text>
         </view>
         <view class="quick-btn workshop-panel-interactive" @click="goSettings">
@@ -280,21 +274,21 @@ function taskProgress(status: string): number {
 </template>
 
 <style lang="scss" scoped>
-.workshop-home {
+.home {
   min-height: 100vh;
-  position: relative;
-  z-index: 1;
+  background: var(--bg);
 }
 
-// ── 标题栏 ──
+// ── 标题栏（克制：纯白标题 + 灰副标）──
 .home-header {
-  padding: 32rpx;
+  padding: 32rpx 32rpx 24rpx;
 }
 .home-title {
   display: block;
-  font-size: 48rpx;
-  font-weight: 800;
-  letter-spacing: 2rpx;
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 1rpx;
 }
 .home-subtitle {
   display: block;
@@ -306,106 +300,117 @@ function taskProgress(status: string): number {
 // ── 分区 ──
 .section {
   padding: 0 24rpx;
-  margin-bottom: 32rpx;
+  margin-bottom: 36rpx;
 }
 .section-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   margin-bottom: 16rpx;
 }
 .section-title {
   display: block;
-  font-size: 28rpx;
-  font-weight: 700;
-  margin-bottom: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 20rpx;
 }
 .section-more {
   font-size: 24rpx;
-  color: var(--accent);
+  color: var(--muted);
 }
 
-// ── 遥测面板 ──
-.telemetry-panel {
-  padding: 28rpx;
+// ── 设备状态 Hero 卡（数据为核心）──
+.device-hero {
+  padding: 32rpx 28rpx;
 }
-.panel-header {
-  margin-bottom: 20rpx;
-}
-.panel-title-row {
+.hero-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 28rpx;
 }
-.panel-title {
-  font-size: 26rpx;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: 2rpx;
-}
-.panel-status {
+.hero-status {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 10rpx;
 }
-.panel-status-text {
+.hero-status-text {
   font-size: 24rpx;
   color: var(--dim);
-  &.online { color: var(--accent); }
+  &.online { color: var(--green); font-weight: 600; }
 }
-.panel-device-name {
-  display: block;
-  font-size: 36rpx;
-  font-weight: 700;
-  color: var(--text);
-  margin-top: 8rpx;
+.hero-model {
+  font-size: 26rpx;
+  color: var(--muted);
+  font-weight: 500;
 }
 
-// ── 遥测数据网格 ──
-.telemetry-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16rpx;
+// hero 大数字（全页唯一的视觉焦点）
+.hero-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin-bottom: 28rpx;
 }
-.telemetry-item {
-  background: rgba(0, 255, 170, 0.03);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 16rpx 20rpx;
+.metric-value {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -1rpx;
+}
+.metric-x {
+  font-size: 48rpx;
+  color: var(--dim);
+  font-weight: 400;
+  margin: 0 4rpx;
+}
+.metric-unit {
+  font-size: 24rpx;
+  color: var(--muted);
+}
+
+// 次要数据行
+.hero-sub {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid var(--border);
+}
+.sub-item {
   display: flex;
   flex-direction: column;
   gap: 4rpx;
 }
-.telemetry-label {
+.sub-label {
   font-size: 20rpx;
   color: var(--dim);
-  text-transform: uppercase;
-  letter-spacing: 1rpx;
 }
-.telemetry-value {
+.sub-value {
   font-size: 26rpx;
   color: var(--text);
-  font-weight: 600;
-  &.mono { font-family: monospace; }
+  font-weight: 500;
+  &.mono { font-family: monospace; font-size: 24rpx; }
+}
+.sub-divider {
+  width: 1rpx;
+  height: 40rpx;
+  background: var(--border);
 }
 
-.panel-scan-line {
-  height: 2rpx;
-  margin-top: 16rpx;
-  border-radius: 1rpx;
-}
-
-// ── 空面板 ──
-.empty-panel {
-  padding: 48rpx 28rpx;
+// ── 空状态 ──
+.empty-hero {
+  padding: 64rpx 28rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12rpx;
 }
-.empty-icon { font-size: 64rpx; }
-.empty-text { font-size: 28rpx; color: var(--muted); }
-.empty-hint { font-size: 22rpx; color: var(--dim); }
+.empty-icon { font-size: 56rpx; color: var(--dim); }
+.empty-text { font-size: 28rpx; color: var(--text); }
+.empty-hint { font-size: 22rpx; color: var(--muted); }
 
 // ── AI 创作卡片 ──
 .create-grid {
@@ -414,7 +419,7 @@ function taskProgress(status: string): number {
   gap: 16rpx;
 }
 .create-card {
-  padding: 24rpx;
+  padding: 28rpx;
   display: flex;
   flex-direction: column;
   gap: 10rpx;
@@ -428,15 +433,16 @@ function taskProgress(status: string): number {
   align-items: center;
   justify-content: center;
   font-size: 28rpx;
-  margin-bottom: 4rpx;
-  &.draw { background: rgba(0, 255, 170, 0.12); color: var(--accent); }
-  &.write { background: rgba(0, 212, 255, 0.12); color: var(--accent2); }
-  &.chat { background: rgba(139, 92, 246, 0.12); color: var(--violet); }
-  &.human { background: rgba(255, 184, 0, 0.12); color: var(--amber); }
+  margin-bottom: 6rpx;
+  // 图标底色保持低饱和
+  &.draw { background: var(--accent-g); color: var(--accent); }
+  &.write { background: var(--cyan-g); color: var(--cyan); }
+  &.chat { background: var(--violet-g); color: var(--violet); }
+  &.human { background: var(--amber-g); color: var(--amber); }
 }
 .create-name {
   font-size: 28rpx;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
 }
 .create-desc {
@@ -452,18 +458,18 @@ function taskProgress(status: string): number {
   gap: 12rpx;
 }
 .task-item {
-  padding: 20rpx 24rpx;
+  padding: 24rpx 28rpx;
 }
 .task-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12rpx;
+  margin-bottom: 14rpx;
 }
 .task-cap {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 500;
 }
 .task-status-text {
   font-size: 22rpx;
@@ -471,7 +477,7 @@ function taskProgress(status: string): number {
 }
 .task-track {
   height: 4rpx;
-  background: rgba(0, 255, 170, 0.06);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 2rpx;
   overflow: hidden;
 }
@@ -491,9 +497,9 @@ function taskProgress(status: string): number {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10rpx;
-  padding: 24rpx 0;
+  gap: 12rpx;
+  padding: 28rpx 0;
 }
-.quick-icon { font-size: 36rpx; }
+.quick-icon { font-size: 36rpx; color: var(--muted); }
 .quick-text { font-size: 22rpx; color: var(--muted); }
 </style>

@@ -393,7 +393,7 @@ defineExpose({
   <view class="voiceprint-container page-enter" style="background: var(--bg); min-height: 100%;">
     <!-- 加载状态 -->
     <view v-if="loading && voicePrintList.length === 0" class="loading-container">
-      <wd-loading color="#3b82f6" />
+      <wd-loading color="#2dd4a7" />
       <text class="loading-text">
         {{ t('voiceprint.loading') }}
       </text>
@@ -479,7 +479,7 @@ defineExpose({
           </text>
           <picker mode="selector" :range="memberPickerRange" @change="onMemberChange">
             <view
-              class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] transition-all duration-300 active:bg-[#0a0a14]"
+              class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#14181f] p-[20rpx] transition-all duration-300 active:bg-[#14181f]"
             >
               <text
                 class="m-r-[16rpx] flex-1 text-left text-[26rpx] text-[var(--text)]"
@@ -501,7 +501,7 @@ defineExpose({
             {{ t('voiceprint.voiceVector') }}
           </text>
           <view
-            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] transition-all duration-300 active:bg-[#0a0a14]"
+            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#14181f] p-[20rpx] transition-all duration-300 active:bg-[#14181f]"
             @click="showChatHistoryDialog = true"
           >
             <text
@@ -524,7 +524,7 @@ defineExpose({
           </text>
           <input
             v-model="addForm.sourceName"
-            class="box-border h-[80rpx] w-full border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[16rpx_20rpx] text-[28rpx] text-[var(--text)] leading-[1.4] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
+            class="box-border h-[80rpx] w-full border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#14181f] p-[16rpx_20rpx] text-[28rpx] text-[var(--text)] leading-[1.4] outline-none focus:border-[#2dd4a7] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
             type="text" :placeholder="t('voiceprint.pleaseInputName')"
           >
         </view>
@@ -539,7 +539,7 @@ defineExpose({
           </text>
           <textarea
             v-model="addForm.introduce" :maxlength="100" :placeholder="t('voiceprint.pleaseInputDescription')"
-            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] text-[26rpx] text-[var(--text)] leading-[1.6] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
+            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#14181f] p-[20rpx] text-[26rpx] text-[var(--text)] leading-[1.6] outline-none focus:border-[#2dd4a7] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
           />
           <view class="mt-[8rpx] text-right text-[22rpx] text-[var(--dim)]">
             {{ (addForm.introduce || '').length }}/100
@@ -580,7 +580,7 @@ defineExpose({
             {{ t('voiceprint.voiceVector') }}
           </text>
           <view
-            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] transition-all duration-300 active:bg-[#0a0a14]"
+            class="flex cursor-pointer items-center justify-between border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#14181f] p-[20rpx] transition-all duration-300 active:bg-[#14181f]"
             @click="showChatHistoryDialog = true"
           >
             <text
@@ -603,7 +603,7 @@ defineExpose({
           </text>
           <input
             v-model="editForm.sourceName"
-            class="box-border h-[80rpx] w-full border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[16rpx_20rpx] text-[28rpx] text-[var(--text)] leading-[1.4] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
+            class="box-border h-[80rpx] w-full border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#14181f] p-[16rpx_20rpx] text-[28rpx] text-[var(--text)] leading-[1.4] outline-none focus:border-[#2dd4a7] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
             type="text" :placeholder="t('voiceprint.pleaseInputName')"
           >
         </view>
@@ -618,7 +618,7 @@ defineExpose({
           </text>
           <textarea
             v-model="editForm.introduce" :maxlength="100" :placeholder="t('voiceprint.pleaseInputDescription')"
-            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#0a0a14] p-[20rpx] text-[26rpx] text-[var(--text)] leading-[1.6] outline-none focus:border-[#3b82f6] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
+            class="box-border h-[200rpx] w-full resize-none border-[1rpx] border-[var(--border)] rounded-[12rpx] bg-[#14181f] p-[20rpx] text-[26rpx] text-[var(--text)] leading-[1.6] outline-none focus:border-[#2dd4a7] focus:bg-[var(--surface)] placeholder:text-[var(--dim)]"
           />
           <view class="mt-[8rpx] text-right text-[22rpx] text-[var(--dim)]">
             {{ (editForm.introduce || '').length }}/100
@@ -644,7 +644,7 @@ defineExpose({
         <view
           v-for="item in chatHistoryActions"
           :key="item.audioId"
-          class="flex items-center justify-between border-b border-[var(--border)] p-[32rpx] transition-all active:bg-[#0a0a14]"
+          class="flex items-center justify-between border-b border-[var(--border)] p-[32rpx] transition-all active:bg-[#14181f]"
           @click="handleItemClick(item)"
         >
           <text class="flex-1 text-[28rpx] text-[var(--text)]">
@@ -654,7 +654,7 @@ defineExpose({
             <wd-icon
               :name="playingAudioId === item.audioId ? 'pause-circle' : 'play-circle'"
               size="24px"
-              :custom-class="playingAudioId === item.audioId ? 'text-[#3b82f6]' : 'text-[var(--dim)]'"
+              :custom-class="playingAudioId === item.audioId ? 'text-[#2dd4a7]' : 'text-[var(--dim)]'"
             />
           </view>
         </view>

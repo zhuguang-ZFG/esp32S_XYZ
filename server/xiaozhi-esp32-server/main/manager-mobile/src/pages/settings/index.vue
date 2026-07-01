@@ -445,7 +445,7 @@ onMounted(async () => {
           </view>
 
           <view class="mb-[24rpx]">
-            <view class="w-full overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[16rpx]" style="background: #0a0a14;">
+            <view class="w-full overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[16rpx]" style="background: #14181f;">
               <wd-input
                 v-model="baseUrlInput" type="text" clearable :maxlength="200"
                 :placeholder="t('settings.enterServerUrl')"
@@ -493,7 +493,7 @@ onMounted(async () => {
             <!-- 缓存信息展示，参考插件样式 -->
             <view
               class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-              style="background: #0a0a14;"
+              style="background: #14181f;"
             >
               <view>
                 <text class="text-[28rpx] text-[#f0f4f8] font-medium">
@@ -511,7 +511,7 @@ onMounted(async () => {
             <!-- 清除缓存按钮，参考插件编辑按钮样式 -->
             <view
               class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-              style="background: #0a0a14;"
+              style="background: #14181f;"
             >
               <view>
                 <text class="text-[28rpx] text-[#f0f4f8] font-medium">
@@ -547,7 +547,7 @@ onMounted(async () => {
         >
           <view
             class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #0a0a14;"
+            style="background: #14181f;"
             @click="openPrivacyPermissions"
           >
             <view>
@@ -577,7 +577,7 @@ onMounted(async () => {
         >
           <view
             class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #0a0a14;"
+            style="background: #14181f;"
           >
             <view>
               <text class="text-[28rpx] text-[#f0f4f8] font-medium">
@@ -642,7 +642,7 @@ onMounted(async () => {
         >
           <view
             class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #0a0a14;"
+            style="background: #14181f;"
             @click="showAbout"
           >
             <view>
@@ -672,7 +672,7 @@ onMounted(async () => {
         >
           <view
             class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #0a0a14;"
+            style="background: #14181f;"
             @click="showLanguageSheet = true"
           >
             <view>

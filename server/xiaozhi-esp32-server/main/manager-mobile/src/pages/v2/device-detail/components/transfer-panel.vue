@@ -31,14 +31,14 @@ const transferAcceptId = defineModel<string>('transferAcceptId', { default: '' }
       type="number"
       :maxlength="11"
       :placeholder="t('v2.detail.targetPhone')"
-      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mt-[16rpx] !mb-[12rpx]"
+      custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mt-[16rpx] !mb-[12rpx]"
     />
     <wd-input
       v-model="transferAcceptId"
       clearable
       type="number"
       placeholder="transferId"
-      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <view class="transfer-actions">
       <wd-button type="primary" round size="small" :loading="transferLoading" @click="emit('requestTransfer')">

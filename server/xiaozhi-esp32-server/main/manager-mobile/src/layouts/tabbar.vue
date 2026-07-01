@@ -3,9 +3,9 @@ import type { ConfigProviderThemeVars } from 'wot-design-uni/components/wd-confi
 import FgTabbar from './fg-tabbar/fg-tabbar.vue'
 
 const themeVars: ConfigProviderThemeVars = {
-  colorTheme: '#3b82f6',
-  buttonPrimaryBgColor: '#3b82f6',
-  buttonPrimaryColor: '#3b82f6',
+  colorTheme: '#2dd4a7',
+  buttonPrimaryBgColor: '#2dd4a7',
+  buttonPrimaryColor: '#2dd4a7',
 }
 </script>
 

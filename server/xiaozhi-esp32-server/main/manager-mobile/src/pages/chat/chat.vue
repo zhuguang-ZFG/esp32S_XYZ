@@ -393,14 +393,15 @@ function clearHistory() {
   &.user {
     justify-content: flex-end;
     .msg-bubble {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      background: var(--accent);
       border-bottom-right-radius: 4rpx;
     }
     .msg-content {
-      color: #fff;
+      color: #0b0e13;
+      font-weight: 500;
     }
     .msg-time {
-      color: rgba(255, 255, 255, 0.6);
+      color: rgba(11, 14, 19, 0.5);
     }
   }
 
@@ -409,8 +410,6 @@ function clearHistory() {
     .msg-bubble {
       background: var(--surface);
       border: 1rpx solid var(--border);
-      backdrop-filter: blur(24rpx);
-      box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
       border-bottom-left-radius: 4rpx;
     }
   }
@@ -464,7 +463,7 @@ function clearHistory() {
   }
 
   :deep(.inline-code) {
-    background: rgba(0, 255, 170, 0.15);
+    background: var(--accent-g);
     padding: 2rpx 10rpx;
     border-radius: 6rpx;
     color: var(--accent);
@@ -531,7 +530,7 @@ function clearHistory() {
     font-size: 22rpx;
     color: var(--accent);
     padding: 12rpx 20rpx;
-    background: rgba(0, 255, 170, 0.12);
+    background: var(--accent-g);
     border-radius: 8rpx;
 
     &:active {
@@ -542,10 +541,10 @@ function clearHistory() {
 
 /* 错误消息样式 */
 .msg-error .msg-bubble {
-  border-color: rgba(239, 68, 68, 0.3) !important;
-  background: rgba(239, 68, 68, 0.06) !important;
+  border-color: rgba(248, 113, 113, 0.3) !important;
+  background: var(--danger-g) !important;
   .msg-rich-text {
-    color: #f87171 !important;
+    color: var(--danger) !important;
   }
 }
 
@@ -603,17 +602,14 @@ function clearHistory() {
   height: 88rpx;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 16rpx rgba(0, 255, 170, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   &:active {
     opacity: 0.8;
-    box-shadow: 0 0 8rpx rgba(0, 255, 170, 0.2);
   }
   &.disabled {
     opacity: 0.4;
-    box-shadow: none;
   }
 }
 
@@ -621,7 +617,7 @@ function clearHistory() {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: #ff4d6d;
+  background: var(--danger);
   display: flex;
   align-items: center;
   justify-content: center;

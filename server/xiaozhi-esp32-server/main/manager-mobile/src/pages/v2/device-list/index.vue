@@ -167,7 +167,7 @@ function deviceIconName(model?: string) {
       <view v-for="d in devices" :key="d.deviceId" class="bento-card device-card" @click="openDevice(d.deviceId)">
         <view class="device-card-header">
           <view class="device-icon-wrap">
-            <wd-icon :name="deviceIconName(d.model)" size="24" color="#00ffaa" />
+            <wd-icon :name="deviceIconName(d.model)" size="24" color="var(--muted)" />
           </view>
           <wd-tag :type="d.status === 'online' ? 'success' : 'default'" size="small" round>
             {{ d.status === 'online' ? t('v2.deviceList.online') : t('v2.deviceList.offline') }}
@@ -184,25 +184,25 @@ function deviceIconName(model?: string) {
         <!-- Quick Controls -->
         <view class="device-controls" @click.stop>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-draw`] }" @click="quickControl(d.deviceId, 'draw')">
-            <wd-icon name="photo" size="20" color="#00ffaa" />
+            <wd-icon name="photo" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickDraw') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-write`] }" @click="quickControl(d.deviceId, 'write')">
-            <wd-icon name="edit-2" size="20" color="#00ffaa" />
+            <wd-icon name="edit-2" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickWrite') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-home`] }" @click="quickControl(d.deviceId, 'home')">
-            <wd-icon name="home" size="20" color="#00ffaa" />
+            <wd-icon name="home" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickHome') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-pause`] }" @click="quickControl(d.deviceId, 'pause')">
-            <wd-icon name="pause-circle" size="20" color="#00ffaa" />
+            <wd-icon name="pause-circle" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickPause') }}
             </text>
@@ -247,13 +247,10 @@ function deviceIconName(model?: string) {
 }
 
 .bento-card {
-  background: var(--bg2);
+  background: var(--surface);
   border: 1rpx solid var(--border);
   border-radius: var(--r);
   padding: 28rpx;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.3);
 }
 
 .bento-title {
@@ -335,8 +332,7 @@ function deviceIconName(model?: string) {
   width: 64rpx;
   height: 64rpx;
   border-radius: 18rpx;
-  background: rgba(0, 255, 170, 0.1);
-  border: 1rpx solid rgba(0, 255, 170, 0.12);
+  background: var(--surface-h);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -370,13 +366,11 @@ function deviceIconName(model?: string) {
   align-items: center;
   gap: 8rpx;
   padding: 16rpx 0;
-  background: rgba(0, 255, 170, 0.03);
-  border: 1rpx solid var(--border);
+  background: var(--bg);
   border-radius: 16rpx;
   transition: all 0.15s;
   &:active:not(.disabled) {
-    background: rgba(0, 255, 170, 0.12);
-    border-color: var(--accent);
+    background: var(--surface-h);
   }
   &.disabled {
     opacity: 0.3;

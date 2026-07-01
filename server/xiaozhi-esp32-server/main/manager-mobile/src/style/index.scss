@@ -1,92 +1,93 @@
-// LiMa 工坊 — 全局科技工坊主题变量
+// LiMa — 克制霓虹全局主题
+// 原则：95% 干净深色，霓虹只点在关键数字/状态灯上，大面积留白
 :root,
 page {
-  // ── 基底色 ──
-  --bg: #050810;
-  --bg2: #0a1018;
-  --surface: rgba(255, 255, 255, 0.025);
-  --surface-h: rgba(255, 255, 255, 0.05);
-  --glass: rgba(255, 255, 255, 0.02);
+  // ── 基底色（纯色深底，非透明叠加，避免脏）──
+  --bg: #0b0e13;
+  --bg2: #14181f;
+  --surface: #181c24;
+  --surface-h: #1e232c;
+  --glass: #14181f;
 
-  // ── 主色：霓虹青绿 ──
-  --accent: #00ffaa;
-  --accent2: #00d4ff;
-  --accent-g: rgba(0, 255, 170, 0.12);
-  --accent-glow: rgba(0, 255, 170, 0.4);
+  // ── 主色：霓虹青绿（仅强调用）──
+  --accent: #2dd4a7;
+  --accent2: #38bdf8;
+  --accent-g: rgba(45, 212, 167, 0.1);
+  --accent-glow: rgba(45, 212, 167, 0.25);
 
   // ── 语义色 ──
-  --cyan: #00d4ff;
-  --cyan-g: rgba(0, 212, 255, 0.1);
-  --violet: #8b5cf6;
-  --violet-g: rgba(139, 92, 246, 0.08);
-  --amber: #ffb800;
-  --amber-g: rgba(255, 184, 0, 0.08);
-  --green: #34d399;
-  --green-g: rgba(52, 211, 153, 0.1);
-  --danger: #ff4d6d;
-  --danger-g: rgba(255, 77, 109, 0.08);
+  --cyan: #38bdf8;
+  --cyan-g: rgba(56, 189, 248, 0.08);
+  --violet: #a78bfa;
+  --violet-g: rgba(167, 139, 250, 0.06);
+  --amber: #fbbf24;
+  --amber-g: rgba(251, 191, 36, 0.08);
+  --green: #4ade80;
+  --green-g: rgba(74, 222, 128, 0.08);
+  --danger: #f87171;
+  --danger-g: rgba(248, 113, 113, 0.08);
 
-  // ── 文字 ──
-  --text: #e8f0f5;
-  --muted: #7a8896;
-  --dim: #4a5662;
-  --faint: #2a3340;
+  // ── 文字（高对比）──
+  --text: #f0f2f5;
+  --muted: #8b95a3;
+  --dim: #5a6470;
+  --faint: #2d3340;
 
-  // ── 边框（带青色调）──
-  --border: rgba(0, 255, 170, 0.08);
-  --border-h: rgba(0, 255, 170, 0.15);
+  // ── 边框（中性灰，非青色）──
+  --border: rgba(255, 255, 255, 0.06);
+  --border-h: rgba(255, 255, 255, 0.12);
 
   // ── 圆角 ──
   --r: 24rpx;
   --r-sm: 16rpx;
 
   // ── wot-design-uni 主题覆盖 ──
-  --wot-color-theme: #00ffaa;
-  --wot-button-primary-bg-color: #00ffaa;
-  --wot-navbar-title-color: #e8f0f5;
-  --wot-navbar-bg: #050810;
-  --wot-cell-bg: #0a1018;
-  --wot-cell-border-color: rgba(0, 255, 170, 0.06);
-  --wot-cell-title-color: #e8f0f5;
-  --wot-cell-label-color: #4a5662;
-  --wot-input-bg: #0a1018;
-  --wot-input-color: #e8f0f5;
-  --wot-input-placeholder-color: #4a5662;
-  --wot-popup-bg: #0a1018;
-  --wot-popup-title-color: #e8f0f5;
-  --wot-tag-primary-bg-color: rgba(0, 255, 170, 0.12);
-  --wot-tag-primary-color: #00ffaa;
-  --wot-tag-success-bg-color: rgba(52, 211, 153, 0.12);
-  --wot-tag-success-color: #34d399;
-  --wot-tag-warning-bg-color: rgba(255, 184, 0, 0.12);
-  --wot-tag-warning-color: #ffb800;
+  --wot-color-theme: #2dd4a7;
+  --wot-button-primary-bg-color: #2dd4a7;
+  --wot-navbar-title-color: #f0f2f5;
+  --wot-navbar-bg: #0b0e13;
+  --wot-cell-bg: #14181f;
+  --wot-cell-border-color: rgba(255, 255, 255, 0.05);
+  --wot-cell-title-color: #f0f2f5;
+  --wot-cell-label-color: #5a6470;
+  --wot-input-bg: #14181f;
+  --wot-input-color: #f0f2f5;
+  --wot-input-placeholder-color: #5a6470;
+  --wot-popup-bg: #14181f;
+  --wot-popup-title-color: #f0f2f5;
+  --wot-tag-primary-bg-color: rgba(45, 212, 167, 0.1);
+  --wot-tag-primary-color: #2dd4a7;
+  --wot-tag-success-bg-color: rgba(74, 222, 128, 0.1);
+  --wot-tag-success-color: #4ade80;
+  --wot-tag-warning-bg-color: rgba(251, 191, 36, 0.1);
+  --wot-tag-warning-color: #fbbf24;
   --wot-tag-default-bg-color: rgba(255, 255, 255, 0.04);
-  --wot-tag-default-color: #4a5662;
-  --wot-action-sheet-bg: #0a1018;
-  --wot-action-sheet-title-color: #e8f0f5;
-  --wot-action-sheet-item-color: #e8f0f5;
-  --wot-action-sheet-item-active-color: #00ffaa;
-  --wot-toast-bg: rgba(10, 16, 24, 0.9);
-  --wot-toast-color: #e8f0f5;
-  --wot-message-box-bg: #0a1018;
-  --wot-message-box-title-color: #e8f0f5;
-  --wot-message-box-content-color: #7a8896;
-  --wot-message-box-confirm-button-color: #00ffaa;
-  --wot-fab-bg: #00ffaa;
-  --wot-fab-color: #050810;
-  --wot-status-tip-color: #4a5662;
-  --wot-swipe-action-delete-bg: #ff4d6d;
-  --wot-icon-color: #7a8896;
-  --wot-loading-color: #00ffaa;
-  --wot-switch-on-color: #00ffaa;
-  --wot-switch-off-color: #2a3340;
-  --wot-radio-checked-color: #00ffaa;
-  --wot-checkbox-checked-color: #00ffaa;
-  --wot-slider-active-color: #00ffaa;
-  --wot-divider-color: rgba(0, 255, 170, 0.06);
-  --wot-collapse-item-title-color: #e8f0f5;
-  --wot-collapse-item-content-color: #7a8896;
-  --wot-collapse-item-bg: #0a1018;
+  --wot-tag-default-color: #5a6470;
+  --wot-action-sheet-bg: #14181f;
+  --wot-action-sheet-title-color: #f0f2f5;
+  --wot-action-sheet-item-color: #f0f2f5;
+  --wot-action-sheet-item-active-color: #2dd4a7;
+  --wot-toast-bg: rgba(20, 24, 31, 0.92);
+  --wot-toast-color: #f0f2f5;
+  --wot-message-box-bg: #14181f;
+  --wot-message-box-title-color: #f0f2f5;
+  --wot-message-box-content-color: #8b95a3;
+  --wot-message-box-confirm-button-color: #2dd4a7;
+  --wot-fab-bg: #2dd4a7;
+  --wot-fab-color: #0b0e13;
+  --wot-status-tip-color: #5a6470;
+  --wot-swipe-action-delete-bg: #f87171;
+  --wot-icon-color: #8b95a3;
+  --wot-loading-color: #2dd4a7;
+  --wot-switch-on-color: #2dd4a7;
+  --wot-switch-off-color: #2d3340;
+  --wot-radio-checked-color: #2dd4a7;
+  --wot-checkbox-checked-color: #2dd4a7;
+  --wot-slider-active-color: #2dd4a7;
+  --wot-divider-color: rgba(255, 255, 255, 0.05);
+  --wot-collapse-item-title-color: #f0f2f5;
+  --wot-collapse-item-content-color: #8b95a3;
+  --wot-collapse-item-bg: #14181f;
 
   background: var(--bg);
   color: var(--text);
@@ -97,136 +98,93 @@ page {
 }
 
 // ════════════════════════════════════════
-// 工坊面板（核心卡片样式）
+// 核心卡片（纯色深底 + 中性细边框，无装饰）
 // ════════════════════════════════════════
-.workshop-panel {
-  background: var(--bg2);
+.workshop-panel,
+.nebula-card {
+  background: var(--surface);
   border: 1rpx solid var(--border);
   border-radius: var(--r);
   position: relative;
-  overflow: hidden;
-}
-// 面板角标装饰（左上 L 形）
-.workshop-panel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 24rpx;
-  height: 24rpx;
-  border-top: 2rpx solid var(--accent);
-  border-left: 2rpx solid var(--accent);
-  border-top-left-radius: var(--r);
-  opacity: 0.6;
-  pointer-events: none;
 }
 
-.workshop-panel-interactive {
-  background: var(--bg2);
+.workshop-panel-interactive,
+.nebula-card-interactive {
+  background: var(--surface);
   border: 1rpx solid var(--border);
   border-radius: var(--r);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.3);
   transition: all 0.15s ease;
   &:active {
     transform: scale(0.98);
-    border-color: var(--border-h);
+    background: var(--surface-h);
   }
 }
 
 // ════════════════════════════════════════
-// 工坊背景（网格 + 辉光）
+// 页面背景（干净纯色，无网格/辉光）
 // ════════════════════════════════════════
-.workshop-bg {
+.workshop-bg,
+.nebula-bg {
   background: var(--bg);
-  position: relative;
-}
-.workshop-bg::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  // 科技网格线
-  background-image:
-    linear-gradient(rgba(0, 255, 170, 0.025) 1rpx, transparent 1rpx),
-    linear-gradient(90deg, rgba(0, 255, 170, 0.025) 1rpx, transparent 1rpx);
-  background-size: 40rpx 40rpx;
-}
-.workshop-bg::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse 600rpx 400rpx at 20% 10%, rgba(0, 255, 170, 0.04) 0%, transparent 70%),
-    radial-gradient(ellipse 500rpx 350rpx at 80% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 70%);
 }
 
 // ════════════════════════════════════════
-// 霓虹按钮
+// 主按钮（实心 accent，无辉光）
 // ════════════════════════════════════════
-.neon-btn {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #050810;
+.neon-btn,
+.nebula-btn {
+  background: var(--accent);
+  color: #0b0e13;
   border-radius: var(--r-sm);
   border: none;
-  font-weight: 700;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 0 20rpx rgba(0, 255, 170, 0.3);
+  font-weight: 600;
 }
 
 // ════════════════════════════════════════
-// 霓虹文字
+// 强调文字（仅彩色，无 text-shadow 辉光）
 // ════════════════════════════════════════
 .neon-text {
-  color: var(--accent);
-  text-shadow: 0 0 8rpx rgba(0, 255, 170, 0.4);
+  color: var(--text);
+  // 不再用 neon-text 做标题渲染辉光；标题回归纯白色高对比
 }
 
 // ════════════════════════════════════════
-// 状态徽章
+// 状态徽章（克制：低饱和底 + 饱和文字）
 // ════════════════════════════════════════
 .status-online {
-  background: rgba(0, 255, 170, 0.12) !important;
-  color: var(--accent) !important;
+  background: rgba(74, 222, 128, 0.1) !important;
+  color: var(--green) !important;
 }
 .status-offline {
-  background: rgba(74, 86, 98, 0.12) !important;
+  background: rgba(90, 100, 112, 0.1) !important;
   color: var(--dim) !important;
 }
 .status-busy {
-  background: rgba(255, 184, 0, 0.12) !important;
+  background: rgba(251, 191, 36, 0.1) !important;
   color: var(--amber) !important;
 }
 
-// 脉冲状态灯
+// 状态灯（点光源，仅此一处保留微妙辉光）
 .pulse-dot {
-  width: 16rpx;
-  height: 16rpx;
+  width: 14rpx;
+  height: 14rpx;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 12rpx var(--accent-glow);
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-.pulse-dot.offline {
-  background: var(--dim);
-  box-shadow: none;
-  animation: none;
+  background: var(--green);
+  &.online {
+    background: var(--green);
+    box-shadow: 0 0 10rpx rgba(74, 222, 128, 0.5);
+    animation: pulse-glow 2.5s ease-in-out infinite;
+  }
+  &.offline {
+    background: var(--dim);
+    box-shadow: none;
+    animation: none;
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
-    opacity: 1;
-    box-shadow: 0 0 8rpx var(--accent-glow);
-  }
-  50% {
-    opacity: 0.6;
-    box-shadow: 0 0 16rpx var(--accent-glow);
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 // ════════════════════════════════════════
@@ -238,70 +196,44 @@ page {
   justify-content: space-between;
   padding: 8rpx 0;
   font-size: 24rpx;
-  .telemetry-label {
-    color: var(--muted);
-  }
+  .telemetry-label { color: var(--muted); }
   .telemetry-value {
     color: var(--text);
-    font-family: monospace;
     font-weight: 600;
   }
 }
 
-// 遥测进度条（刻度轨道）
+// 进度条（中性轨道 + accent 填充）
 .telemetry-bar {
   height: 6rpx;
-  background: rgba(0, 255, 170, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 3rpx;
   overflow: hidden;
-  position: relative;
 }
 .telemetry-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  background: var(--accent);
   border-radius: 3rpx;
   transition: width 0.5s ease;
-  box-shadow: 0 0 8rpx var(--accent-glow);
 }
 
 // ════════════════════════════════════════
-// 扫描线动画
+// 扫描线（保留 class 名兼容，但关闭动画）
 // ════════════════════════════════════════
 .scan-line {
-  position: relative;
-  overflow: hidden;
-}
-.scan-line::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4rpx;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  animation: scan 2s linear infinite;
-}
-@keyframes scan {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  // 关闭扫描动画，避免廉价感
 }
 
 // ════════════════════════════════════════
-// 页面入场动画
+// 页面入场动画（保留轻量级淡入）
 // ════════════════════════════════════════
 .page-enter {
-  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fade-in-up 0.35s ease-out;
 }
 
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20rpx);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 // ════════════════════════════════════════
@@ -340,32 +272,18 @@ page {
   border: 1rpx solid var(--border) !important;
   border-radius: var(--r-sm) !important;
   &::placeholder { color: var(--dim) !important; }
-  &:focus {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 12rpx rgba(0, 255, 170, 0.15) !important;
-  }
+  &:focus { border-color: var(--accent) !important; }
 }
 
 // ════════════════════════════════════════
-// 深色标签
+// 标签
 // ════════════════════════════════════════
 .dark-tag {
-  background: rgba(0, 255, 170, 0.1);
+  background: var(--accent-g);
   color: var(--accent);
-  border: 1rpx solid rgba(0, 255, 170, 0.15);
   border-radius: 8rpx;
   padding: 4rpx 16rpx;
   font-size: 22rpx;
-}
-
-// ════════════════════════════════════════
-// 渐变头部
-// ════════════════════════════════════════
-.gradient-header {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 0 0 var(--r) var(--r);
-  padding: 40rpx 32rpx;
-  color: #050810;
 }
 
 // ════════════════════════════════════════
@@ -376,10 +294,10 @@ button:active {
   transition: transform 0.1s ease;
 }
 
-// ════════════════════════════════════════
-// 向后兼容：保留 nebula-* 别名（渐进迁移）
-// ════════════════════════════════════════
-.nebula-card { @extend .workshop-panel; }
-.nebula-card-interactive { @extend .workshop-panel-interactive; }
-.nebula-bg { @extend .workshop-bg; }
-.nebula-btn { @extend .neon-btn; }
+// gradient-header 别名保留（不再强烈渐变）
+.gradient-header {
+  background: var(--surface);
+  border-radius: 0 0 var(--r) var(--r);
+  padding: 40rpx 32rpx;
+  color: var(--text);
+}

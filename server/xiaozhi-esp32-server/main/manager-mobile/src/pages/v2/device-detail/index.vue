@@ -255,12 +255,12 @@ async function loadSelfCheckHistoryData() {
 // --- Computed labels ---
 const phaseColor = computed(() => {
   if (['running', 'accepted', 'progress'].includes(latestPhase.value))
-    return '#3b82f6'
+    return 'var(--accent)'
   if (latestPhase.value === 'done')
-    return '#07c160'
+    return 'var(--green)'
   if (latestPhase.value === 'failed')
-    return '#ee0a24'
-  return '#999'
+    return 'var(--danger)'
+  return 'var(--muted)'
 })
 const workspaceLabel = computed(() => {
   const ws = normalizeWorkspace(deviceInfo.value?.workspaceMm as any)
@@ -577,7 +577,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <wd-config-provider theme-color="#3b82f6" />
+  <wd-config-provider theme-color="var(--accent)" />
   <wd-navbar :title="t('v2.deviceDetail.title')" safe-area-inset-top left-arrow placeholder fixed @click-left="navigateBack" />
 
   <view class="bento-page page-enter">
@@ -608,17 +608,17 @@ onUnmounted(() => {
       </view>
       <view class="quick-links">
         <view class="quick-link" @click="goToChatHistory">
-          <wd-icon name="chat" size="20" color="#3b82f6" />
+          <wd-icon name="chat" size="20" color="var(--muted)" />
           <text>{{ t('v2.detail.chatHistory') }}</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
         <view class="quick-link" @click="goToVoiceprint">
-          <wd-icon name="volume" size="20" color="#3b82f6" />
+          <wd-icon name="volume" size="20" color="var(--muted)" />
           <text>{{ t('v2.detail.voiceprintMgmt') }}</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
         <view class="quick-link" @click="goToAgents">
-          <wd-icon name="robot" size="20" color="#3b82f6" />
+          <wd-icon name="robot" size="20" color="var(--muted)" />
           <text>{{ t('v2.detail.manageAgents') }}</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
@@ -670,8 +670,6 @@ onUnmounted(() => {
   border: 1rpx solid var(--border);
   border-radius: var(--r);
   padding: 32rpx 28rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(24rpx);
 }
 
 .bento-title {

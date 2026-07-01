@@ -72,7 +72,7 @@ async function handleLogin() {
 </script>
 
 <template>
-  <wd-config-provider theme-color="#3b82f6" />
+  <wd-config-provider theme-color="#2dd4a7" />
   <wd-navbar
     :title="t('v2.login.title')" safe-area-inset-top placeholder fixed
     custom-class="!bg-[#07070f]/90 !backdrop-blur-md"
@@ -82,14 +82,14 @@ async function handleLogin() {
   <view class="page-enter relative min-h-screen overflow-hidden bg-[#07070f]">
     <!-- 背景光晕 -->
     <view class="pointer-events-none absolute inset-0">
-      <view class="absolute left-1/2 top-0 h-[70vh] w-[140vw] bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.22),transparent_55%)] -translate-x-1/2" />
-      <view class="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(29,78,216,0.10),transparent_50%)]" />
+      <view class="absolute left-1/2 top-0 h-[70vh] w-[140vw] bg-[radial-gradient(circle_at_50%_0%,rgba(45,212,167,0.15),transparent_55%)] -translate-x-1/2" />
+      <view class="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(56,189,248,0.06),transparent_50%)]" />
     </view>
 
     <!-- 内容 -->
     <view class="animate-enter relative z-10 min-h-screen flex flex-col items-center justify-center px-[48rpx] pb-[120rpx]">
       <!-- 品牌标识 -->
-      <view class="mb-[64rpx] h-[180rpx] w-[180rpx] flex items-center justify-center border border-white/10 rounded-[48rpx] from-[#3b82f6]/30 via-[#2563eb]/15 to-transparent bg-gradient-to-br shadow-2xl shadow-blue-500/20">
+      <view class="mb-[64rpx] h-[180rpx] w-[180rpx] flex items-center justify-center border border-white/10 rounded-[48rpx] from-[#2dd4a7]/30 via-[#38bdf8]/15 to-transparent bg-gradient-to-br shadow-2xl ">
         <text class="text-[64rpx] text-white font-black tracking-tighter">
           DLC
         </text>
@@ -107,7 +107,7 @@ async function handleLogin() {
       <view class="max-w-[560rpx] w-full transition-transform duration-150 active:scale-[0.98]">
         <wd-button
           type="primary" round block size="large" :loading="loading"
-          custom-class="!h-[100rpx] !rounded-full !bg-gradient-to-r !from-[#3b82f6] !to-[#2563eb] !shadow-lg !shadow-blue-500/30 !text-white !text-[32rpx] !font-medium"
+          custom-class="!h-[100rpx] !rounded-full !bg-gradient-to-r !from-[#2dd4a7] !to-[#38bdf8] !shadow-lg ! !text-white !text-[32rpx] !font-medium"
           @click="handleLogin"
         >
           {{ loading ? t('v2.login.loggingIn') : t('v2.login.wxLogin') }}
@@ -120,7 +120,7 @@ async function handleLogin() {
       </view>
 
       <!-- 调试信息（仅在开发环境显示） -->
-      <view v-if="errorInfo && isDev" class="mt-[48rpx] max-w-[560rpx] w-full border border-white/5 rounded-2xl bg-[#0a0a14] p-[24rpx]">
+      <view v-if="errorInfo && isDev" class="mt-[48rpx] max-w-[560rpx] w-full border border-white/5 rounded-2xl bg-[#14181f] p-[24rpx]">
         <view class="mb-[12rpx] text-[24rpx] text-[#ff6b6b] font-bold">
           调试信息
         </view>

@@ -176,14 +176,14 @@ function getStatusLabel(status: string) {
 }
 function getStatusColor(status: string) {
   const map: Record<string, string> = {
-    pending: '#f59e0b',
-    queued: '#f59e0b',
-    running: '#00ffaa',
-    completed: '#34d399',
-    failed: '#ff4d6d',
-    error: '#ff4d6d',
+    pending: '#fbbf24',
+    queued: '#fbbf24',
+    running: '#2dd4a7',
+    completed: '#4ade80',
+    failed: '#f87171',
+    error: '#f87171',
   }
-  return map[status] || '#9d9ea3'
+  return map[status] || '#8b95a3'
 }
 function getProgressPercent(status: string) {
   const map: Record<string, number> = {
@@ -282,19 +282,19 @@ function clearAllTasks() {
 
     <view class="mode-tabs">
       <view class="mode-tab" :class="{ active: mode === 'draw' }" @click="mode = 'draw'">
-        <wd-icon name="photo" size="28" :color="mode === 'draw' ? '#00ffaa' : 'var(--dim)'" />
+        <wd-icon name="photo" size="28" :color="mode === 'draw' ? 'var(--accent)' : 'var(--dim)'" />
         <text class="tab-label">
           {{ t('create.drawTab') }}
         </text>
       </view>
       <view class="mode-tab" :class="{ active: mode === 'write' }" @click="mode = 'write'">
-        <wd-icon name="edit-2" size="28" :color="mode === 'write' ? '#00ffaa' : 'var(--dim)'" />
+        <wd-icon name="edit-2" size="28" :color="mode === 'write' ? 'var(--accent)' : 'var(--dim)'" />
         <text class="tab-label">
           {{ t('create.writeTab') }}
         </text>
       </view>
       <view class="mode-tab" :class="{ active: mode === 'image' }" @click="mode = 'image'">
-        <wd-icon name="cloud" size="28" :color="mode === 'image' ? '#00ffaa' : 'var(--dim)'" />
+        <wd-icon name="cloud" size="28" :color="mode === 'image' ? 'var(--accent)' : 'var(--dim)'" />
         <text class="tab-label">
           {{ t('create.imageTab') }}
         </text>
@@ -311,7 +311,7 @@ function clearAllTasks() {
       <scroll-view v-else scroll-x class="device-scroll">
         <view class="device-list">
           <view v-for="d in devices" :key="d.deviceId" class="device-chip" :class="{ selected: selectedDeviceId === d.deviceId }" @click="selectedDeviceId = d.deviceId">
-            <wd-icon name="phone" size="20" :color="selectedDeviceId === d.deviceId ? '#00ffaa' : 'var(--muted)'" />
+            <wd-icon name="phone" size="20" :color="selectedDeviceId === d.deviceId ? 'var(--accent)' : 'var(--muted)'" />
             <view class="chip-info">
               <text class="chip-name">
                 {{ d.model || 'Device' }}
@@ -369,7 +369,7 @@ function clearAllTasks() {
       </view>
       <view class="result-actions">
         <view class="action-btn secondary" @click="saveImageToAlbum(imageResultUrl)">
-          <wd-icon name="download" size="16" color="#00ffaa" />
+          <wd-icon name="download" size="16" color="var(--accent)" />
           <text>{{ t('create.saveToAlbum') }}</text>
         </view>
         <view class="action-btn primary" :class="{ disabled: !selectedDeviceId || submitting }" @click="sendImageToDevice">
@@ -499,7 +499,7 @@ function clearAllTasks() {
     transform: scale(0.97);
   }
   &.active {
-    background: rgba(0, 255, 170, 0.1);
+    background: rgba(45, 212, 167, 0.1);
     border: 2rpx solid var(--accent);
     box-shadow: none;
   }
@@ -547,7 +547,7 @@ function clearAllTasks() {
     transform: scale(0.97);
   }
   &.selected {
-    background: rgba(0, 255, 170, 0.1);
+    background: rgba(45, 212, 167, 0.1);
     border: 2rpx solid var(--accent);
     box-shadow: none;
   }
@@ -564,7 +564,7 @@ function clearAllTasks() {
   .chip-status {
     font-size: 22rpx;
     &.online {
-      color: #34d399;
+      color: var(--green);
     }
     &.offline {
       color: var(--dim);
@@ -605,22 +605,19 @@ function clearAllTasks() {
   padding: 28rpx 0;
   background: var(--accent);
   border-radius: 20rpx;
-  box-shadow: 0 0 20rpx rgba(0, 255, 170, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   &:active {
     opacity: 0.9;
-    box-shadow: 0 0 12rpx rgba(0, 255, 170, 0.15);
   }
   &.disabled {
     opacity: 0.4;
-    box-shadow: none;
   }
   .submit-text {
     font-size: 32rpx;
-    font-weight: 700;
-    color: #050810;
+    font-weight: 600;
+    color: #0b0e13;
   }
 }
 .tasks-section {
@@ -702,7 +699,7 @@ function clearAllTasks() {
 }
 .task-error {
   font-size: 24rpx;
-  color: #ff4d6d;
+  color: var(--danger);
 }
 
 .section-header-row {
@@ -713,7 +710,7 @@ function clearAllTasks() {
 }
 .clear-btn {
   font-size: 26rpx;
-  color: #ff4d6d;
+  color: var(--danger);
   padding: 16rpx 24rpx;
 }
 
@@ -726,7 +723,7 @@ function clearAllTasks() {
   font-size: 24rpx;
   color: var(--accent);
   padding: 16rpx 24rpx;
-  background: rgba(0, 255, 170, 0.1);
+  background: rgba(45, 212, 167, 0.1);
   border-radius: 8rpx;
 }
 
@@ -767,7 +764,7 @@ function clearAllTasks() {
 .backend-tag {
   font-size: 22rpx;
   color: var(--accent);
-  background: rgba(0, 255, 170, 0.1);
+  background: rgba(45, 212, 167, 0.1);
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
 }
@@ -790,7 +787,7 @@ function clearAllTasks() {
     color: #fff;
   }
   &.secondary {
-    background: rgba(0, 255, 170, 0.1);
+    background: rgba(45, 212, 167, 0.1);
     color: var(--accent);
   }
 }

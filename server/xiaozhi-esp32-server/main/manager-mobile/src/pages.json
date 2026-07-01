@@ -16,9 +16,9 @@
   },
   "tabBar": {
     "custom": false,
-    "color": "#4a5662",
-    "selectedColor": "#00ffaa",
-    "backgroundColor": "#050810",
+    "color": "#5a6470",
+    "selectedColor": "#2dd4a7",
+    "backgroundColor": "#0b0e13",
     "borderStyle": "black",
     "height": "50px",
     "fontSize": "10px",
@@ -120,7 +120,7 @@
       "layout": "tabbar",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "LiMa 工坊"
+        "navigationBarTitleText": "LiMa"
       }
     },
     {

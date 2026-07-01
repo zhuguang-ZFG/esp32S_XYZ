@@ -30,7 +30,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
       clearable
       :maxlength="40"
       :placeholder="t('v2.detail.writePlaceholder')"
-      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"
@@ -55,7 +55,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
       clearable
       :maxlength="60"
       :placeholder="t('v2.detail.drawPlaceholder')"
-      custom-class="!bg-[#0a0a14] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"

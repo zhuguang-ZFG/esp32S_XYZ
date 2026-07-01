@@ -216,6 +216,6 @@ onMounted(() => {
 }
 .dc-permission-card {
   background: var(--accent-g);
-  border-color: rgba(59, 130, 246, 0.12);
+  border-color: rgba(45, 212, 167, 0.12);
 }
 </style>

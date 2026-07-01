@@ -353,7 +353,7 @@ onUnload(() => {
             <view
               class="shadow-message break-words rounded-[20rpx] p-[24rpx] leading-[1.4]"
               :class="{
-                'bg-[#3b82f6] text-white': message.chatType === 1,
+                'bg-[#2dd4a7] text-white': message.chatType === 1,
                 'ai-bubble text-[#232338]': [2, 3].includes(message.chatType),
               }"
             >
@@ -394,10 +394,10 @@ onUnload(() => {
                   :class="{
                     'text-white animate-pulse-audio': message.chatType === 1 && playingAudioId === message.audioId,
                     'text-[#ffd700]': message.chatType === 1 && playingAudioId === message.audioId && playingAudioId,
-                    'text-[#3b82f6] animate-pulse-audio': message.chatType === 2 && playingAudioId === message.audioId,
+                    'text-[#2dd4a7] animate-pulse-audio': message.chatType === 2 && playingAudioId === message.audioId,
                     'text-[#ff6b35]': message.chatType === 2 && playingAudioId === message.audioId && playingAudioId,
                     'text-white': message.chatType === 1 && playingAudioId !== message.audioId,
-                    'text-[#3b82f6]': message.chatType === 2 && playingAudioId !== message.audioId,
+                    'text-[#2dd4a7]': message.chatType === 2 && playingAudioId !== message.audioId,
                   }"
                   @click="playAudio(message.audioId)"
                 >

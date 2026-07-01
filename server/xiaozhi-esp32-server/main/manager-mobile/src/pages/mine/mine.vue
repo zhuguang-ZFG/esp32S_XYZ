@@ -142,7 +142,7 @@ function showAbout() {
       </text>
       <view class="menu-list">
         <view class="menu-item" @click="goDevices">
-          <wd-icon name="setting" size="22" color="#3b82f6" custom-class="menu-icon" />
+          <wd-icon name="setting" size="22" color="#2dd4a7" custom-class="menu-icon" />
           <view class="menu-content">
             <text class="menu-name">
               {{ t('mine.deviceMgmt') }}
@@ -154,7 +154,7 @@ function showAbout() {
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
         <view class="menu-item" @click="goConfig">
-          <wd-icon name="wifi" size="22" color="#3b82f6" custom-class="menu-icon" />
+          <wd-icon name="wifi" size="22" color="#2dd4a7" custom-class="menu-icon" />
           <view class="menu-content">
             <text class="menu-name">
               {{ t('mine.deviceConfig') }}
@@ -166,7 +166,7 @@ function showAbout() {
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
         </view>
         <view class="menu-item" @click="goDigitalHuman">
-          <wd-icon name="user" size="22" color="#3b82f6" custom-class="menu-icon" />
+          <wd-icon name="user" size="22" color="#2dd4a7" custom-class="menu-icon" />
           <view class="menu-content">
             <text class="menu-name">
               {{ t('mine.digitalHuman') }}
@@ -256,9 +256,8 @@ function showAbout() {
   gap: 24rpx;
   margin: 24rpx;
   padding: 32rpx;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  background: var(--accent);
   border-radius: 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(59, 130, 246, 0.25);
 }
 
 .user-avatar {

@@ -189,7 +189,7 @@ defineExpose({
   <view class="chat-history-container page-enter" style="background: var(--bg); min-height: 100%;">
     <!-- 加载状态 -->
     <view v-if="loading && sessionList.length === 0" class="loading-container">
-      <wd-loading color="#3b82f6" />
+      <wd-loading color="#2dd4a7" />
       <text class="loading-text">
         {{ t('chatHistory.loading') }}
       </text>
@@ -228,7 +228,7 @@ defineExpose({
 
       <!-- 加载更多状态 -->
       <view v-if="loadingMore" class="loading-more">
-        <wd-loading color="#3b82f6" size="24" />
+        <wd-loading color="#2dd4a7" size="24" />
         <text class="loading-more-text">
           {{ t('chatHistory.loading') }}
         </text>
