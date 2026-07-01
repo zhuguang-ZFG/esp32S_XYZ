@@ -69,13 +69,17 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const capability = mode.value === 'draw' ? 'draw_generated' : 'write_text'
-    const res = await v2SubmitTask(selectedDeviceId.value, capability, { prompt: prompt.value.trim() })
+    // write_text 后端读 params.text；draw_generated 读 params.prompt
+    const params = capability === 'write_text'
+      ? { text: prompt.value.trim() }
+      : { prompt: prompt.value.trim() }
+    const res = await v2SubmitTask(selectedDeviceId.value, capability, params)
     const newTask: V2TaskInfo = {
       taskId: res.taskId || 'unknown',
       status: 'pending',
       deviceId: selectedDeviceId.value,
       capability,
-      params: { prompt: prompt.value.trim() },
+      params,
       createdAt: new Date().toISOString(),
     }
     tasks.value.unshift(newTask)
@@ -152,7 +156,8 @@ function startPolling(taskId: string) {
         return
       }
       tasks.value[idx] = { ...tasks.value[idx], ...task }
-      if (['completed', 'failed', 'error'].includes(task.status)) {
+      // 服务端终态：done/failed/cancelled/dead_letter（task_events.py TERMINAL_PHASES）
+      if (['done', 'failed', 'cancelled', 'dead_letter', 'completed', 'error'].includes(task.status)) {
         if (pollTimer.value)
           clearInterval(pollTimer.value)
         pollTimer.value = null
@@ -178,21 +183,37 @@ function getStatusColor(status: string) {
   const map: Record<string, string> = {
     pending: '#fbbf24',
     queued: '#fbbf24',
+    created: '#fbbf24',
+    dispatching: '#fbbf24',
+    dispatched: '#fbbf24',
+    accepted: '#2dd4a7',
     running: '#2dd4a7',
+    progress: '#2dd4a7',
+    done: '#4ade80',
     completed: '#4ade80',
     failed: '#f87171',
     error: '#f87171',
+    cancelled: '#8b95a3',
+    dead_letter: '#f87171',
   }
   return map[status] || '#8b95a3'
 }
 function getProgressPercent(status: string) {
   const map: Record<string, number> = {
     pending: 10,
-    queued: 30,
+    queued: 20,
+    created: 10,
+    dispatching: 25,
+    dispatched: 30,
+    accepted: 35,
     running: 60,
+    progress: 70,
+    done: 100,
     completed: 100,
     failed: 100,
     error: 100,
+    cancelled: 100,
+    dead_letter: 100,
   }
   return map[status] ?? 10
 }

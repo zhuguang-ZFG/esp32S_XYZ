@@ -203,6 +203,9 @@ export function getEnvBaseUrl() {
 
 /**
  * Edge-A（M2.7）：由 HTTP baseURL 推导 WSS `.../ws/v1/client`（与 manager-api `context-path` 一致）。
+ *
+ * 注意：`/ws/v1/client` 是 Edge-A 多设备订阅协议，当前服务端未实现。
+ * 请改用 buildDeviceStatusWsUrl() 连接已实现的单设备状态 WS。
  */
 export function buildEdgeAClientWsUrl(): string {
   const base = getEnvBaseUrl().replace(/\/$/, '')
@@ -218,6 +221,18 @@ export function buildEdgeAClientWsUrl(): string {
     const rest = base.replace(/^https?:\/\//, '')
     return `${proto}://${rest}/ws/v1/client`
   }
+}
+
+/**
+ * 构建单设备实时状态 WebSocket URL（M2 协议，服务端已实现）。
+ * 路径：/device/v1/app/devices/{deviceId}/ws
+ * 鉴权：URL query param ?authorization=Bearer xxx
+ */
+export function buildDeviceStatusWsUrl(deviceId: string, token: string): string {
+  const base = getEnvBaseUrl().replace(/\/$/, '')
+  const proto = base.startsWith('https') ? 'wss' : 'ws'
+  const rest = base.replace(/^https?:\/\//, '')
+  return `${proto}://${rest}/device/v1/app/devices/${deviceId}/ws?authorization=Bearer ${encodeURIComponent(token)}`
 }
 
 /**
