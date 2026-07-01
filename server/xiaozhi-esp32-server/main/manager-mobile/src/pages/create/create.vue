@@ -2,7 +2,7 @@
 {
   "style": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "AI 创作"
+    "navigationBarTitleText": "AI 绘画"
   }
 }
 </route>
@@ -15,35 +15,36 @@ import { generateImage } from '@/api/images'
 import { v2GetDevices, v2GetTask, v2SubmitTask } from '@/api/v2'
 import { t } from '@/i18n'
 import DrawParamsPanel from './components/draw-params-panel.vue'
+import ImagePicker from './components/image-picker.vue'
 
 const safeAreaTop = ref(0)
 const systemInfo = uni.getSystemInfoSync()
 safeAreaTop.value = systemInfo.statusBarHeight || 0
 
-const mode = ref<'draw' | 'write' | 'handwrite' | 'image'>('draw')
+// 顶部模式：AI 绘画 / 图片绘画
+const mode = ref<'ai-draw' | 'image-draw'>('ai-draw')
+// AI 绘画子模式：文生图 / 图生图
+const aiSubMode = ref<'text' | 'image'>('text')
+
 const imageGenerating = ref(false)
 const imageResultUrl = ref('')
-// 品牌标签（「LiMa 生图」），非真实后端名；后端真实模型对外不可见。
 const imageResultBackend = ref('')
+const referenceImageUrl = ref('')
+
 const devices = ref<V2DeviceInfo[]>([])
 const selectedDeviceId = ref('')
 const prompt = ref('')
 const submitting = ref(false)
 const tasks = ref<V2TaskInfo[]>([])
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
-// 参数面板传入的附加参数（feed/font_type/mistake_rate/messy_ratio 等）
 const drawParams = ref<Record<string, unknown>>({})
-// 预览弹窗
-const previewSvgContent = ref('')
-const showPreview = ref(false)
 
 onLoad((options: any) => {
-  const allowed: Array<'draw' | 'write' | 'image'> = ['draw', 'write', 'image']
-  mode.value = allowed.includes(options?.mode) ? options.mode : 'draw'
+  // 保留旧入口 mode=draw 的兼容，默认都是 AI 绘画
+  mode.value = options?.mode === 'image' ? 'image-draw' : 'ai-draw'
 })
 onShow(() => {
-  if (mode.value !== 'image')
-    loadDevices()
+  loadDevices()
 })
 onUnmounted(() => {
   if (pollTimer.value)
@@ -63,62 +64,23 @@ async function loadDevices() {
   }
 }
 
-async function handleSubmit() {
-  if (!selectedDeviceId.value) {
-    uni.showToast({ title: t('create.pleaseSelectDevice'), icon: 'none' })
-    return
-  }
-  if (!prompt.value.trim()) {
+async function handleAiDraw() {
+  if (!prompt.value.trim() && aiSubMode.value === 'text') {
     uni.showToast({ title: t('create.pleaseEnterPrompt'), icon: 'none' })
     return
   }
-  submitting.value = true
-  try {
-    // 按 mode 映射 capability + 参数
-    // draw → draw_generated {prompt}；write → write_text {text}；handwrite → handwriting {text,font_type,...}
-    let capability: string
-    let params: Record<string, unknown>
-    const extra = drawParams.value || {}
-    if (mode.value === 'handwrite') {
-      capability = 'handwriting'
-      params = { text: prompt.value.trim(), ...extra }
-    } else if (mode.value === 'draw') {
-      capability = 'draw_generated'
-      params = { prompt: prompt.value.trim(), ...extra }
-    } else {
-      capability = 'write_text'
-      params = { text: prompt.value.trim(), ...extra }
-    }
-    const res = await v2SubmitTask(selectedDeviceId.value, capability, params)
-    const newTask: V2TaskInfo = {
-      taskId: res.taskId || 'unknown',
-      status: 'pending',
-      deviceId: selectedDeviceId.value,
-      capability,
-      params,
-      createdAt: new Date().toISOString(),
-    }
-    tasks.value.unshift(newTask)
-    prompt.value = ''
-    uni.showToast({ title: t('create.taskSubmitted'), icon: 'success' })
-    startPolling(newTask.taskId)
-  }
-  catch (e: any) {
-    uni.showToast({ title: `${t('create.submitFailed')}: ${e.message || ''}`, icon: 'none' })
-  }
-  finally {
-    submitting.value = false
-  }
-}
-
-async function handleImageGenerate() {
-  if (!prompt.value.trim()) {
-    uni.showToast({ title: t('create.pleaseEnterPrompt'), icon: 'none' })
+  if (aiSubMode.value === 'image' && !referenceImageUrl.value) {
+    uni.showToast({ title: t('create.pleaseSelectReferenceImage'), icon: 'none' })
     return
   }
   imageGenerating.value = true
   try {
-    const res = await generateImage({ prompt: prompt.value.trim(), size: '1024x1024', n: 1 })
+    const res = await generateImage({
+      prompt: prompt.value.trim(),
+      size: '1024x1024',
+      n: 1,
+      ...(aiSubMode.value === 'image' ? { image_url: referenceImageUrl.value } : {}),
+    })
     imageResultUrl.value = res.data?.[0]?.url || ''
     imageResultBackend.value = res.backend || ''
     if (!imageResultUrl.value) {
@@ -133,18 +95,73 @@ async function handleImageGenerate() {
   }
 }
 
+async function handleImageDraw() {
+  if (!selectedDeviceId.value) {
+    uni.showToast({ title: t('create.pleaseSelectDevice'), icon: 'none' })
+    return
+  }
+  if (!referenceImageUrl.value) {
+    uni.showToast({ title: t('create.pleaseSelectImage'), icon: 'none' })
+    return
+  }
+  submitting.value = true
+  try {
+    const params: Record<string, unknown> = {
+      imageUrl: referenceImageUrl.value,
+      ...(prompt.value.trim() ? { prompt: prompt.value.trim() } : {}),
+      ...drawParams.value,
+    }
+    const res = await v2SubmitTask(selectedDeviceId.value, 'draw_generated', params)
+    const newTask: V2TaskInfo = {
+      taskId: res.taskId || 'unknown',
+      status: 'pending',
+      deviceId: selectedDeviceId.value,
+      capability: 'draw_generated',
+      params,
+      createdAt: new Date().toISOString(),
+    }
+    tasks.value.unshift(newTask)
+    prompt.value = ''
+    referenceImageUrl.value = ''
+    uni.showToast({ title: t('create.taskSubmitted'), icon: 'success' })
+    startPolling(newTask.taskId)
+  }
+  catch (e: any) {
+    uni.showToast({ title: `${t('create.submitFailed')}: ${e.message || ''}`, icon: 'none' })
+  }
+  finally {
+    submitting.value = false
+  }
+}
+
 function sendImageToDevice() {
   if (!imageResultUrl.value || !selectedDeviceId.value) {
     uni.showToast({ title: t('create.imageSelectDeviceFirst'), icon: 'none' })
     return
   }
   submitting.value = true
-  v2SubmitTask(selectedDeviceId.value, 'draw_generated', { imageUrl: imageResultUrl.value, prompt: prompt.value.trim() })
-    .then(() => {
-      uni.showToast({ title: t('create.taskSubmitted'), icon: 'success' })
+  const params = {
+    imageUrl: imageResultUrl.value,
+    ...(prompt.value.trim() ? { prompt: prompt.value.trim() } : {}),
+    ...drawParams.value,
+  }
+  v2SubmitTask(selectedDeviceId.value, 'draw_generated', params)
+    .then((res) => {
+      const newTask: V2TaskInfo = {
+        taskId: res.taskId || 'unknown',
+        status: 'pending',
+        deviceId: selectedDeviceId.value,
+        capability: 'draw_generated',
+        params,
+        createdAt: new Date().toISOString(),
+      }
+      tasks.value.unshift(newTask)
       imageResultUrl.value = ''
       imageResultBackend.value = ''
       prompt.value = ''
+      referenceImageUrl.value = ''
+      uni.showToast({ title: t('create.taskSubmitted'), icon: 'success' })
+      startPolling(newTask.taskId)
     })
     .catch((e: any) => {
       uni.showToast({ title: `${t('create.submitFailed')}: ${e.message || ''}`, icon: 'none' })
@@ -162,17 +179,15 @@ function startPolling(taskId: string) {
   pollTimer.value = setInterval(async () => {
     try {
       const task = await v2GetTask(taskId)
-      failCount = 0 // 成功后重置失败计数
+      failCount = 0
       const idx = tasks.value.findIndex(t => t.taskId === taskId)
       if (idx < 0) {
-        // 任务已被删除，停止轮询避免泄漏
         if (pollTimer.value)
           clearInterval(pollTimer.value)
         pollTimer.value = null
         return
       }
       tasks.value[idx] = { ...tasks.value[idx], ...task }
-      // 服务端终态：done/failed/cancelled/dead_letter（task_events.py TERMINAL_PHASES）
       if (['done', 'failed', 'cancelled', 'dead_letter', 'completed', 'error'].includes(task.status)) {
         if (pollTimer.value)
           clearInterval(pollTimer.value)
@@ -246,13 +261,11 @@ function navigateBack() {
   uni.navigateBack()
 }
 
-// 图片加载错误
 const imageErrorMap = ref<Record<string, boolean>>({})
 function onImageError(taskId: string) {
   imageErrorMap.value[taskId] = true
 }
 
-// 保存图片到相册
 function saveImageToAlbum(url: string) {
   uni.downloadFile({
     url,
@@ -272,9 +285,9 @@ function saveImageToAlbum(url: string) {
   })
 }
 
-// SVG 字符串转 data URI（用于 image 标签渲染）
 function svgToDataUri(svg: string): string {
-  if (!svg) return ''
+  if (!svg)
+    return ''
   try {
     // #ifdef MP-WEIXIN
     return `data:image/svg+xml;base64,${uni.arrayBufferToBase64(stringToArrayBuffer(svg))}`
@@ -295,13 +308,13 @@ function stringToArrayBuffer(str: string): ArrayBuffer {
   return bytes.buffer
 }
 
-// 全屏预览 SVG 路径
+const previewSvgContent = ref('')
+const showPreview = ref(false)
 function openPreview(svg: string) {
   previewSvgContent.value = svg
   showPreview.value = true
 }
 
-// 删除单个任务
 function deleteTask(taskId: string) {
   uni.showModal({
     title: t('create.deleteConfirmTitle'),
@@ -315,7 +328,6 @@ function deleteTask(taskId: string) {
   })
 }
 
-// 清空全部任务
 function clearAllTasks() {
   if (!tasks.value.length)
     return
@@ -346,30 +358,29 @@ function clearAllTasks() {
       </view>
     </view>
 
+    <!-- 顶部模式切换 -->
     <view class="mode-tabs">
-      <view class="mode-tab" :class="{ active: mode === 'draw' }" @click="mode = 'draw'">
-        <wd-icon name="photo" size="28" :color="mode === 'draw' ? 'var(--accent)' : 'var(--dim)'" />
+      <view class="mode-tab" :class="{ active: mode === 'ai-draw' }" @click="mode = 'ai-draw'">
+        <wd-icon name="photo" size="28" :color="mode === 'ai-draw' ? 'var(--accent)' : 'var(--dim)'" />
         <text class="tab-label">
-          {{ t('create.drawTab') }}
+          {{ t('create.aiDrawTab') }}
         </text>
       </view>
-      <view class="mode-tab" :class="{ active: mode === 'write' }" @click="mode = 'write'">
-        <wd-icon name="edit-2" size="28" :color="mode === 'write' ? 'var(--accent)' : 'var(--dim)'" />
+      <view class="mode-tab" :class="{ active: mode === 'image-draw' }" @click="mode = 'image-draw'">
+        <wd-icon name="picture" size="28" :color="mode === 'image-draw' ? 'var(--accent)' : 'var(--dim)'" />
         <text class="tab-label">
-          {{ t('create.writeTab') }}
+          {{ t('create.imageDrawTab') }}
         </text>
       </view>
-      <view class="mode-tab" :class="{ active: mode === 'handwrite' }" @click="mode = 'handwrite'">
-        <wd-icon name="mark" size="28" :color="mode === 'handwrite' ? 'var(--accent)' : 'var(--dim)'" />
-        <text class="tab-label">
-          {{ t('create.handwriteTab') }}
-        </text>
+    </view>
+
+    <!-- AI 绘画子模式 -->
+    <view v-if="mode === 'ai-draw'" class="sub-mode-tabs">
+      <view class="sub-mode-tab" :class="{ active: aiSubMode === 'text' }" @click="aiSubMode = 'text'">
+        {{ t('create.subModeText') }}
       </view>
-      <view class="mode-tab" :class="{ active: mode === 'image' }" @click="mode = 'image'">
-        <wd-icon name="cloud" size="28" :color="mode === 'image' ? 'var(--accent)' : 'var(--dim)'" />
-        <text class="tab-label">
-          {{ t('create.imageTab') }}
-        </text>
+      <view class="sub-mode-tab" :class="{ active: aiSubMode === 'image' }" @click="aiSubMode = 'image'">
+        {{ t('create.subModeImage') }}
       </view>
     </view>
 
@@ -397,36 +408,53 @@ function clearAllTasks() {
       </scroll-view>
     </view>
 
+    <!-- 参考图（图生图 / 图片绘画） -->
+    <view v-if="mode === 'image-draw' || aiSubMode === 'image'" class="section">
+      <text class="section-title">
+        {{ mode === 'image-draw' ? t('create.selectReferenceImage') : t('create.referenceImage') }}
+      </text>
+      <ImagePicker v-model="referenceImageUrl" />
+      <view v-if="mode === 'image-draw'" class="hint-text">
+        {{ t('create.imageDrawHint') }}
+      </view>
+      <view v-else-if="aiSubMode === 'image' && !referenceImageUrl" class="hint-text">
+        {{ t('create.noReferenceImageHint') }}
+      </view>
+    </view>
+
+    <!-- 提示词 -->
     <view class="section">
       <text class="section-title">
         {{ t('create.promptTitle') }}
       </text>
       <view class="prompt-box">
-        <textarea v-model="prompt" class="prompt-textarea" :placeholder="mode === 'image' ? t('create.imagePlaceholder') : (mode === 'draw' ? t('create.drawPlaceholder') : (mode === 'handwrite' ? t('create.handwritePlaceholder') : t('create.writePlaceholder')))" placeholder-class="prompt-placeholder" :maxlength="500" :disabled="submitting || imageGenerating" />
+        <textarea v-model="prompt" class="prompt-textarea" :placeholder="t('create.drawPlaceholder')" placeholder-class="prompt-placeholder" :maxlength="500" :disabled="submitting || imageGenerating" />
         <text class="prompt-count">
           {{ prompt.length }}/500
         </text>
       </view>
     </view>
 
-    <!-- 参数面板（速度/字体/失误率/潦草度） -->
+    <!-- 参数面板 -->
     <view class="section">
-      <DrawParamsPanel :mode="mode" @update:params="drawParams = $event" />
+      <DrawParamsPanel @update:params="drawParams = $event" />
     </view>
 
+    <!-- 提交按钮 -->
     <view class="submit-section">
-      <view v-if="mode === 'image'" class="submit-btn" :class="{ disabled: !prompt.trim() || imageGenerating }" @click="handleImageGenerate">
+      <view v-if="mode === 'ai-draw'" class="submit-btn" :class="{ disabled: imageGenerating || (aiSubMode === 'text' ? !prompt.trim() : !referenceImageUrl) }" @click="handleAiDraw">
         <text class="submit-text">
-          {{ imageGenerating ? t('create.imageGenerating') : t('create.submitImage') }}
+          {{ imageGenerating ? t('create.imageGenerating') : t('create.submitAiDraw') }}
         </text>
       </view>
-      <view v-else class="submit-btn" :class="{ disabled: !selectedDeviceId || !prompt.trim() || submitting }" @click="handleSubmit">
+      <view v-else class="submit-btn" :class="{ disabled: !selectedDeviceId || !referenceImageUrl || submitting }" @click="handleImageDraw">
         <text class="submit-text">
-          {{ submitting ? t('create.submitting') : (mode === 'draw' ? t('create.submitDraw') : (mode === 'handwrite' ? t('create.submitHandwrite') : t('create.submitWrite'))) }}
+          {{ submitting ? t('create.submitting') : t('create.submitImageDraw') }}
         </text>
       </view>
     </view>
 
+    <!-- 生成结果 -->
     <view v-if="imageResultUrl" class="section image-result-section">
       <view class="section-header-row">
         <text class="section-title">
@@ -445,7 +473,7 @@ function clearAllTasks() {
         />
       </view>
       <view class="result-actions">
-        <view class="action-btn secondary" @click="saveImageToAlbum(imageResultUrl)">
+        <view class="secondary action-btn" @click="saveImageToAlbum(imageResultUrl)">
           <wd-icon name="download" size="16" color="var(--accent)" />
           <text>{{ t('create.saveToAlbum') }}</text>
         </view>
@@ -456,6 +484,7 @@ function clearAllTasks() {
       </view>
     </view>
 
+    <!-- 任务追踪 -->
     <view v-if="tasks.length" class="section tasks-section">
       <view class="section-header-row">
         <text class="section-title">
@@ -469,7 +498,7 @@ function clearAllTasks() {
         <view v-for="task in tasks" :key="task.taskId" class="task-card">
           <view class="task-header">
             <text class="task-cap">
-              {{ task.capability === 'draw_generated' ? t('create.drawTab') : (task.capability === 'handwriting' ? t('create.handwriteTab') : t('create.writeTab')) }}
+              {{ task.capability === 'draw_generated' ? t('create.aiDrawTab') : task.capability }}
             </text>
             <view class="task-status" :style="{ color: getStatusColor(task.status) }">
               <view class="status-dot" :style="{ background: getStatusColor(task.status) }" />
@@ -479,7 +508,6 @@ function clearAllTasks() {
           <text class="task-prompt">
             {{ task.params?.text || task.params?.prompt || '' }}
           </text>
-          <!-- 落笔路径预览（后端返回的 preview_svg） -->
           <view v-if="task.params?.preview_svg" class="task-preview" @click="openPreview(task.params.preview_svg)">
             <image
               class="preview-thumb"
@@ -540,8 +568,12 @@ function clearAllTasks() {
     <view v-if="showPreview" class="preview-modal" @click="showPreview = false">
       <view class="preview-modal-content" @click.stop>
         <view class="preview-modal-header">
-          <text class="preview-modal-title">{{ t('create.previewTitle') }}</text>
-          <text class="preview-modal-close" @click="showPreview = false">✕</text>
+          <text class="preview-modal-title">
+            {{ t('create.previewTitle') }}
+          </text>
+          <text class="preview-modal-close" @click="showPreview = false">
+            ✕
+          </text>
         </view>
         <image
           v-if="previewSvgContent"
@@ -611,6 +643,27 @@ function clearAllTasks() {
     font-size: 26rpx;
     font-weight: 600;
     color: var(--text);
+  }
+}
+.sub-mode-tabs {
+  display: flex;
+  gap: 16rpx;
+  padding: 0 24rpx 24rpx;
+}
+.sub-mode-tab {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: var(--muted);
+  &.active {
+    background: rgba(45, 212, 167, 0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
   }
 }
 .section {
@@ -698,6 +751,11 @@ function clearAllTasks() {
   bottom: 12rpx;
   right: 20rpx;
   font-size: 22rpx;
+  color: var(--dim);
+}
+.hint-text {
+  margin-top: 12rpx;
+  font-size: 24rpx;
   color: var(--dim);
 }
 .submit-section {

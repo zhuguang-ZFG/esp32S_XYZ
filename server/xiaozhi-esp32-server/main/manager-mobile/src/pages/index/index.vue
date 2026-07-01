@@ -57,8 +57,8 @@ function goChat() {
 function goDraw() {
   uni.navigateTo({ url: '/pages/create/create?mode=draw' })
 }
-function goWrite() {
-  uni.navigateTo({ url: '/pages/create/create?mode=write' })
+function goImageDraw() {
+  uni.navigateTo({ url: '/pages/create/create?mode=image' })
 }
 function goDigitalHuman() {
   uni.showToast({ title: t('nebula.digitalHumanComingSoon'), icon: 'none' })
@@ -118,16 +118,27 @@ function taskStatusColor(status: string): string {
 
 function taskProgress(status: string): number {
   const map: Record<string, number> = {
-    pending: 10, queued: 20, created: 10, dispatching: 25, dispatched: 30,
-    accepted: 35, running: 60, progress: 70,
-    done: 100, completed: 100, failed: 100, error: 100, cancelled: 100, dead_letter: 100,
+    pending: 10,
+    queued: 20,
+    created: 10,
+    dispatching: 25,
+    dispatched: 30,
+    accepted: 35,
+    running: 60,
+    progress: 70,
+    done: 100,
+    completed: 100,
+    failed: 100,
+    error: 100,
+    cancelled: 100,
+    dead_letter: 100,
   }
   return map[status] ?? 0
 }
 </script>
 
 <template>
-  <view class="home page-enter" :style="{ paddingTop: `${safeAreaTop}px` }">
+  <view class="page-enter home" :style="{ paddingTop: `${safeAreaTop}px` }">
     <!-- 顶部标题（纯文字，无装饰） -->
     <view class="home-header">
       <text class="home-title">
@@ -157,35 +168,57 @@ function taskProgress(status: string): number {
         <!-- 大数字：工作幅面（唯一的 hero number） -->
         <view class="hero-metric">
           <text class="metric-value">
-            {{ primaryDevice.workspaceMm?.x || 0 }}<text class="metric-x">×</text>{{ primaryDevice.workspaceMm?.y || 0 }}
+            {{ primaryDevice.workspaceMm?.x || 0 }}<text class="metric-x">
+              ×
+            </text>{{ primaryDevice.workspaceMm?.y || 0 }}
           </text>
-          <text class="metric-unit">mm 工作幅面</text>
+          <text class="metric-unit">
+            mm 工作幅面
+          </text>
         </view>
 
         <!-- 次要数据行（中性色，不抢眼） -->
         <view class="hero-sub">
           <view class="sub-item">
-            <text class="sub-label">固件</text>
-            <text class="sub-value">v{{ primaryDevice.fwRev || '—' }}</text>
+            <text class="sub-label">
+              固件
+            </text>
+            <text class="sub-value">
+              v{{ primaryDevice.fwRev || '—' }}
+            </text>
           </view>
           <view class="sub-divider" />
           <view class="sub-item">
-            <text class="sub-label">设备</text>
-            <text class="sub-value">{{ devices.length }} 台</text>
+            <text class="sub-label">
+              设备
+            </text>
+            <text class="sub-value">
+              {{ devices.length }} 台
+            </text>
           </view>
           <view class="sub-divider" />
           <view class="sub-item">
-            <text class="sub-label">编号</text>
-            <text class="sub-value mono">{{ primaryDevice.deviceId.slice(0, 8) }}</text>
+            <text class="sub-label">
+              编号
+            </text>
+            <text class="sub-value mono">
+              {{ primaryDevice.deviceId.slice(0, 8) }}
+            </text>
           </view>
         </view>
       </view>
 
       <!-- 无设备状态 -->
-      <view v-else-if="!loading" class="empty-hero workshop-panel" @click="goDevices">
-        <text class="empty-icon">＋</text>
-        <text class="empty-text">{{ t('workshop.noDevices') }}</text>
-        <text class="empty-hint">{{ t('workshop.addDeviceHint') }}</text>
+      <view v-else-if="!loading" class="workshop-panel empty-hero" @click="goDevices">
+        <text class="empty-icon">
+          ＋
+        </text>
+        <text class="empty-text">
+          {{ t('workshop.noDevices') }}
+        </text>
+        <text class="empty-hint">
+          {{ t('workshop.addDeviceHint') }}
+        </text>
       </view>
     </view>
 
@@ -206,15 +239,15 @@ function taskProgress(status: string): number {
             {{ t('workshop.aiDrawDesc') }}
           </text>
         </view>
-        <view class="create-card workshop-panel-interactive" @click="goWrite">
-          <view class="create-icon write">
-            <text>✎</text>
+        <view class="create-card workshop-panel-interactive" @click="goImageDraw">
+          <view class="create-icon image">
+            <text>🖼️</text>
           </view>
           <text class="create-name">
-            {{ t('workshop.aiWrite') }}
+            {{ t('workshop.imageDraw') }}
           </text>
           <text class="create-desc">
-            {{ t('workshop.aiWriteDesc') }}
+            {{ t('workshop.imageDrawDesc') }}
           </text>
         </view>
         <view class="create-card workshop-panel-interactive" @click="goChat">
@@ -253,10 +286,10 @@ function taskProgress(status: string): number {
         </text>
       </view>
       <view class="task-list">
-        <view v-for="task in recentTasks" :key="task.taskId" class="task-item workshop-panel">
+        <view v-for="task in recentTasks" :key="task.taskId" class="workshop-panel task-item">
           <view class="task-info">
             <text class="task-cap">
-              {{ task.capability === 'draw_generated' ? '✦' : '✎' }} {{ task.capability === 'draw_generated' ? t('workshop.aiDraw') : t('workshop.aiWrite') }}
+              {{ task.params?.imageUrl && !task.params?.prompt ? '🖼️' : '✦' }} {{ task.params?.imageUrl && !task.params?.prompt ? t('workshop.imageDraw') : t('workshop.aiDraw') }}
             </text>
             <text class="task-status-text" :style="{ color: taskStatusColor(task.status) }">
               {{ taskStatusLabel(task.status) }}
@@ -272,17 +305,29 @@ function taskProgress(status: string): number {
     <!-- ══ 快捷操作 ══ -->
     <view class="section">
       <view class="quick-row">
-        <view class="quick-btn workshop-panel-interactive" @click="goDevices">
-          <text class="quick-icon">▣</text>
-          <text class="quick-text">{{ t('workshop.myDevices') }}</text>
+        <view class="workshop-panel-interactive quick-btn" @click="goDevices">
+          <text class="quick-icon">
+            ▣
+          </text>
+          <text class="quick-text">
+            {{ t('workshop.myDevices') }}
+          </text>
         </view>
         <view class="quick-btn workshop-panel-interactive" @click="goConfig">
-          <text class="quick-icon">⌗</text>
-          <text class="quick-text">{{ t('workshop.config') }}</text>
+          <text class="quick-icon">
+            ⌗
+          </text>
+          <text class="quick-text">
+            {{ t('workshop.config') }}
+          </text>
         </view>
         <view class="quick-btn workshop-panel-interactive" @click="goSettings">
-          <text class="quick-icon">⚙</text>
-          <text class="quick-text">{{ t('workshop.systemSettings') }}</text>
+          <text class="quick-icon">
+            ⚙
+          </text>
+          <text class="quick-text">
+            {{ t('workshop.systemSettings') }}
+          </text>
         </view>
       </view>
     </view>
@@ -356,7 +401,10 @@ function taskProgress(status: string): number {
 .hero-status-text {
   font-size: 24rpx;
   color: var(--dim);
-  &.online { color: var(--green); font-weight: 600; }
+  &.online {
+    color: var(--green);
+    font-weight: 600;
+  }
 }
 .hero-model {
   font-size: 26rpx;
@@ -410,7 +458,10 @@ function taskProgress(status: string): number {
   font-size: 26rpx;
   color: var(--text);
   font-weight: 500;
-  &.mono { font-family: monospace; font-size: 24rpx; }
+  &.mono {
+    font-family: monospace;
+    font-size: 24rpx;
+  }
 }
 .sub-divider {
   width: 1rpx;
@@ -426,9 +477,18 @@ function taskProgress(status: string): number {
   align-items: center;
   gap: 12rpx;
 }
-.empty-icon { font-size: 56rpx; color: var(--dim); }
-.empty-text { font-size: 28rpx; color: var(--text); }
-.empty-hint { font-size: 22rpx; color: var(--muted); }
+.empty-icon {
+  font-size: 56rpx;
+  color: var(--dim);
+}
+.empty-text {
+  font-size: 28rpx;
+  color: var(--text);
+}
+.empty-hint {
+  font-size: 22rpx;
+  color: var(--muted);
+}
 
 // ── AI 创作卡片 ──
 .create-grid {
@@ -453,10 +513,22 @@ function taskProgress(status: string): number {
   font-size: 28rpx;
   margin-bottom: 6rpx;
   // 图标底色保持低饱和
-  &.draw { background: var(--accent-g); color: var(--accent); }
-  &.write { background: var(--cyan-g); color: var(--cyan); }
-  &.chat { background: var(--violet-g); color: var(--violet); }
-  &.human { background: var(--amber-g); color: var(--amber); }
+  &.draw {
+    background: var(--accent-g);
+    color: var(--accent);
+  }
+  &.write {
+    background: var(--cyan-g);
+    color: var(--cyan);
+  }
+  &.chat {
+    background: var(--violet-g);
+    color: var(--violet);
+  }
+  &.human {
+    background: var(--amber-g);
+    color: var(--amber);
+  }
 }
 .create-name {
   font-size: 28rpx;
@@ -518,6 +590,12 @@ function taskProgress(status: string): number {
   gap: 12rpx;
   padding: 28rpx 0;
 }
-.quick-icon { font-size: 36rpx; color: var(--muted); }
-.quick-text { font-size: 22rpx; color: var(--muted); }
+.quick-icon {
+  font-size: 36rpx;
+  color: var(--muted);
+}
+.quick-text {
+  font-size: 22rpx;
+  color: var(--muted);
+}
 </style>
