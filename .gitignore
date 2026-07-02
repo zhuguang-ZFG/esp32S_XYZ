@@ -33,3 +33,6 @@ __pycache__/
 # 敏感凭据 — 绝不提交
 .env
 *.env.local
+
+# U1 firmware: never commit node_modules
+firmware/u1-grbl/embedded/node_modules/
