@@ -1,0 +1,149 @@
+# FluidNC 迁移配置 — DLC Motor Control P1 XYYZ
+#
+# 从 Grbl_Esp32 机型定义 dlc_motor_control_p1.h 翻译而来。
+# 板级硬件：ESP32-S3 + 4×HR4988E (A4988-class) STEP/DIR 驱动器
+# 轴配置：XYYZ（Y/Y2 龙门双驱校正）
+#
+# 使用方法：
+#   1. 将此文件上传到 FluidNC 的 /config/ 目录（或通过 WebUI 上传）
+#   2. 在 FluidNC 中执行 $config=dlc_motor_control_p1.yaml
+#   3. 重启后执行 $H 回零验证
+
+board: DLC Motor Control P1
+name: DLC Motor Control P1 XYYZ
+meta: 2026-07-02 从 Grbl_Esp32 dlc_motor_control_p1.h 迁移
+
+# ─── 串口/通信 ──────────────────────────────────────────────
+uart:
+  port: uart0
+  baud: 115200
+
+# ─── 步进电机 ───────────────────────────────────────────────
+# HR4988E 为标准 STEP/DIR 驱动器，无 UART/SPI 智能控制
+stepping:
+  engine: RMT
+  idle_ms: 25          # DEFAULT_STEPPER_IDLE_LOCK_TIME
+  pulse_us: 4          # DEFAULT_STEP_PULSE_MICROSECONDS
+  dir_delay_us: 1      # STEP_PULSE_DELAY
+  disable_delay_us: 0
+  segments: 12
+
+axes:
+  # ─── X 轴 ─────────────────────────────────────────────────
+  x:
+    steps_per_mm: 80.0
+    max_rate_mm_per_min: 6000.0
+    acceleration_mm_per_sec2: 200.0
+    max_travel_mm: 300.0
+    homing:
+      cycle: 1
+      positive_direction: false   # DEFAULT_HOMING_DIR_MASK bit(X)
+      mpos_mm: 0.0
+      feed_mm_per_min: 100.0
+      seek_mm_per_min: 800.0
+      debounce_ms: 250
+      pull_off_mm: 2.0
+    motor0:
+      stepstick:
+        step_pin: gpio.46
+        direction_pin: gpio.3
+        disable_pin: gpio.4       # 共享使能线 MOTOR_EN
+
+  # ─── Y 轴（主） ───────────────────────────────────────────
+  y:
+    steps_per_mm: 80.0
+    max_rate_mm_per_min: 6000.0
+    acceleration_mm_per_sec2: 200.0
+    max_travel_mm: 300.0
+    homing:
+      cycle: 2
+      positive_direction: false   # DEFAULT_HOMING_DIR_MASK bit(Y)
+      mpos_mm: 0.0
+      feed_mm_per_min: 100.0
+      seek_mm_per_min: 800.0
+      debounce_ms: 250
+      pull_off_mm: 2.0
+      square: true                # DEFAULT_HOMING_SQUARED_AXES bit(Y)
+    motor0:
+      stepstick:
+        step_pin: gpio.8
+        direction_pin: gpio.18
+        disable_pin: gpio.4
+    # Y2 ganged motor — 双驱龙门校正
+    motor1:
+      stepstick:
+        step_pin: gpio.17
+        direction_pin: gpio.16
+        disable_pin: gpio.4
+
+  # ─── Z 轴 ─────────────────────────────────────────────────
+  z:
+    steps_per_mm: 400.0
+    max_rate_mm_per_min: 1500.0
+    acceleration_mm_per_sec2: 80.0
+    max_travel_mm: 80.0
+    homing:
+      cycle: 0                    # Z 先回零
+      positive_direction: false   # DEFAULT_HOMING_DIR_MASK bit(Z)
+      mpos_mm: 0.0
+      feed_mm_per_min: 100.0
+      seek_mm_per_min: 800.0
+      debounce_ms: 250
+      pull_off_mm: 2.0
+    motor0:
+      stepstick:
+        step_pin: gpio.6
+        direction_pin: gpio.5
+        disable_pin: gpio.4
+
+# ─── 限位/原点传感器 ─────────────────────────────────────────
+# UUT_SENSOR_1..4 → X, Y, Y2, Z
+# 极性：DEFAULT_INVERT_LIMIT_PINS = 0（低电平触发）
+Limits:
+  x_hard_limit: true
+  y_hard_limit: true
+  z_hard_limit: true
+  # 限位引脚在 motor 块的 limits 中定义
+
+# 在 FluidNC 中，限位引脚绑定到轴
+# X 限位
+axes.x.motor0.stepstick.limits_low_pin: gpio.9
+# Y 限位（主）
+axes.y.motor0.stepstick.limits_low_pin: gpio.12
+# Y2 限位（ganged — 用于龙门校正）
+axes.y.motor1.stepstick.limits_low_pin: gpio.13
+# Z 限位
+axes.z.motor0.stepstick.limits_low_pin: gpio.14
+
+# ─── 激光/主轴输出 ───────────────────────────────────────────
+# LASER_CONTROL → GPIO45（低侧 MOSFET PWM）
+PWM:
+  output_pin: gpio.45
+  pwm_hz: 5000
+  output_off: 0.0
+  min_output: 0.0
+  max_output: 1000.0
+  spinup_ms: 0
+  spindown_ms: 0
+  tool_num: 0
+  speeds: 0=0.0% 1000=100.0%
+
+# ─── 激光模式 ───────────────────────────────────────────────
+laser:
+  enable: true                     # DEFAULT_LASER_MODE = 1
+
+# ─── 软限位/初始锁定 ─────────────────────────────────────────
+# DEFAULT_SOFT_LIMIT_ENABLE = 1
+# DEFAULT_HARD_LIMIT_ENABLE = 1
+# HOMING_INIT_LOCK — FluidNC 通过 $Homing/InitLock=true 实现
+homing:
+  init_lock: true
+
+# ─── 安全/报告 ──────────────────────────────────────────────
+# DEFAULT_STATUS_REPORT_MASK = 1
+report:
+  status_report_mask: 1
+  inches: false                    # DEFAULT_REPORT_INCHES = 0
+
+# ─── 持久化设置 ─────────────────────────────────────────────
+# FluidNC 通过 $settings 管理持久化参数，无需单独定义
