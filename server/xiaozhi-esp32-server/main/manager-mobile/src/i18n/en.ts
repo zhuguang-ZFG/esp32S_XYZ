@@ -699,6 +699,8 @@ export default {
   'mine.deviceConfigDesc': 'Configure WiFi for new devices',
   'mine.digitalHuman': 'Digital Human',
   'mine.digitalHumanDesc': '2D voice interactive avatar',
+  'mine.voiceprint': 'Voiceprint',
+  'mine.voiceprintDesc': 'Voiceprint enrollment and management',
   'mine.system': 'System',
   'mine.settings': 'Settings',
   'mine.settingsDesc': 'Network, cache, language, privacy',

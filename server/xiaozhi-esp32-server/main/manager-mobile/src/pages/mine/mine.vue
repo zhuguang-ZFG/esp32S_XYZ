@@ -9,10 +9,7 @@
 </route>
 
 <script lang="ts" setup>
-import type { V2DeviceInfo } from '@/api/v2/types'
-import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
-import { v2GetDevices, v2ListTasks } from '@/api/v2'
 import { t } from '@/i18n'
 
 defineOptions({ name: 'MinePage' })
@@ -21,44 +18,16 @@ const safeAreaTop = ref(0)
 const systemInfo = uni.getSystemInfoSync()
 safeAreaTop.value = systemInfo.statusBarHeight || 0
 
-const devices = ref<V2DeviceInfo[]>([])
-const onlineCount = ref(0)
-const taskCount = ref(0)
-const loading = ref(false)
 const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0'
 
-onShow(() => {
-  loadData()
-})
-
-async function loadData() {
-  loading.value = true
-  try {
-    const res = await v2GetDevices()
-    devices.value = res.rows || []
-    onlineCount.value = devices.value.filter(d => d.status === 'online').length
-
-    // 并行查询所有设备的活跃任务数（替代串行 for...of）
-    const taskResults = await Promise.all(
-      devices.value.map(d => v2ListTasks(d.deviceId, 'running', 100).catch(() => ({ count: 0 }))),
-    )
-    taskCount.value = taskResults.reduce((sum, r) => sum + (r.count || 0), 0)
-  }
-  catch (e) { console.error(e) }
-  finally { loading.value = false }
-}
-
-function goDevices() {
-  uni.switchTab({ url: '/pages/v2/device-list/index' })
-}
-function goConfig() {
-  uni.switchTab({ url: '/pages/device-config/index' })
-}
 function goSettings() {
   uni.switchTab({ url: '/pages/settings/index' })
 }
 function goDigitalHuman() {
   uni.showToast({ title: t('nebula.digitalHumanComingSoon'), icon: 'none' })
+}
+function goVoiceprint() {
+  uni.navigateTo({ url: '/pages/voiceprint/index' })
 }
 function goLogout() {
   uni.vibrateShort({ type: 'medium' })
@@ -104,67 +73,12 @@ function showAbout() {
       </view>
     </view>
 
-    <!-- Stats -->
-    <view class="stats-row">
-      <view class="stat-card">
-        <view v-if="loading" class="skeleton" style="width: 60rpx; height: 48rpx;" />
-        <text v-else class="stat-num">
-          {{ devices.length }}
-        </text>
-        <text class="stat-label">
-          {{ t('mine.devices') }}
-        </text>
-      </view>
-      <view class="stat-card">
-        <view v-if="loading" class="skeleton" style="width: 60rpx; height: 48rpx;" />
-        <text v-else class="stat-num online">
-          {{ onlineCount }}
-        </text>
-        <text class="stat-label">
-          {{ t('mine.online') }}
-        </text>
-      </view>
-      <view class="stat-card">
-        <view v-if="loading" class="skeleton" style="width: 60rpx; height: 48rpx;" />
-        <text v-else class="stat-num tasks">
-          {{ taskCount }}
-        </text>
-        <text class="stat-label">
-          {{ t('mine.tasks') }}
-        </text>
-      </view>
-    </view>
-
     <!-- Feature Menu -->
     <view class="menu-section">
       <text class="menu-title">
         {{ t('mine.featureCenter') }}
       </text>
       <view class="menu-list">
-        <view class="menu-item" @click="goDevices">
-          <wd-icon name="setting" size="22" color="#2dd4a7" custom-class="menu-icon" />
-          <view class="menu-content">
-            <text class="menu-name">
-              {{ t('mine.deviceMgmt') }}
-            </text>
-            <text class="menu-desc">
-              {{ t('mine.deviceMgmtDesc') }}
-            </text>
-          </view>
-          <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
-        </view>
-        <view class="menu-item" @click="goConfig">
-          <wd-icon name="wifi" size="22" color="#2dd4a7" custom-class="menu-icon" />
-          <view class="menu-content">
-            <text class="menu-name">
-              {{ t('mine.deviceConfig') }}
-            </text>
-            <text class="menu-desc">
-              {{ t('mine.deviceConfigDesc') }}
-            </text>
-          </view>
-          <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
-        </view>
         <view class="menu-item" @click="goDigitalHuman">
           <wd-icon name="user" size="22" color="#2dd4a7" custom-class="menu-icon" />
           <view class="menu-content">
@@ -173,6 +87,18 @@ function showAbout() {
             </text>
             <text class="menu-desc">
               {{ t('mine.digitalHumanDesc') }}
+            </text>
+          </view>
+          <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
+        </view>
+        <view class="menu-item" @click="goVoiceprint">
+          <wd-icon name="sound" size="22" color="#2dd4a7" custom-class="menu-icon" />
+          <view class="menu-content">
+            <text class="menu-name">
+              {{ t('mine.voiceprint') }}
+            </text>
+            <text class="menu-desc">
+              {{ t('mine.voiceprintDesc') }}
             </text>
           </view>
           <wd-icon name="arrow-right" size="16" color="#c7c7cc" />
@@ -287,44 +213,6 @@ function showAbout() {
 .user-sub {
   font-size: 24rpx;
   color: rgba(255, 255, 255, 0.8);
-}
-
-.stats-row {
-  display: flex;
-  gap: 16rpx;
-  padding: 0 24rpx;
-  margin-bottom: 24rpx;
-}
-
-.stat-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8rpx;
-  padding: 24rpx 0;
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: 20rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-}
-
-.stat-num {
-  font-size: 44rpx;
-  font-weight: 800;
-  color: var(--accent);
-
-  &.online {
-    color: var(--green);
-  }
-  &.tasks {
-    color: var(--amber);
-  }
-}
-
-.stat-label {
-  font-size: 24rpx;
-  color: var(--muted);
 }
 
 .menu-section {

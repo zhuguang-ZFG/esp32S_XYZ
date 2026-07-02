@@ -700,6 +700,8 @@ export default {
   'mine.deviceConfigDesc': '为新设备配置 WiFi 网络',
   'mine.digitalHuman': '数字人',
   'mine.digitalHumanDesc': '2D 语音交互数字人',
+  'mine.voiceprint': '声纹',
+  'mine.voiceprintDesc': '声纹注册与管理',
   'mine.system': '系统',
   'mine.settings': '设置',
   'mine.settingsDesc': '网络、缓存、语言、隐私',

@@ -30,6 +30,9 @@ const primaryDevice = computed(() => {
   return devices.value.find(d => d.status === 'online') || devices.value[0] || null
 })
 
+// 在线数（Hero sub-item 已展示总设备数，这里独立供后续统计行复用）
+const onlineCount = computed(() => devices.value.filter(d => d.status === 'online').length)
+
 onShow(() => {
   loadData()
 })
@@ -193,7 +196,7 @@ function taskProgress(status: string): number {
               设备
             </text>
             <text class="sub-value">
-              {{ devices.length }} 台
+              {{ onlineCount }}/{{ devices.length }} 台
             </text>
           </view>
           <view class="sub-divider" />
