@@ -11,11 +11,10 @@
 <script lang="ts" setup>
 import type { V2NotificationSubscription } from '@/api/v2'
 import type { Language } from '@/store/lang'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useToast } from 'wot-design-uni/components/wd-toast'
 import { v2DeleteAccount, v2ListNotificationSubscriptions, v2SubscribeNotifications, v2UnsubscribeNotification } from '@/api/v2'
 import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
-import { useConfigStore } from '@/store'
 import {
   clearServerBaseUrlOverride,
   getEnvBaseUrl,
@@ -24,6 +23,7 @@ import {
   setServerBaseUrlOverride,
 } from '@/utils'
 import { isMp } from '@/utils/platform'
+import SectionCard from '@/components/section-card.vue'
 
 defineOptions({
   name: 'SettingsPage',
@@ -38,18 +38,10 @@ const cacheInfo = reactive({
   dataCache: '0MB',
 })
 
-const configStore = useConfigStore()
-
 // 服务端地址设置
 const baseUrlInput = ref('')
 const urlError = ref('')
 const accountDeleteLoading = ref(false)
-
-// 系统信息（保留）
-const systemInfo = computed(() => {
-  const info = uni.getSystemInfoSync()
-  return `${info.platform} ${info.system}`
-})
 
 // 读取本地覆盖地址
 function loadServerBaseUrl() {
@@ -424,274 +416,193 @@ onMounted(async () => {
 
     <view class="p-[24rpx]">
       <!-- 网络设置 - 仅在非小程序环境显示 -->
-      <view v-if="!isMp" class="mb-[32rpx]">
-        <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('settings.networkSettings') }}
+      <SectionCard v-if="!isMp" :title="t('settings.networkSettings')">
+        <view class="mb-[24rpx]">
+          <text class="text-[28rpx] text-[#f0f4f8] font-semibold">
+            {{ t('settings.serverApiUrl') }}
+          </text>
+          <text class="mt-[8rpx] block text-[24rpx] text-[#5a6372]">
+            {{ t('settings.modifyWillClearCache') }}
           </text>
         </view>
-
-        <view
-          class="overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
-          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
-        >
-          <view class="mb-[24rpx]">
-            <text class="text-[28rpx] text-[#f0f4f8] font-semibold">
-              {{ t('settings.serverApiUrl') }}
-            </text>
-            <text class="mt-[8rpx] block text-[24rpx] text-[#5a6372]">
-              {{ t('settings.modifyWillClearCache') }}
-            </text>
+        <view class="mb-[24rpx]">
+          <view class="w-full overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[16rpx]" style="background: #14181f;">
+            <wd-input
+              v-model="baseUrlInput" type="text" clearable :maxlength="200"
+              :placeholder="t('settings.enterServerUrl')"
+              custom-class="!border-none !bg-transparent h-[64rpx] px-[24rpx] items-center"
+              input-class="text-[28rpx] text-[#f0f4f8]" @input="validateUrl" @blur="validateUrl"
+            />
           </view>
-
-          <view class="mb-[24rpx]">
-            <view class="w-full overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[16rpx]" style="background: #14181f;">
-              <wd-input
-                v-model="baseUrlInput" type="text" clearable :maxlength="200"
-                :placeholder="t('settings.enterServerUrl')"
-                custom-class="!border-none !bg-transparent h-[64rpx] px-[24rpx] items-center"
-                input-class="text-[28rpx] text-[#f0f4f8]" @input="validateUrl" @blur="validateUrl"
-              />
-            </view>
-            <text v-if="urlError" class="mt-[8rpx] block text-[24rpx] text-[#ff4d4f]">
-              {{ urlError }}
-            </text>
-          </view>
-
-          <view class="flex gap-[16rpx]">
-            <wd-button
-              type="primary"
-              custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-none"
-              @click="saveServerBaseUrl"
-            >
-              {{ t('settings.saveSettings') }}
-            </wd-button>
-            <wd-button
-              type="default"
-              custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-[rgba(255,255,255,0.04)] text-[#8b95a8]"
-              @click="resetServerBaseUrl"
-            >
-              {{ t('settings.resetDefault') }}
-            </wd-button>
-          </view>
+          <text v-if="urlError" class="mt-[8rpx] block text-[24rpx] text-[#ff4d4f]">
+            {{ urlError }}
+          </text>
         </view>
-      </view>
+        <view class="flex gap-[16rpx]">
+          <wd-button
+            type="primary"
+            custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-none"
+            @click="saveServerBaseUrl"
+          >
+            {{ t('settings.saveSettings') }}
+          </wd-button>
+          <wd-button
+            type="default"
+            custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-[rgba(255,255,255,0.04)] text-[#8b95a8]"
+            @click="resetServerBaseUrl"
+          >
+            {{ t('settings.resetDefault') }}
+          </wd-button>
+        </view>
+      </SectionCard>
 
       <!-- 缓存管理 -->
-      <view class="mb-[32rpx]">
-        <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('settings.cacheManagement') }}
-          </text>
-        </view>
-
-        <view
-          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
-          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
-        >
-          <view class="space-y-[16rpx]">
-            <!-- 缓存信息展示，参考插件样式 -->
-            <view
-              class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-              style="background: #14181f;"
-            >
-              <view>
-                <text class="text-[28rpx] text-[#f0f4f8] font-medium">
-                  {{ t('settings.totalCacheSize') }}
-                </text>
-                <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
-                  {{ t('settings.appDataSize') }}
-                </text>
-              </view>
-              <text class="text-[28rpx] text-[#8b95a8] font-semibold">
-                {{ cacheInfo.storageSize }}
-              </text>
-            </view>
-
-            <!-- 清除缓存按钮，参考插件编辑按钮样式 -->
-            <view
-              class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-              style="background: #14181f;"
-            >
-              <view>
-                <text class="text-[28rpx] text-[#f0f4f8] font-medium">
-                  {{ t('settings.cacheClear') }}
-                </text>
-                <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
-                  {{ t('settings.clearAllCache') }}
-                </text>
-              </view>
-              <view
-                class="cursor-pointer rounded-[24rpx] px-[28rpx] py-[16rpx] text-[24rpx] text-[#ff6b6b] font-semibold transition-all duration-300 active:scale-95"
-                style="background: rgba(255,107,107,0.1);"
-                @click="clearCache"
-              >
-                {{ t('settings.clearCache') }}
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 隐私与权限 -->
-      <view class="mb-[32rpx]">
-        <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('settings.privacyTitle') }}
-          </text>
-        </view>
-
-        <view
-          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
-          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
-        >
-          <view
-            class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #14181f;"
-            @click="openPrivacyPermissions"
-          >
-            <view>
-              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
-                {{ t('settings.privacyAuth') }}
-              </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
-                {{ t('settings.privacyDesc') }}
-              </text>
-            </view>
-            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
-          </view>
-        </view>
-      </view>
-
-      <!-- 通知订阅 -->
-      <view class="mb-[32rpx]">
-        <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('settings.notificationsTitle') }}
-          </text>
-        </view>
-
-        <view
-          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
-          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
-        >
+      <SectionCard :title="t('settings.cacheManagement')">
+        <view class="space-y-[16rpx]">
           <view
             class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
             style="background: #14181f;"
           >
             <view>
               <text class="text-[28rpx] text-[#f0f4f8] font-medium">
-                {{ t('settings.pushNotifications') }}
+                {{ t('settings.totalCacheSize') }}
               </text>
               <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
-                {{ t('settings.pushNotificationsDesc') }}
+                {{ t('settings.appDataSize') }}
               </text>
             </view>
-            <wd-switch
-              v-model="notificationEnabled"
-              :loading="notificationLoading"
-              @change="handleToggleNotifications"
-            />
+            <text class="text-[28rpx] text-[#8b95a8] font-semibold">
+              {{ cacheInfo.storageSize }}
+            </text>
           </view>
-        </view>
-      </view>
-
-      <!-- 应用信息 -->
-      <view class="mb-[32rpx]">
-        <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('settings.accountDeletion') }}
-          </text>
-        </view>
-
-        <view
-          class="border border-[rgba(255,107,107,0.15)] rounded-[24rpx] p-[32rpx]"
-          style="background: rgba(255,107,107,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
-        >
-          <view class="flex items-center justify-between gap-[24rpx]">
-            <view class="min-w-0 flex-1">
-              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
-                {{ t('settings.accountDeletionTitle') }}
-              </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a] leading-[34rpx]">
-                {{ t('settings.accountDeletionDesc') }}
-              </text>
-            </view>
-            <wd-button
-              type="error"
-              :loading="accountDeleteLoading"
-              custom-class="h-[72rpx] rounded-[16rpx] px-[28rpx] text-[24rpx] font-semibold"
-              @click="handleAccountDeletion"
-            >
-              {{ t('settings.delete') }}
-            </wd-button>
-          </view>
-        </view>
-      </view>
-
-      <view class="mb-[32rpx]">
-        <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('settings.appInfo') }}
-          </text>
-        </view>
-
-        <view
-          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
-          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
-        >
           <view
-            class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+            class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
             style="background: #14181f;"
-            @click="showAbout"
           >
             <view>
               <text class="text-[28rpx] text-[#f0f4f8] font-medium">
-                {{ t('settings.aboutUs') }}
+                {{ t('settings.cacheClear') }}
               </text>
               <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
-                {{ t('settings.appVersion') }}
+                {{ t('settings.clearAllCache') }}
               </text>
             </view>
+            <view
+              class="cursor-pointer rounded-[24rpx] px-[28rpx] py-[16rpx] text-[24rpx] text-[#ff6b6b] font-semibold transition-all duration-300 active:scale-95"
+              style="background: rgba(255,107,107,0.1);"
+              @click="clearCache"
+            >
+              {{ t('settings.clearCache') }}
+            </view>
+          </view>
+        </view>
+      </SectionCard>
+
+      <!-- 隐私与权限 -->
+      <SectionCard :title="t('settings.privacyTitle')">
+        <view
+          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+          style="background: #14181f;"
+          @click="openPrivacyPermissions"
+        >
+          <view>
+            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              {{ t('settings.privacyAuth') }}
+            </text>
+            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+              {{ t('settings.privacyDesc') }}
+            </text>
+          </view>
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+        </view>
+      </SectionCard>
+
+      <!-- 通知订阅 -->
+      <SectionCard :title="t('settings.notificationsTitle')">
+        <view
+          class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+          style="background: #14181f;"
+        >
+          <view>
+            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              {{ t('settings.pushNotifications') }}
+            </text>
+            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+              {{ t('settings.pushNotificationsDesc') }}
+            </text>
+          </view>
+          <wd-switch
+            v-model="notificationEnabled"
+            :loading="notificationLoading"
+            @change="handleToggleNotifications"
+          />
+        </view>
+      </SectionCard>
+
+      <!-- 应用信息 - 注销账号 -->
+      <SectionCard :title="t('settings.accountDeletion')" variant="danger">
+        <view class="flex items-center justify-between gap-[24rpx]">
+          <view class="min-w-0 flex-1">
+            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              {{ t('settings.accountDeletionTitle') }}
+            </text>
+            <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a] leading-[34rpx]">
+              {{ t('settings.accountDeletionDesc') }}
+            </text>
+          </view>
+          <wd-button
+            type="error"
+            :loading="accountDeleteLoading"
+            custom-class="h-[72rpx] rounded-[16rpx] px-[28rpx] text-[24rpx] font-semibold"
+            @click="handleAccountDeletion"
+          >
+            {{ t('settings.delete') }}
+          </wd-button>
+        </view>
+      </SectionCard>
+
+      <!-- 应用信息 - 关于我们 -->
+      <SectionCard :title="t('settings.appInfo')">
+        <view
+          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+          style="background: #14181f;"
+          @click="showAbout"
+        >
+          <view>
+            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              {{ t('settings.aboutUs') }}
+            </text>
+            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+              {{ t('settings.appVersion') }}
+            </text>
+          </view>
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+        </view>
+      </SectionCard>
+
+      <!-- 语言设置 -->
+      <SectionCard :title="t('settings.languageSettings')">
+        <view
+          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+          style="background: #14181f;"
+          @click="showLanguageSheet = true"
+        >
+          <view>
+            <text class="text-[32rpx] text-[#f0f4f8] font-medium">
+              {{ t('settings.language') }}
+            </text>
+            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+              {{ t('settings.selectLanguage') }}
+            </text>
+          </view>
+          <view class="flex items-center">
+            <text class="mr-[16rpx] text-[32rpx] text-[#5a6372] font-semibold">
+              {{ supportedLanguages.find(lang => lang.code === currentLanguage)?.name }}
+            </text>
             <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
           </view>
         </view>
-      </view>
-
-      <!-- 语言设置 -->
-      <view class="mb-[32rpx]">
-        <view class="mb-[24rpx] flex items-center">
-          <text class="text-[32rpx] text-[#f0f4f8] font-bold">
-            {{ t('settings.languageSettings') }}
-          </text>
-        </view>
-
-        <view
-          class="border border-[rgba(255,255,255,0.04)] rounded-[24rpx] p-[32rpx]"
-          style="background: rgba(255,255,255,0.03); box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.2);"
-        >
-          <view
-            class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #14181f;"
-            @click="showLanguageSheet = true"
-          >
-            <view>
-              <text class="text-[32rpx] text-[#f0f4f8] font-medium">
-                {{ t('settings.language') }}
-              </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
-                {{ t('settings.selectLanguage') }}
-              </text>
-            </view>
-            <view class="flex items-center">
-              <text class="mr-[16rpx] text-[32rpx] text-[#5a6372] font-semibold">
-                {{ supportedLanguages.find(lang => lang.code === currentLanguage)?.name }}
-              </text>
-              <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
-            </view>
-          </view>
-        </view>
-      </view>
+      </SectionCard>
 
       <!-- 语言选择弹窗 -->
       <wd-action-sheet v-model="showLanguageSheet" :title="t('settings.selectLanguage')" :close-on-click-modal="true">
