@@ -152,15 +152,6 @@
       }
     },
     {
-      "path": "pages/mine/mine",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "我的"
-      }
-    },
-    {
       "path": "pages/settings/index",
       "type": "page",
       "layout": "tabbar",

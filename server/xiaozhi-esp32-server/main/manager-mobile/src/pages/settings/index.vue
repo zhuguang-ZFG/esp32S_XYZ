@@ -1,6 +1,6 @@
 <route lang="jsonc" type="page">
 {
-  "layout": "default",
+  "layout": "tabbar",
   "style": {
     "navigationBarTitleText": "设置",
     "navigationStyle": "custom"
@@ -9,142 +9,53 @@
 </route>
 
 <script lang="ts" setup>
-import type { V2NotificationSubscription } from '@/api/v2'
 import type { Language } from '@/store/lang'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useToast } from 'wot-design-uni/components/wd-toast'
-import { v2DeleteAccount, v2ListNotificationSubscriptions, v2SubscribeNotifications, v2UnsubscribeNotification } from '@/api/v2'
 import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
-import {
-  clearServerBaseUrlOverride,
-  getEnvBaseUrl,
-  getServerBaseUrlOverride,
-  isValidServerBaseUrl,
-  setServerBaseUrlOverride,
-} from '@/utils'
 import { isMp } from '@/utils/platform'
 import SectionCard from '@/components/section-card.vue'
+import { useAccountDeletion } from '@/hooks/useAccountDeletion'
+import { useCacheManager } from '@/hooks/useCacheManager'
+import { useNotifications } from '@/hooks/useNotifications'
+import { useServerUrl } from '@/hooks/useServerUrl'
 
-defineOptions({
-  name: 'SettingsPage',
-})
-
-const toast = useToast()
-
-// 缓存信息
-const cacheInfo = reactive({
-  storageSize: '0MB',
-  imageCache: '0MB',
-  dataCache: '0MB',
-})
-
-// 服务端地址设置
-const baseUrlInput = ref('')
-const urlError = ref('')
-const accountDeleteLoading = ref(false)
-
-// 读取本地覆盖地址
-function loadServerBaseUrl() {
-  const override = getServerBaseUrlOverride()
-  baseUrlInput.value = override || getEnvBaseUrl()
-}
-
-// 获取缓存信息
-function getCacheInfo() {
-  try {
-    const info = uni.getStorageInfoSync()
-    const totalSize = (info.currentSize || 0) / 1024 // KB to MB
-    cacheInfo.storageSize = `${totalSize.toFixed(2)}MB`
-  }
-  catch (error) {
-    console.error('获取缓存信息失败:', error)
-  }
-}
-
-// 验证URL格式
-function validateUrl() {
-  urlError.value = ''
-
-  if (!baseUrlInput.value) {
-    return
-  }
-
-  if (!isValidServerBaseUrl(baseUrlInput.value)) {
-    urlError.value = t('settings.validServerUrl')
-  }
-}
-
-// 测试服务端地址
-async function testServerBaseUrl() {
-  // 先清除错误信息
-  urlError.value = ''
-
-  if (!baseUrlInput.value || !isValidServerBaseUrl(baseUrlInput.value)) {
-    return false
-  }
-
-  try {
-    const response = await uni.request({
-      url: `${baseUrlInput.value.replace(/\/$/, '')}/health`,
-      method: 'GET',
-      timeout: 3000,
-    })
-
-    if (response.statusCode === 200) {
-      return true
-    }
-    else {
-      toast.error({
-        msg: t('message.invalidAddress'),
-        duration: 3000,
-      })
-      return false
-    }
-  }
-  catch (error) {
-    console.error('测试服务端地址失败:', error)
-    toast.error({
-      msg: t('message.invalidAddress'),
-      duration: 3000,
-    })
-    return false
-  }
-}
-
-// 保存服务端地址
-async function saveServerBaseUrl() {
-  if (!baseUrlInput.value || !isValidServerBaseUrl(baseUrlInput.value)) {
-    toast.warning(t('settings.validServerUrl'))
-    return
-  }
-
-  // 测试地址有效性
-  const isServerValid = await testServerBaseUrl()
-  if (!isServerValid) {
-    return
-  }
-  setServerBaseUrlOverride(baseUrlInput.value)
-
-  // 切换请求地址后清空所有缓存
-  clearAllCacheAfterUrlChange()
-
+// --- 退出登录（P2-18 从 mine 页合并） ---
+function goLogout() {
+  uni.vibrateShort({ type: 'medium' })
   uni.showModal({
-    title: t('settings.restartApp'),
-    content: t('settings.serverUrlSavedAndCacheCleared'),
-    confirmText: t('settings.restartNow'),
-    cancelText: t('settings.restartLater'),
+    title: t('mine.logoutConfirmTitle'),
+    content: t('mine.logoutConfirmContent'),
     success: (res) => {
       if (res.confirm) {
-        restartApp()
-      }
-      else {
-        toast.success(t('settings.restartSuccess'))
+        uni.clearStorageSync()
+        uni.reLaunch({ url: '/pages/v2/login/index' })
       }
     },
   })
 }
 
-// 语言切换
+function goVoiceprint() {
+  uni.navigateTo({ url: '/pages/voiceprint/index' })
+}
+
+defineOptions({ name: 'SettingsPage' })
+
+const toast = useToast()
+
+// --- 缓存管理 ---
+const { cacheInfo, getCacheInfo, clearAllCacheAfterUrlChange, clearCache } = useCacheManager()
+
+// --- 服务端地址 ---
+const { baseUrlInput, urlError, loadServerBaseUrl, validateUrl, saveServerBaseUrl, resetServerBaseUrl } = useServerUrl(clearAllCacheAfterUrlChange)
+
+// --- 通知订阅 ---
+const { notificationEnabled, notificationLoading, loadNotificationSubs, handleToggleNotifications } = useNotifications()
+
+// --- 账号注销 ---
+const { accountDeleteLoading, handleAccountDeletion } = useAccountDeletion(clearAllCacheAfterUrlChange)
+
+// --- 语言切换 ---
 const supportedLanguages = getSupportedLanguages()
 const currentLanguage = ref<Language>(getCurrentLanguage())
 const showLanguageSheet = ref(false)
@@ -156,97 +67,7 @@ function handleLanguageChange(lang: Language) {
   toast.success(t('settings.languageChanged'))
 }
 
-// 重置为 env 默认
-function resetServerBaseUrl() {
-  clearServerBaseUrlOverride()
-  baseUrlInput.value = getEnvBaseUrl()
-
-  // 切换请求地址后清空所有缓存
-  clearAllCacheAfterUrlChange()
-
-  uni.showModal({
-    title: t('settings.restartApp'),
-    content: t('settings.resetToDefaultAndCacheCleared'),
-    confirmText: t('settings.restartNow'),
-    cancelText: t('settings.restartLater'),
-    success: (res) => {
-      if (res.confirm) {
-        restartApp()
-      }
-      else {
-        toast.success(t('settings.resetSuccess'))
-      }
-    },
-  })
-}
-
-// 重启应用（App 原生重启；其他端回到首页）
-function restartApp() {
-  // #ifdef APP-PLUS
-  plus.runtime.restart()
-  // #endif
-  // #ifndef APP-PLUS
-  uni.reLaunch({ url: '/pages/v2/device-list/index' })
-  // #endif
-}
-
-// 切换地址后自动清空所有缓存
-function clearAllCacheAfterUrlChange() {
-  try {
-    // 备份运行时覆盖地址，确保清理后恢复
-    const preservedOverride = getServerBaseUrlOverride()
-
-    // 完全清空所有缓存，包括token
-    uni.clearStorageSync()
-
-    // 清空localStorage（H5环境）
-    // #ifdef H5
-    if (typeof localStorage !== 'undefined') {
-      localStorage.clear()
-    }
-    // #endif
-
-    // 恢复运行时覆盖地址（如有），需要在清理完成后再写入
-    if (preservedOverride) {
-      setServerBaseUrlOverride(preservedOverride)
-    }
-
-    // 重新获取缓存信息
-    getCacheInfo()
-  }
-  catch (error) {
-    console.error('清除缓存失败:', error)
-  }
-}
-
-// 清除缓存
-async function clearCache() {
-  try {
-    uni.showModal({
-      title: t('settings.confirmClear'),
-      content: t('settings.confirmClearMessage'),
-      confirmText: t('common.confirm'),
-      cancelText: t('common.cancel'),
-      success: (res) => {
-        if (res.confirm) {
-          clearAllCacheAfterUrlChange()
-          toast.success(t('settings.cacheCleared'))
-
-          // 延迟跳转到登录页
-          setTimeout(() => {
-            uni.reLaunch({ url: '/pages/v2/login/index' })
-          }, 1500)
-        }
-      },
-    })
-  }
-  catch (error) {
-    console.error('清除缓存失败:', error)
-    toast.error(t('settings.clearCacheFailed'))
-  }
-}
-
-// 关于我们
+// --- 关于 ---
 function showAbout() {
   uni.showModal({
     title: t('settings.aboutApp', { appName: import.meta.env.VITE_APP_TITLE }),
@@ -263,146 +84,12 @@ function openPrivacyPermissions() {
   uni.navigateTo({ url: '/pages/settings/privacy-permissions' })
 }
 
-function handleAccountDeletion() {
-  if (accountDeleteLoading.value) {
-    return
-  }
-  uni.showModal({
-    title: t('settings.deleteConfirmTitle'),
-    content: t('settings.deleteConfirmContent'),
-    confirmText: t('settings.deleteConfirmContinue'),
-    cancelText: t('common.cancel'),
-    success: (first) => {
-      if (!first.confirm) {
-        return
-      }
-      uni.showModal({
-        title: t('settings.deleteSecondConfirmTitle'),
-        content: t('settings.deleteSecondConfirmContent'),
-        confirmText: t('settings.deleteSecondConfirmAction'),
-        cancelText: t('common.cancel'),
-        success: async (second) => {
-          if (!second.confirm) {
-            return
-          }
-          await submitAccountDeletion()
-        },
-      })
-    },
-  })
-}
-
-async function submitAccountDeletion() {
-  accountDeleteLoading.value = true
-  try {
-    const response = await v2DeleteAccount()
-    clearAllCacheAfterUrlChange()
-    toast.success(t('settings.accountDeleted', { days: response.auditRetentionDays }))
-    setTimeout(() => {
-      uni.reLaunch({ url: '/pages/v2/login/index' })
-    }, 800)
-  }
-  catch (error) {
-    console.error('delete account failed:', error)
-    toast.error(t('settings.deleteFailed'))
-  }
-  finally {
-    accountDeleteLoading.value = false
-  }
-}
-
-// 通知订阅
-const notificationSubs = ref<V2NotificationSubscription[]>([])
-const notificationLoading = ref(false)
-const notificationEnabled = ref(false)
-
-// 微信订阅消息模板（需在公众平台创建后填入真实 template_id）
-const NOTIFICATION_TEMPLATES = [
-  'task_completed',
-  'task_failed',
-  'device_offline',
-  'firmware_update',
-]
-
-async function loadNotificationSubs() {
-  try {
-    notificationSubs.value = await v2ListNotificationSubscriptions()
-    notificationEnabled.value = notificationSubs.value.some(s => s.status === 'active')
-  }
-  catch {
-    notificationSubs.value = []
-  }
-}
-
-async function handleToggleNotifications() {
-  if (notificationLoading.value)
-    return
-  notificationLoading.value = true
-  try {
-    if (notificationEnabled.value) {
-      // 关闭：取消所有活跃订阅
-      for (const sub of notificationSubs.value) {
-        if (sub.status === 'active') {
-          await v2UnsubscribeNotification(sub.subscriptionId)
-        }
-      }
-      notificationEnabled.value = false
-      toast.success(t('settings.notificationsOff'))
-    }
-    else {
-      // 开启：请求微信订阅授权 → 后端订阅
-      // #ifdef MP-WEIXIN
-      const reqTemplateIds = NOTIFICATION_TEMPLATES.map(tid => `tmpl_${tid}`)
-      const wxRes = await uni.requestSubscribeMessage({ tmplIds: reqTemplateIds })
-      const accepted = reqTemplateIds.filter(tid => (wxRes as any)[tid] === 'accept')
-      if (!accepted.length) {
-        toast.warning(t('settings.notificationsRejected'))
-        return
-      }
-      const openid = uni.getStorageSync('openid') || ''
-      if (!openid) {
-        toast.warning(t('settings.notificationsNeedLogin'))
-        return
-      }
-      // 获取所有设备 ID
-      const devices = uni.getStorageSync('device_ids') || []
-      if (!devices.length) {
-        toast.warning(t('settings.notificationsNoDevices'))
-        return
-      }
-      await v2SubscribeNotifications(openid, accepted, devices)
-      notificationEnabled.value = true
-      toast.success(t('settings.notificationsOn'))
-      // #endif
-      // #ifndef MP-WEIXIN
-      toast.info(t('settings.notificationsMpOnly'))
-      // #endif
-      await loadNotificationSubs()
-    }
-  }
-  catch (e: any) {
-    console.error('toggle notifications failed:', e)
-    toast.error(e?.message || t('settings.notificationsFailed'))
-  }
-  finally {
-    notificationLoading.value = false
-  }
-}
-
 onMounted(async () => {
-  // 仅在非小程序环境加载服务端地址设置
-  if (!isMp) {
+  if (!isMp)
     loadServerBaseUrl()
-  }
   getCacheInfo()
-
-  // 加载通知订阅状态
   loadNotificationSubs()
-
-  // 动态设置导航栏标题为国际化文本
-  uni.setNavigationBarTitle({
-    title: t('settings.title'),
-  })
+  uni.setNavigationBarTitle({ title: t('settings.title') })
 })
 </script>
 
@@ -539,7 +226,7 @@ onMounted(async () => {
         </view>
       </SectionCard>
 
-      <!-- 应用信息 - 注销账号 -->
+      <!-- 账号注销 -->
       <SectionCard :title="t('settings.accountDeletion')" variant="danger">
         <view class="flex items-center justify-between gap-[24rpx]">
           <view class="min-w-0 flex-1">
@@ -561,7 +248,7 @@ onMounted(async () => {
         </view>
       </SectionCard>
 
-      <!-- 应用信息 - 关于我们 -->
+      <!-- 关于 -->
       <SectionCard :title="t('settings.appInfo')">
         <view
           class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
@@ -604,6 +291,44 @@ onMounted(async () => {
         </view>
       </SectionCard>
 
+      <!-- 声纹录入（P2-18 从 mine 页合并） -->
+      <SectionCard :title="t('mine.featureCenter')">
+        <view
+          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+          style="background: #14181f;"
+          @click="goVoiceprint"
+        >
+          <view>
+            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              {{ t('mine.voiceprint') }}
+            </text>
+            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+              {{ t('mine.voiceprintDesc') }}
+            </text>
+          </view>
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+        </view>
+      </SectionCard>
+
+      <!-- 退出登录（P2-18 从 mine 页合并） -->
+      <SectionCard :title="t('mine.system')" variant="danger">
+        <view
+          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
+          style="background: #14181f;"
+          @click="goLogout"
+        >
+          <view>
+            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              {{ t('mine.logout') }}
+            </text>
+            <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a]">
+              {{ t('mine.logoutConfirmContent') }}
+            </text>
+          </view>
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+        </view>
+      </SectionCard>
+
       <!-- 语言选择弹窗 -->
       <wd-action-sheet v-model="showLanguageSheet" :title="t('settings.selectLanguage')" :close-on-click-modal="true">
         <view class="language-sheet">
@@ -627,7 +352,6 @@ onMounted(async () => {
 </template>
 
 <style lang="scss" scoped>
-// 语言选择弹窗样式
 .language-sheet {
   .language-list {
     max-height: 50vh;

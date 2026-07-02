@@ -485,7 +485,7 @@ function goToVoiceprint() {
   uni.navigateTo({ url: `/pages/voiceprint/index?deviceId=${deviceId.value || ''}` })
 }
 function goToAgents() {
-  uni.switchTab({ url: '/pages/index/index' })
+  uni.navigateTo({ url: '/pages/index/index' })
 }
 
 // ── 设备分享（AUDIT gap 实现）──

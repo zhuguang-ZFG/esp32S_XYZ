@@ -10,14 +10,10 @@ import { getEnvBaseUrl } from '@/utils'
 import { toast } from '@/utils/toast'
 import { ContentTypeEnum, ResultEnum, ShowMessage } from './enum'
 
-// 语言映射, 用于设置 Accept-language 头
+// 语言映射, 用于设置 Accept-language 头（P2-19 裁剪：仅保留 zh_CN + en）
 const langMap: Record<Language, string> = {
   zh_CN: 'zh-CN',
   en: 'en-US',
-  zh_TW: 'zh-TW',
-  de: 'de',
-  vi: 'vi',
-  pt_BR: 'pt-BR',
 }
 
 /**

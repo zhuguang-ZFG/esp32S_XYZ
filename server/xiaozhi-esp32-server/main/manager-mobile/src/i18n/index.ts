@@ -2,22 +2,14 @@ import type { Language } from '@/store/lang'
 import { ref } from 'vue'
 import { useLangStore } from '@/store/lang'
 
-import de from './de'
+// 导入各个语言的翻译文件（P2-19 裁剪：仅保留 zh_CN + en）
 import en from './en'
-import pt_BR from './pt_BR'
-import vi from './vi'
-// 导入各个语言的翻译文件
 import zh_CN from './zh_CN'
-import zh_TW from './zh_TW'
 
 // 语言包映射
 const messages = {
   zh_CN,
   en,
-  zh_TW,
-  de,
-  vi,
-  pt_BR,
 }
 
 // 当前使用的语言
@@ -71,9 +63,5 @@ export function getSupportedLanguages(): { code: Language, name: string }[] {
   return [
     { code: 'zh_CN', name: '简体中文' },
     { code: 'en', name: 'English' },
-    { code: 'zh_TW', name: '繁體中文' },
-    { code: 'de', name: 'Deutsch' },
-    { code: 'vi', name: 'Tiếng Việt' },
-    { code: 'pt_BR', name: 'Português (Brasil)' },
   ]
 }

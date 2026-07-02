@@ -5,8 +5,7 @@ export default {
   'tabBar.agent': 'Agents',
   'tabBar.deviceConfig': 'Network Config',
   'tabBar.settings': 'System',
-  'tabBar.mine': 'Mine',
-  // Settings page title
+    // Settings page title
   'settings.title': 'Settings',
   // Login page
   'login.pageTitle': 'Login',

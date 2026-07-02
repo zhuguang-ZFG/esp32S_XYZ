@@ -26,6 +26,7 @@ export const selectedTabbarStrategy = TABBAR_MAP.NATIVE_TABBAR
 // selectedTabbarStrategy==NATIVE_TABBAR(1) 时，需要填 iconPath 和 selectedIconPath
 // selectedTabbarStrategy==CUSTOM_TABBAR(2,3) 时，需要填 icon 和 iconType
 // selectedTabbarStrategy==NO_TABBAR(0) 时，tabbarList 不生效
+// P2-18: tabbar 5→3，合并 mine→settings，移除 WorkshopHome（与 device-list 重叠）
 export const tabbarList: FgTabBarItem[] = [
   {
     iconPath: 'static/tabbar/home.png',
@@ -33,14 +34,6 @@ export const tabbarList: FgTabBarItem[] = [
     pagePath: 'pages/v2/device-list/index',
     text: '首页',
     icon: 'home',
-    iconType: 'uiLib',
-  },
-  {
-    iconPath: 'static/tabbar/robot.png',
-    selectedIconPath: 'static/tabbar/robot_activate.png',
-    pagePath: 'pages/index/index',
-    text: '智能体',
-    icon: 'robot',
     iconType: 'uiLib',
   },
   {
@@ -55,16 +48,8 @@ export const tabbarList: FgTabBarItem[] = [
     iconPath: 'static/tabbar/system.png',
     selectedIconPath: 'static/tabbar/system_activate.png',
     pagePath: 'pages/settings/index',
-    text: '系统',
+    text: '设置',
     icon: 'i-carbon-settings',
-    iconType: 'uiLib',
-  },
-  {
-    iconPath: 'static/tabbar/personal.png',
-    selectedIconPath: 'static/tabbar/personalHL.png',
-    pagePath: 'pages/mine/mine',
-    text: '我的',
-    icon: 'i-carbon-user',
     iconType: 'uiLib',
   },
 ]
@@ -90,10 +75,8 @@ const _tabbar: TabBar = {
 // i18n keys for dynamic tabBar text update at runtime
 export const tabBarI18nKeys = [
   'tabBar.home',
-  'tabBar.agent',
   'tabBar.deviceConfig',
   'tabBar.settings',
-  'tabBar.mine',
 ]
 
 // 0和1 需要显示底部的tabbar的各种配置，以利用缓存

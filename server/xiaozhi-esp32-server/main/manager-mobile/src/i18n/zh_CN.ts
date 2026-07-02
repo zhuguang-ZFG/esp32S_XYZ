@@ -5,8 +5,7 @@ export default {
   'tabBar.agent': '智能体',
   'tabBar.deviceConfig': '配网',
   'tabBar.settings': '系统',
-  'tabBar.mine': '我的',
-  // 设置页面标题
+    // 设置页面标题
   'settings.title': '设置',
   // 登录页面
   'login.pageTitle': '登录',

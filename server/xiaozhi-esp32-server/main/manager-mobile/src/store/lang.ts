@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-// 支持的语言类型
-export type Language = 'zh_CN' | 'en' | 'zh_TW' | 'de' | 'vi' | 'pt_BR'
+// 支持的语言类型（P2-19 裁剪：仅保留 zh_CN + en）
+export type Language = 'zh_CN' | 'en'
 
 export interface LangStore {
   currentLang: Language
