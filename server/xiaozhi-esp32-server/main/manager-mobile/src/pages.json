@@ -34,14 +34,6 @@
         "iconType": "uiLib"
       },
       {
-        "iconPath": "static/tabbar/robot.png",
-        "selectedIconPath": "static/tabbar/robot_activate.png",
-        "pagePath": "pages/index/index",
-        "text": "智能体",
-        "icon": "robot",
-        "iconType": "uiLib"
-      },
-      {
         "iconPath": "static/tabbar/network.png",
         "selectedIconPath": "static/tabbar/network_activate.png",
         "pagePath": "pages/device-config/index",
@@ -53,16 +45,8 @@
         "iconPath": "static/tabbar/system.png",
         "selectedIconPath": "static/tabbar/system_activate.png",
         "pagePath": "pages/settings/index",
-        "text": "系统",
+        "text": "设置",
         "icon": "i-carbon-settings",
-        "iconType": "uiLib"
-      },
-      {
-        "iconPath": "static/tabbar/personal.png",
-        "selectedIconPath": "static/tabbar/personalHL.png",
-        "pagePath": "pages/mine/mine",
-        "text": "我的",
-        "icon": "i-carbon-user",
         "iconType": "uiLib"
       }
     ]
@@ -125,7 +109,7 @@
     {
       "path": "pages/index/index",
       "type": "page",
-      "layout": "tabbar",
+      "layout": "default",
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "LiMa"
@@ -170,7 +154,7 @@
     {
       "path": "pages/mine/mine",
       "type": "page",
-      "layout": "tabbar",
+      "layout": "default",
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "我的"
@@ -179,7 +163,7 @@
     {
       "path": "pages/settings/index",
       "type": "page",
-      "layout": "default",
+      "layout": "tabbar",
       "style": {
         "navigationBarTitleText": "设置",
         "navigationStyle": "custom"
