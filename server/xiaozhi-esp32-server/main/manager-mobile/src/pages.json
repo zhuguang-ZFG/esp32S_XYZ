@@ -99,11 +99,19 @@
       "type": "page"
     },
     {
-      "path": "pages/create/create",
+      "path": "pages/create/ai-draw",
       "type": "page",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "AI 绘画"
+        "navigationBarTitleText": "AI 生图"
+      }
+    },
+    {
+      "path": "pages/create/image-draw",
+      "type": "page",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "图片绘画"
       }
     },
     {

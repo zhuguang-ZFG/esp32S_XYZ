@@ -55,10 +55,10 @@ function goChat() {
   uni.navigateTo({ url: '/pages/chat/chat' })
 }
 function goDraw() {
-  uni.navigateTo({ url: '/pages/create/create?mode=draw' })
+  uni.navigateTo({ url: '/pages/create/ai-draw' })
 }
 function goImageDraw() {
-  uni.navigateTo({ url: '/pages/create/create?mode=image' })
+  uni.navigateTo({ url: '/pages/create/image-draw' })
 }
 function goDigitalHuman() {
   uni.showToast({ title: t('nebula.digitalHumanComingSoon'), icon: 'none' })
