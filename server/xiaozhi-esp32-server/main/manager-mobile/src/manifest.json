@@ -2,8 +2,8 @@
   "name": "LiMa 星云",
   "appid": "__UNI__36A515E",
   "description": "",
-  "versionName": "3.8.2",
-  "versionCode": "382",
+  "versionName": "3.8.3",
+  "versionCode": "383",
   "transformPx": false,
   "app-plus": {
     "usingComponents": true,
@@ -87,7 +87,7 @@
   "mp-weixin": {
     "appid": "wxbf3c1e0013b46343",
     "setting": {
-      "urlCheck": true,
+      "urlCheck": false,
       "es6": true,
       "minified": true
     },
