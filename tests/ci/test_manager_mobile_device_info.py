@@ -26,6 +26,32 @@ V2_API = (
     / "v2"
     / "index.ts"
 )
+DEVICE_DETAIL_EVENTS = (
+    ROOT
+    / "server"
+    / "xiaozhi-esp32-server"
+    / "main"
+    / "manager-mobile"
+    / "src"
+    / "pages"
+    / "v2"
+    / "device-detail"
+    / "composables"
+    / "useDeviceEvents.ts"
+)
+DEVICE_DETAIL_ACTIONS = (
+    ROOT
+    / "server"
+    / "xiaozhi-esp32-server"
+    / "main"
+    / "manager-mobile"
+    / "src"
+    / "pages"
+    / "v2"
+    / "device-detail"
+    / "composables"
+    / "useDeviceActions.ts"
+)
 DEVICE_LIST = (
     ROOT
     / "server"
@@ -112,7 +138,8 @@ APP_VUE = ROOT / "server" / "xiaozhi-esp32-server" / "main" / "manager-mobile" /
 
 class ManagerMobileDeviceInfoTests(unittest.TestCase):
     def test_device_detail_handles_device_info_reply_event(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_EVENTS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("handleEdgeAEvent(event)", text)
         self.assertIn("event?.event_type === 'device_info_reply'", text)
@@ -123,45 +150,51 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("workspaceMm", text)
 
     def test_device_detail_can_submit_get_device_info_task(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("handleRefreshInfo", text)
-        self.assertIn("v2SubmitTask(deviceId.value, 'get_device_info')", text)
+        self.assertIn("v2SubmitTask(deviceId(), 'get_device_info')", text)
         self.assertIn("v2.detail.refreshInfo", text)
 
     def test_device_detail_displays_run_path_progress_events(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_EVENTS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("latestProgressPercent", text)
-        self.assertIn("applyTaskProgress(jobPayload)", text)
+        self.assertIn("function applyTaskProgress(payload:", text)
         self.assertIn("payload.phase === 'progress'", text)
         self.assertIn("['accepted', 'running'].includes(payload.phase)", text)
         self.assertIn("progressBarStyle", text)
         self.assertIn("latestProgressLabel", text)
 
     def test_device_detail_prompts_retry_when_runtime_status_is_refreshing(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("taskSubmitErrorMessage", text)
         self.assertIn("text.includes('E_RUNTIME_STALE')", text)
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
 
     def test_device_detail_shows_child_friendly_content_audit_message(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("v2.detail.errorContentBlocked", text)
         self.assertIn("text.includes('E_CONTENT_BLOCKED')", text)
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
 
     def test_device_detail_shows_friendly_invalid_drawing_message(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("v2.detail.errorInvalidDrawing", text)
         self.assertIn("text.includes('E_INVALID_DRAWING')", text)
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
 
     def test_device_detail_shows_friendly_entitlement_message(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("v2.detail.errorNotEntitled", text)
         self.assertIn("E_NOT_ENTITLED", text)
@@ -169,7 +202,8 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("message.alert(taskSubmitErrorMessage(e))", text)
 
     def test_device_detail_can_manually_maintain_supplies_state(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
         api = V2_API.read_text(encoding="utf-8", errors="replace")
         supplies_component = (
             ROOT
@@ -199,7 +233,8 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("v2.detail.errorNoPaper", text)
 
     def test_device_detail_can_request_cancel_and_accept_device_transfer(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
         api = V2_API.read_text(encoding="utf-8", errors="replace")
         types = (ROOT / "server" / "xiaozhi-esp32-server" / "main" / "manager-mobile" / "src" / "api" / "v2" / "types.ts").read_text(encoding="utf-8", errors="replace")
 
@@ -213,13 +248,13 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("`${appPrefix}/transfers/${transferId}/accept`", api)
         self.assertIn("`${appPrefix}/transfers/${transferId}/cancel`", api)
         self.assertIn("`${appPrefix}/transfers/pending`", api)
-        self.assertIn("transferTargetUnionid", text)
+        self.assertIn("transferTargetPhone", text)
         self.assertIn("transferAcceptId", text)
         self.assertIn("deviceTransfer", text)
         self.assertIn("handleRequestTransfer", text)
         self.assertIn("handleCancelTransfer", text)
         self.assertIn("handleAcceptTransfer", text)
-        self.assertIn("v2RequestDeviceTransfer(deviceId.value, { targetUnionid: target })", text)
+        self.assertIn("v2RequestDeviceTransfer(deviceId(), { targetPhone: target })", text)
         self.assertIn("v2CancelDeviceTransfer(tid)", text)
         self.assertIn("v2AcceptDeviceTransfer(tid)", text)
 
@@ -378,22 +413,24 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertLess(app.index("updateTabBarText()"), app.index("applyM6PendingTabBarBadge()"))
 
     def test_device_detail_can_submit_write_text_task(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("handleWriteText", text)
         self.assertIn("writeTextInput", text)
         self.assertIn("defaultWriteTextFontId = 'kai_basic_v1'", text)
-        self.assertIn("v2SubmitTask(deviceId.value, 'write_text'", text)
+        self.assertIn("v2SubmitTask(deviceId(), 'write_text'", text)
         self.assertIn("font_id: defaultWriteTextFontId", text)
         self.assertIn("write_text:", text)
 
     def test_device_detail_can_submit_draw_generated_task(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("handleDrawPrompt", text)
         self.assertIn("submitDraw", text)
         self.assertIn("drawPromptInput", text)
-        self.assertIn("v2SubmitTask(deviceId.value, 'draw_generated'", text)
+        self.assertIn("v2SubmitTask(deviceId(), 'draw_generated'", text)
         self.assertIn("starterAssets", text)
         for asset_id in ("starter_star", "starter_house", "starter_tree", "starter_fish", "starter_flower"):
             self.assertIn(asset_id, text)
@@ -401,7 +438,9 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("use_starter_asset: true", text)
 
     def test_device_detail_can_submit_health_check_and_show_self_check_summary(self):
-        text = DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+        text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_EVENTS.read_text(encoding="utf-8", errors="replace")
+                + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("healthCheckLoading", text)
         self.assertIn("latestDiagnosticStatus", text)
@@ -411,9 +450,9 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("applySelfCheck", text)
         self.assertIn("formatSelfCheckSummary", text)
         self.assertIn("loadSelfCheckHistoryData", text)
-        self.assertIn("v2ListSelfCheckHistory(deviceId.value)", text)
+        self.assertIn("v2ListSelfCheckHistory(deviceId())", text)
         self.assertIn("healthCheckPath", text)
-        self.assertIn("v2SubmitTask(deviceId.value, 'run_path'", text)
+        self.assertIn("v2SubmitTask(deviceId(), 'run_path'", text)
         self.assertIn("health_check:", text)
         for check_name in ("'nvs'", "'wifi'", "'u1_uart'", "'audio'"):
             self.assertIn(check_name, text)
@@ -459,7 +498,7 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         for token in (
             "primaryChannel: 'ble_blufi'",
             "fallbackChannel: 'softap_http'",
-            "blufiDeviceName: 'Xiaozhi-Blufi'",
+            "blufiDeviceName: 'DLC-Blufi'",
             "legacyBlufiDeviceName: 'BLUFI_DEVICE'",
             "blufiServiceUuidCandidates",
             "blufiWriteCharacteristicUuidCandidates",
@@ -468,7 +507,7 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
             "softApScanPath: '/scan'",
             "softApSubmitPath: '/submit'",
             "softApExitPath: '/exit'",
-            "softApSsidHint: 'xiaozhi-XXXXXX'",
+            "softApSsidHint: 'DLC-XXXXXX'",
             "submitPayloadFields: ['ssid', 'password', 'server_host', 'device_secret']",
             "export function softApUrl",
             "export function matchesBleUuid",
@@ -510,14 +549,14 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("softApUrl(provisioningContract.softApExitPath)", config)
         self.assertIn("ssid: props.selectedNetwork.ssid", config)
         self.assertIn("password: props.selectedNetwork.authmode > 0 ? props.password : ''", config)
-        self.assertIn("timeout: 15000", config)
+        self.assertIn("timeout: SOFTAP_SUBMIT_TIMEOUT_MS", config)
         self.assertIn("toast.success", config)
 
         self.assertIn("softApUrl(provisioningContract.softApScanPath)", selector)
         self.assertIn("data.success && Array.isArray(data.networks)", selector)
         self.assertIn("data.aps && Array.isArray(data.aps)", selector)
         self.assertIn("Array.isArray(response.data)", selector)
-        self.assertIn("connectXiaozhiHotspot", selector)
+        self.assertIn("checkESP32Connection", selector)
 
 
 if __name__ == "__main__":
