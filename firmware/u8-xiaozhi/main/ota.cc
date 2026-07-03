@@ -53,6 +53,42 @@ static bool IsAllowedOtaHost(const std::string& url) {
     return false;
 }
 
+static bool IsAllowedEndpointUrl(const std::string& url) {
+    static const std::vector<std::string> kAllowedHosts = {
+        "chat.donglicao.com",
+        "donglicao.com",
+        "127.0.0.1",
+        "localhost",
+    };
+    std::string host_part;
+    const std::string kSchemes[] = {"wss://", "ws://", "mqtts://", "mqtt://"};
+    bool has_scheme = false;
+    for (const auto& scheme : kSchemes) {
+        if (url.rfind(scheme, 0) == 0) {
+            host_part = url.substr(scheme.size());
+            has_scheme = true;
+            break;
+        }
+    }
+    if (!has_scheme) {
+        host_part = url;
+    }
+    size_t port_pos = host_part.find(':');
+    if (port_pos != std::string::npos) {
+        host_part = host_part.substr(0, port_pos);
+    }
+    size_t slash_pos = host_part.find('/');
+    if (slash_pos != std::string::npos) {
+        host_part = host_part.substr(0, slash_pos);
+    }
+    for (const auto& host : kAllowedHosts) {
+        if (host_part == host) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool IsLowerHexSha256(const std::string& value) {
     if (value.size() != 64) {
         return false;
@@ -263,20 +299,26 @@ esp_err_t Ota::CheckVersion() {
     has_mqtt_config_ = false;
     cJSON *mqtt = cJSON_GetObjectItem(root, "mqtt");
     if (cJSON_IsObject(mqtt)) {
-        Settings settings("mqtt", true);
-        cJSON *item = NULL;
-        cJSON_ArrayForEach(item, mqtt) {
-            if (cJSON_IsString(item)) {
-                if (settings.GetString(item->string) != item->valuestring) {
-                    settings.SetString(item->string, item->valuestring);
-                }
-            } else if (cJSON_IsNumber(item)) {
-                if (settings.GetInt(item->string) != item->valueint) {
-                    settings.SetInt(item->string, item->valueint);
+        cJSON *endpoint = cJSON_GetObjectItem(mqtt, "endpoint");
+        if (!cJSON_IsString(endpoint) || !IsAllowedEndpointUrl(endpoint->valuestring)) {
+            ESP_LOGE(TAG, "Rejected mqtt endpoint (not in allowlist): %s",
+                     cJSON_IsString(endpoint) ? endpoint->valuestring : "(null)");
+        } else {
+            Settings settings("mqtt", true);
+            cJSON *item = NULL;
+            cJSON_ArrayForEach(item, mqtt) {
+                if (cJSON_IsString(item)) {
+                    if (settings.GetString(item->string) != item->valuestring) {
+                        settings.SetString(item->string, item->valuestring);
+                    }
+                } else if (cJSON_IsNumber(item)) {
+                    if (settings.GetInt(item->string) != item->valueint) {
+                        settings.SetInt(item->string, item->valueint);
+                    }
                 }
             }
+            has_mqtt_config_ = true;
         }
-        has_mqtt_config_ = true;
     } else {
         ESP_LOGI(TAG, "No mqtt section found !");
     }
@@ -284,22 +326,28 @@ esp_err_t Ota::CheckVersion() {
     has_websocket_config_ = false;
     cJSON *websocket = cJSON_GetObjectItem(root, "websocket");
     if (cJSON_IsObject(websocket)) {
-        Settings settings("websocket", true);
-        cJSON *item = NULL;
-        cJSON_ArrayForEach(item, websocket) {
-            if (cJSON_IsString(item)) {
-                if (settings.GetString(item->string) != item->valuestring) {
-                    settings.SetString(item->string, item->valuestring);
-                }
-            } else if (cJSON_IsNumber(item)) {
-                if (settings.GetInt(item->string) != item->valueint) {
-                    settings.SetInt(item->string, item->valueint);
+        cJSON *url = cJSON_GetObjectItem(websocket, "url");
+        if (!cJSON_IsString(url) || !IsAllowedEndpointUrl(url->valuestring)) {
+            ESP_LOGE(TAG, "Rejected websocket url (not in allowlist): %s",
+                     cJSON_IsString(url) ? url->valuestring : "(null)");
+        } else {
+            Settings settings("websocket", true);
+            cJSON *item = NULL;
+            cJSON_ArrayForEach(item, websocket) {
+                if (cJSON_IsString(item)) {
+                    if (settings.GetString(item->string) != item->valuestring) {
+                        settings.SetString(item->string, item->valuestring);
+                    }
+                } else if (cJSON_IsNumber(item)) {
+                    if (settings.GetInt(item->string) != item->valueint) {
+                        settings.SetInt(item->string, item->valueint);
+                    }
                 }
             }
+            has_websocket_config_ = true;
         }
-        has_websocket_config_ = true;
     } else {
-        ESP_LOGI(TAG, "No websocket section found!");
+        ESP_LOGE(TAG, "No websocket section found!");
     }
 
     has_server_time_ = false;
