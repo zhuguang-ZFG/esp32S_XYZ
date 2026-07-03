@@ -74,7 +74,7 @@ export function chatCompletionStream(
 
   // 非微信小程序环境使用定时器轮询（fallback）
   // #ifndef MP-WEIXIN
-  const pollTimer: ReturnType<typeof setInterval> | null = null
+  throw new Error('chatStream: streaming currently supported only on mp-weixin; use chatCompletion for non-mp clients')
   // #endif
 
   function processBuffer() {
@@ -113,10 +113,6 @@ export function chatCompletionStream(
   return {
     abort: () => {
       requestTask.abort?.()
-      // #ifndef MP-WEIXIN
-      if (pollTimer)
-        clearInterval(pollTimer)
-      // #endif
     },
   }
 }

@@ -1,6 +1,10 @@
 ## 智控台移动版（manager-mobile）
 基于 uni-app v3 + Vue 3 + Vite 的跨端移动管理端，支持 App（Android & iOS）和微信小程序。
 
+## 密钥保管
+
+`secrets/private.wxbf3c1e0013b46343.key` 是微信小程序 CI 上传私钥，**仅允许保存在本地工作区**。仓库 `.gitignore` 已包含 `secrets/` 与 `*.key`，请勿将其提交到 git 或打包外传。若怀疑私钥泄露，应立即在微信公众平台「小程序开发>开发管理>小程序代码上传」中重置上传密钥。
+
 ### 平台兼容性
 
 | H5 | iOS | Android | 微信小程序 |
