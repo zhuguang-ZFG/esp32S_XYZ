@@ -45,9 +45,6 @@ set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg"
 list(APPEND SOURCES
     "boards/common/board.cc"
     "boards/common/wifi_board.cc"
-    "boards/common/ml307_board.cc"
-    "boards/common/nt26_board.cc"
-    "boards/common/dual_network_board.cc"
     "boards/common/adc_battery_monitor.cc"
     "boards/common/afsk_demod.cc"
     "boards/common/axp2101.cc"
@@ -246,13 +243,6 @@ if(CONFIG_IDF_TARGET_ESP32)
                              "boards/common/ml307_board.cc"
                              "boards/common/dual_network_board.cc"
                              )
-endif()
-
-# Include EspVideo if target is ESP32S3 or ESP32P4
-if(CONFIG_IDF_TARGET_ESP32S3 OR CONFIG_IDF_TARGET_ESP32P4)
-    list(APPEND SOURCES "boards/common/esp_video.cc"
-                        "boards/common/rndis_board.cc"
-                        )
 endif()
 
 # Include Esp32Camera if target is ESP32S3
