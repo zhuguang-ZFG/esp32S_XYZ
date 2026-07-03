@@ -1,5 +1,10 @@
 # Edge-C（DeviceServer ↔ U8）WSS 文本帧契约
 
+> ⚠️ 历史归档：本契约描述的 `DeviceServer` / `BusinessServer` 服务端组件已于 2026-06-25 物理删除，能力迁移至 LiMa 主项目 `device_gateway`。
+> U8 当前应直接连接 LiMa 主项目 `routes/device_gateway.py: WS /device/v1/ws`（设备端 URL `wss://chat.donglicao.com/device/v1/ws`）。
+> `motion_task`、`motion_event`、`device_info` 等消息通过该 WebSocket 帧处理，由 `routes/device_gateway_ws*.py` 中的 handler 消费。
+> 下方内容保留为历史参考。
+
 与 `docs/架构定稿-v2.md` §15.3 对齐：在既有小智 WSS JSON 文本通道上增加 `motion_task`（下行）与 `motion_event`（上行）。
 
 ## M2.13 最小上行：`device_info`（设备身份/能力快照）

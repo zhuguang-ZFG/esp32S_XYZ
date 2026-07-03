@@ -1,12 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
   "$id": "https://local.schemas/edge_a/ack.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["op", "topic", "seq"],
+  "required": [
+    "op",
+    "topic",
+    "seq"
+  ],
   "properties": {
-    "op": { "const": "ack" },
-    "topic": { "type": "string", "minLength": 1 },
-    "seq": { "type": "integer", "minimum": 0 }
+    "op": {
+      "const": "ack"
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    }
   }
 }

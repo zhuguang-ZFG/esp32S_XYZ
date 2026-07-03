@@ -1,12 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
   "$id": "https://local.schemas/edge_a/subscribe_task.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["op", "task_id"],
+  "required": [
+    "op",
+    "task_id"
+  ],
   "properties": {
-    "op": { "const": "subscribe_task" },
-    "task_id": { "type": "string", "minLength": 1 },
-    "req_id": { "type": "string", "minLength": 1 }
+    "op": {
+      "const": "subscribe_task"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "req_id": {
+      "type": "string",
+      "minLength": 1
+    }
   }
 }

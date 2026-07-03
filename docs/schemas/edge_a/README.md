@@ -1,6 +1,10 @@
 # Edge-A（Client ↔ BusinessServer）WSS 文本帧契约
 
-与 `docs/架构定稿-v2.md` §9.1–§9.2 对齐；实现入口：`manager-api` 路径 **`/ws/v1/client`**（若部署 `context-path=/xiaozhi`，则完整 URL 为 `/xiaozhi/ws/v1/client`）。
+> ⚠️ 历史归档：本契约描述的 `BusinessServer` / `manager-api` 服务端组件已于 2026-06-25 物理删除，能力迁移至 LiMa 主项目 `device_gateway`。
+> 当前设备/用户 WebSocket 统一入口为 LiMa 主项目 `routes/device_gateway.py: WS /device/v1/ws`（设备端 URL `wss://chat.donglicao.com/device/v1/ws`）。
+> 下方内容保留为历史参考。
+
+与 `docs/架构定稿-v2.md` §9.1–§9.2 对齐；历史实现入口：`manager-api` 路径 **`/ws/v1/client`**（若部署 `context-path=/xiaozhi`，则完整 URL 为 `/xiaozhi/ws/v1/client`）。
 
 ## 鉴权（§9.1）
 

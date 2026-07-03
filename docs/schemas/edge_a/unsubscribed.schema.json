@@ -1,12 +1,21 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
   "$id": "https://local.schemas/edge_a/unsubscribed.schema.json",
   "title": "Edge-A unsubscribe 成功响应（BusinessServer→Client WSS）",
   "type": "object",
   "additionalProperties": false,
-  "required": ["type", "topic"],
+  "required": [
+    "type",
+    "topic"
+  ],
   "properties": {
-    "type": { "const": "unsubscribed" },
-    "topic": { "type": "string", "minLength": 1 }
+    "type": {
+      "const": "unsubscribed"
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1
+    }
   }
 }

@@ -1,38 +1,95 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
   "$id": "https://local.schemas/edge_b/motion_task.schema.json",
   "title": "Edge-B motion_task 下发（BusinessServer→DeviceServer HTTP）",
   "type": "object",
   "additionalProperties": false,
-  "required": ["task_id", "device_id", "capability"],
+  "required": [
+    "task_id",
+    "device_id",
+    "capability"
+  ],
   "properties": {
-    "task_id": { "type": "string", "minLength": 1 },
-    "device_id": { "type": "string", "minLength": 1 },
-    "account_id": { "type": "integer" },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "device_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "account_id": {
+      "type": "integer"
+    },
     "capability": {
       "type": "string",
-      "enum": ["home", "get_status", "move_abs", "move_rel", "run_path", "get_device_info", "pause", "resume", "stop", "estop"]
+      "enum": [
+        "home",
+        "get_status",
+        "move_abs",
+        "move_rel",
+        "run_path",
+        "get_device_info",
+        "pause",
+        "resume",
+        "stop",
+        "estop"
+      ]
     },
-    "source": { "type": "string", "enum": ["client", "voice"] },
-    "request_id": { "type": "string" },
-    "trace_id": { "type": "string" },
+    "source": {
+      "type": "string",
+      "enum": [
+        "client",
+        "voice"
+      ]
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
     "route_policy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["route_role", "model_required", "primary_strategy", "artifact_required"],
+      "required": [
+        "route_role",
+        "model_required",
+        "primary_strategy",
+        "artifact_required"
+      ],
       "properties": {
         "route_role": {
           "type": "string",
-          "enum": ["device_control", "device_write", "device_draw", "device_vector", "device_unknown"]
+          "enum": [
+            "device_control",
+            "device_write",
+            "device_draw",
+            "device_vector",
+            "device_unknown"
+          ]
         },
-        "model_required": { "type": "boolean" },
+        "model_required": {
+          "type": "boolean"
+        },
         "primary_strategy": {
           "type": "string",
-          "enum": ["deterministic", "image_then_vector", "svg_vector", "provided_path", "planner_required"]
+          "enum": [
+            "deterministic",
+            "image_then_vector",
+            "svg_vector",
+            "provided_path",
+            "planner_required"
+          ]
         },
         "artifact_required": {
           "type": "string",
-          "enum": ["none", "preview_svg", "vector_path"]
+          "enum": [
+            "none",
+            "preview_svg",
+            "vector_path"
+          ]
         },
         "backend": {
           "type": "string",
@@ -41,12 +98,23 @@
         }
       }
     },
-    "params": { "type": "object" },
+    "params": {
+      "type": "object"
+    },
     "constraints": {
       "type": "object",
       "properties": {
-        "timeout_ms": { "type": "integer", "minimum": 0 },
-        "safety_level": { "type": "string", "enum": ["strict", "loose"] }
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "safety_level": {
+          "type": "string",
+          "enum": [
+            "strict",
+            "loose"
+          ]
+        }
       }
     }
   }

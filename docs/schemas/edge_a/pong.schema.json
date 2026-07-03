@@ -1,10 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
   "$id": "https://local.schemas/edge_a/pong.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["type"],
+  "required": [
+    "type"
+  ],
   "properties": {
-    "type": { "const": "pong" }
+    "type": {
+      "const": "pong"
+    }
   }
 }

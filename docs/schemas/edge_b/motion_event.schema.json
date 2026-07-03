@@ -1,49 +1,123 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
   "$id": "https://local.schemas/edge_b/motion_event.schema.json",
   "title": "Edge-B motion_event 上行（DeviceServer→BusinessServer HTTP）",
   "type": "object",
   "additionalProperties": false,
-  "required": ["device_id", "task_id", "phase"],
+  "required": [
+    "device_id",
+    "task_id",
+    "phase"
+  ],
   "properties": {
-    "device_id": { "type": "string", "minLength": 1 },
-    "task_id": { "type": "string", "minLength": 1 },
+    "device_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "phase": {
       "type": "string",
-      "enum": ["accepted", "running", "progress", "done", "failed", "cancelled", "rejected"]
+      "enum": [
+        "accepted",
+        "running",
+        "progress",
+        "done",
+        "failed",
+        "cancelled",
+        "rejected"
+      ]
     },
-    "capability": { "type": "string" },
-    "source": { "type": "string", "enum": ["client", "voice"] },
+    "capability": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "client",
+        "voice"
+      ]
+    },
     "progress": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "done_segments": { "type": "integer", "minimum": 0 },
-        "total_segments": { "type": "integer", "minimum": 1 },
-        "percent": { "type": "integer", "minimum": 0, "maximum": 100 }
+        "done_segments": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_segments": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "percent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
       }
     },
     "tts_hint": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["tts_event"],
+      "required": [
+        "tts_event"
+      ],
       "properties": {
         "tts_event": {
           "type": "string",
-          "enum": ["task_started", "task_done", "task_failed", "task_rejected", "device_info_reply"]
+          "enum": [
+            "task_started",
+            "task_done",
+            "task_failed",
+            "task_rejected",
+            "device_info_reply"
+          ]
         },
-        "text": { "type": "string" },
-        "task_id": { "type": "string" },
-        "device_id": { "type": "string" },
-        "capability": { "type": "string" },
-        "source": { "type": "string", "enum": ["client", "voice"] }
+        "text": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "device_id": {
+          "type": "string"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "client",
+            "voice"
+          ]
+        }
       }
     },
-    "error_code": { "type": "string" },
-    "error_message": { "type": "string" },
-    "started_at": { "type": "string", "format": "date-time" },
-    "finished_at": { "type": "string", "format": "date-time" },
-    "ts": { "type": "integer", "minimum": 0 },
-    "result": { "type": "object" }
+    "error_code": {
+      "type": "string"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "result": {
+      "type": "object"
+    }
   }
 }

@@ -1,11 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
   "$id": "https://local.schemas/edge_a/unsubscribe.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["op", "topic"],
+  "required": [
+    "op",
+    "topic"
+  ],
   "properties": {
-    "op": { "const": "unsubscribe" },
-    "topic": { "type": "string", "minLength": 1 }
+    "op": {
+      "const": "unsubscribe"
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1
+    }
   }
 }

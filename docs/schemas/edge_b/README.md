@@ -1,5 +1,9 @@
 # Edge-B（BusinessServer ↔ DeviceServer）HTTP 契约
 
+> ⚠️ 历史归档：本契约描述的 `BusinessServer` / `DeviceServer` 服务端组件已于 2026-06-25 物理删除，能力迁移至 LiMa 主项目 `device_gateway`。
+> 当前任务下发、运动事件/设备信息上行的统一入口为 LiMa 主项目 `routes/device_gateway.py: WS /device/v1/ws` 与 `routes/device_gateway_events_routes.py: POST /device/v1/events`。
+> 下方内容保留为历史参考。
+
 与 `docs/架构定稿-v2.md` §15.2 对齐：
 
 - **鉴权**：`Authorization: Bearer <internal-token>`，与 yml 配置 `server.internal_motion_task_token` / `v2.device-server.internal-token` 一致。
