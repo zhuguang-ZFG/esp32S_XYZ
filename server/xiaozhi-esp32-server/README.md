@@ -1,3 +1,5 @@
+> ⚠️ 本目录服务端组件（xiaozhi-server / manager-api / manager-web / digital-human）已于 2026-06-25 物理删除，能力迁移至 LiMa 主项目 device_gateway（见 `D:\QWEN3.0\routes\device_app_*.py`）。下方为上游历史 README，仅作参考。
+
 [![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
 
 <h1 align="center">小智后端服务xiaozhi-esp32-server</h1>

@@ -118,25 +118,9 @@ idf.py -p COM4 flash monitor
 
 ## 云端服务
 
-### DeviceServer (Python)
+云端服务能力已于 2026-06-25 迁移至 LiMa 主项目 `device_gateway` 与 `routes/device_app_*.py`。
+历史运行命令（xiaozhi-server / manager-api）已不可用，请勿执行。
 
-```bash
-cd server/xiaozhi-esp32-server/main/xiaozhi-server
-# Docker 方式
-rtk docker-compose up -d
-
-# 或直接运行
-pip install -r requirements.txt
-rtk python app.py
-```
-
-### BusinessServer (Java)
-
-```bash
-cd server/xiaozhi-esp32-server/main/manager-api
-rtk mvn clean package
-java -jar target/manager-api.jar
-```
 
 ### Mobile Client (uni-app)
 

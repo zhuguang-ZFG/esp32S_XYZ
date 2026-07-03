@@ -17,7 +17,7 @@ make help          # 查看所有命令
 
 - `firmware/u1-grbl/` — U1 MOTOR_MCU 固件 (Grbl_Esp32, PlatformIO)
 - `firmware/u8-xiaozhi/` — U8 AI_MCU 固件 (xiaozhi-esp32, ESP-IDF)
-- `server/xiaozhi-esp32-server/` — 云端服务 (Python/Java/Vue/uni-app)
+- `server/xiaozhi-esp32-server/` — 历史目录（云端服务能力已迁移至 LiMa 主项目 device_gateway）
 - `tools/` — 开发工具、Fake 模拟器
 - `tests/` — CI 测试套件 (243+ 测试)
 - `docs/` — 硬件文档、架构设计、里程碑报告
