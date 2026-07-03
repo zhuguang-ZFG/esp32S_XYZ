@@ -1,5 +1,5 @@
 import path from 'node:path'
-// manifest.config.ts
+import process from 'node:process'
 import { defineManifestConfig } from '@uni-helper/vite-plugin-uni-manifest'
 import { loadEnv } from 'vite'
 import { getMode } from './scripts/get-mode'
@@ -18,8 +18,8 @@ export default defineManifestConfig({
   'name': VITE_APP_TITLE,
   'appid': VITE_UNI_APPID,
   'description': '',
-  'versionName': '3.8.4',
-  'versionCode': '384',
+  'versionName': '3.8.5',
+  'versionCode': '385',
   'transformPx': false,
   'locale': VITE_FALLBACK_LOCALE, // 'zh-Hans'
   'h5': {
@@ -32,112 +32,75 @@ export default defineManifestConfig({
     usingComponents: true,
     nvueStyleCompiler: 'uni-app',
     compilerVersion: 3,
-    compatible: {
-      ignoreVersion: true,
-    },
     splashscreen: {
       alwaysShowBeforeRender: true,
       waiting: true,
       autoclose: true,
       delay: 0,
     },
-    /* 模块配置 */
-    modules: {},
-    /* 应用发布信息 */
+    modules: {
+      Payment: {},
+      Push: {},
+      Share: {},
+      Speech: {},
+      VideoPlayer: {},
+      Contacts: {},
+    },
     distribute: {
-      /* android打包配置 */
       android: {
-        minSdkVersion: 30,
-        targetSdkVersion: 30,
-        abiFilters: ['armeabi-v7a', 'arm64-v8a'],
         permissions: [
-          '<uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>',
-          '<uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>',
-          '<uses-permission android:name="android.permission.VIBRATE"/>',
-          '<uses-permission android:name="android.permission.READ_LOGS"/>',
-          '<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>',
-          '<uses-feature android:name="android.hardware.camera.autofocus"/>',
-          '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>',
-          '<uses-permission android:name="android.permission.CAMERA"/>',
-          '<uses-permission android:name="android.permission.GET_ACCOUNTS"/>',
-          '<uses-permission android:name="android.permission.READ_PHONE_STATE"/>',
-          '<uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>',
-          '<uses-permission android:name="android.permission.WAKE_LOCK"/>',
-          '<uses-permission android:name="android.permission.FLASHLIGHT"/>',
-          '<uses-feature android:name="android.hardware.camera"/>',
-          '<uses-permission android:name="android.permission.WRITE_SETTINGS"/>',
-          '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>',
-          '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>',
+          '<uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />',
+          '<uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />',
+          '<uses-permission android:name="android.permission.VIBRATE" />',
+          '<uses-permission android:name="android.permission.READ_LOGS" />',
+          '<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />',
+          '<uses-feature android:name="android.hardware.camera.autofocus" />',
+          '<uses-permission android:name="android.permission.WRITE_CONTACTS" />',
+          '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />',
+          '<uses-permission android:name="android.permission.CAMERA" />',
+          '<uses-permission android:name="android.permission.RECORD_AUDIO" />',
+          '<uses-permission android:name="android.permission.GET_ACCOUNTS" />',
+          '<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />',
+          '<uses-permission android:name="android.permission.READ_PHONE_STATE" />',
+          '<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />',
+          '<uses-permission android:name="android.permission.WAKE_LOCK" />',
+          '<uses-permission android:name="android.permission.CALL_PHONE" />',
+          '<uses-permission android:name="android.permission.FLASHLIGHT" />',
+          '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+          '<uses-feature android:name="android.hardware.camera" />',
+          '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+          '<uses-permission android:name="android.permission.READ_CONTACTS" />',
+          '<uses-permission android:name="android.permission.WRITE_SETTINGS" />',
+          '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />',
+          '<uses-permission android:name="android.permission.INTERNET" />',
+          '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />',
+          '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
         ],
       },
-      /* ios打包配置 */
       ios: {},
-      /* SDK配置 */
       sdkConfigs: {},
-      /* 图标配置 */
-      icons: {
-        android: {
-          hdpi: 'unpackage/res/icons/72x72.png',
-          xhdpi: 'unpackage/res/icons/96x96.png',
-          xxhdpi: 'unpackage/res/icons/144x144.png',
-          xxxhdpi: 'unpackage/res/icons/192x192.png',
-        },
-        ios: {
-          appstore: 'unpackage/res/icons/1024x1024.png',
-          ipad: {
-            'app': 'unpackage/res/icons/76x76.png',
-            'app@2x': 'unpackage/res/icons/152x152.png',
-            'notification': 'unpackage/res/icons/20x20.png',
-            'notification@2x': 'unpackage/res/icons/40x40.png',
-            'proapp@2x': 'unpackage/res/icons/167x167.png',
-            'settings': 'unpackage/res/icons/29x29.png',
-            'settings@2x': 'unpackage/res/icons/58x58.png',
-            'spotlight': 'unpackage/res/icons/40x40.png',
-            'spotlight@2x': 'unpackage/res/icons/80x80.png',
-          },
-          iphone: {
-            'app@2x': 'unpackage/res/icons/120x120.png',
-            'app@3x': 'unpackage/res/icons/180x180.png',
-            'notification@2x': 'unpackage/res/icons/40x40.png',
-            'notification@3x': 'unpackage/res/icons/60x60.png',
-            'settings@2x': 'unpackage/res/icons/58x58.png',
-            'settings@3x': 'unpackage/res/icons/87x87.png',
-            'spotlight@2x': 'unpackage/res/icons/80x80.png',
-            'spotlight@3x': 'unpackage/res/icons/120x120.png',
-          },
-        },
-      },
     },
   },
-  /* 快应用特有相关 */
-  'quickapp': {},
   /* 小程序特有相关 */
   'mp-weixin': {
     appid: VITE_WX_APPID,
-    setting: {
-      urlCheck: false,
-      // 是否启用 ES6 转 ES5
-      es6: true,
-      minified: true,
-    },
+    darkmode: true,
+    // __usePrivacyCheck__: true,
+    // 微信小程序 App 默认标题，如`
+    // navigationBarTitleText: 'uni-app',
+    // 分包优化
     optimization: {
       subPackages: true,
     },
-    usingComponents: true,
-    // __usePrivacyCheck__: true,
-    permission: {
-      'scope.record': {
-        desc: '用于语音指令和声纹录入',
-      },
-      'scope.userLocation': {
-        desc: 'WiFi配网功能需要获取位置权限',
-      },
-    },
-    requiredPrivateInfos: ['getLocation'],
+    // 对微信小程序的 js 文件开启原生压缩，可能会导致部分 ES6 语法不兼容，需要关闭（例如：audioContext 的 setInterval）
+    // minified: true,
+    // 微信小程序自定义组件尺寸单位，默认为 rpx
+    // component2: true,
+    // 开启素描相机
+    // runtimeCompiler: true,
   },
   'mp-alipay': {
     usingComponents: true,
-    styleIsolation: 'shared',
   },
   'mp-baidu': {
     usingComponents: true,
@@ -145,8 +108,29 @@ export default defineManifestConfig({
   'mp-toutiao': {
     usingComponents: true,
   },
-  'uniStatistics': {
-    enable: false,
+  'mp-qq': {
+    usingComponents: true,
   },
-  'vueVersion': '3',
+  'mp-kuaishou': {
+    usingComponents: true,
+  },
+  'mp-lark': {
+    usingComponents: true,
+  },
+  'mp-jd': {
+    usingComponents: true,
+  },
+  'mp-xhs': {
+    usingComponents: true,
+  },
+  // 百度小程序、抖音小程序需要设置，但用户不能自己修改地址
+  'mp-360': {
+    usingComponents: true,
+  },
+  'quickapp-webview': {
+    // 快应用特有相关
+  },
+  // 路由跳转白名单：开发期关闭，生产构建改 true
+  // urlCheck: false,
+  urlCheck: true,
 })

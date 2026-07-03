@@ -9,7 +9,7 @@
 | Python | 3.12+ | 测试、工具脚本 |
 | PlatformIO CLI | 最新 | U1 固件编译 |
 | ESP-IDF | v5.4+ | U8 固件编译 |
-| Java JDK | 21 | manager-api 编译 |
+| Java JDK | 21 | 已不再需要（manager-api 已迁移至 LiMa 主项目） |
 | Node.js | 20+ | manager-mobile 编译 |
 | Git | 2.30+ | 版本控制 |
 
@@ -182,9 +182,8 @@ GitHub Actions 在 push/PR 时自动运行：
 2. **GPIO 检查** — strapping pin 风险检测
 3. **Python 单元测试** — 243+ 测试用例
 4. **Fake 集成测试** — 无硬件端到端验证
-5. **Java 测试** — manager-api 76+ 测试
-6. **Mobile 类型检查** — TypeScript 类型验证
-7. **Markdown 链接检查** — 文档链接有效性
+5. **Mobile 类型检查** — TypeScript 类型验证
+6. **Markdown 链接检查** — 文档链接有效性
 
 **注意**: U1/U8 固件目前不在 CI 中编译。固件 CI 需要额外配置 PlatformIO 和 ESP-IDF 环境。
 

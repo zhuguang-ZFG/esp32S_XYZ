@@ -2,8 +2,8 @@
   "name": "LiMa 星云",
   "appid": "__UNI__36A515E",
   "description": "",
-  "versionName": "3.8.4",
-  "versionCode": "384",
+  "versionName": "3.8.5",
+  "versionCode": "385",
   "transformPx": false,
   "app-plus": {
     "usingComponents": true,
@@ -15,101 +15,63 @@
       "autoclose": true,
       "delay": 0
     },
-    "modules": {},
+    "modules": {
+      "Payment": {},
+      "Push": {},
+      "Share": {},
+      "Speech": {},
+      "VideoPlayer": {},
+      "Contacts": {}
+    },
     "distribute": {
       "android": {
         "permissions": [
-          "<uses-permission android:name=\"android.permission.CHANGE_NETWORK_STATE\"/>",
-          "<uses-permission android:name=\"android.permission.MOUNT_UNMOUNT_FILESYSTEMS\"/>",
-          "<uses-permission android:name=\"android.permission.VIBRATE\"/>",
-          "<uses-permission android:name=\"android.permission.READ_LOGS\"/>",
-          "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>",
-          "<uses-feature android:name=\"android.hardware.camera.autofocus\"/>",
-          "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
-          "<uses-permission android:name=\"android.permission.CAMERA\"/>",
-          "<uses-permission android:name=\"android.permission.GET_ACCOUNTS\"/>",
-          "<uses-permission android:name=\"android.permission.READ_PHONE_STATE\"/>",
-          "<uses-permission android:name=\"android.permission.CHANGE_WIFI_STATE\"/>",
-          "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>",
-          "<uses-permission android:name=\"android.permission.FLASHLIGHT\"/>",
-          "<uses-feature android:name=\"android.hardware.camera\"/>",
-          "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>",
-          "<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\"/>",
-          "<uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\"/>"
-        ],
-        "minSdkVersion": 30,
-        "targetSdkVersion": 30,
-        "abiFilters": [
-          "armeabi-v7a",
-          "arm64-v8a"
+          "<uses-permission android:name=\"android.permission.CHANGE_NETWORK_STATE\" />",
+          "<uses-permission android:name=\"android.permission.MOUNT_UNMOUNT_FILESYSTEMS\" />",
+          "<uses-permission android:name=\"android.permission.VIBRATE\" />",
+          "<uses-permission android:name=\"android.permission.READ_LOGS\" />",
+          "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\" />",
+          "<uses-feature android:name=\"android.hardware.camera.autofocus\" />",
+          "<uses-permission android:name=\"android.permission.WRITE_CONTACTS\" />",
+          "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />",
+          "<uses-permission android:name=\"android.permission.CAMERA\" />",
+          "<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />",
+          "<uses-permission android:name=\"android.permission.GET_ACCOUNTS\" />",
+          "<uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\" />",
+          "<uses-permission android:name=\"android.permission.READ_PHONE_STATE\" />",
+          "<uses-permission android:name=\"android.permission.CHANGE_WIFI_STATE\" />",
+          "<uses-permission android:name=\"android.permission.WAKE_LOCK\" />",
+          "<uses-permission android:name=\"android.permission.CALL_PHONE\" />",
+          "<uses-permission android:name=\"android.permission.FLASHLIGHT\" />",
+          "<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\" />",
+          "<uses-feature android:name=\"android.hardware.camera\" />",
+          "<uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\" />",
+          "<uses-permission android:name=\"android.permission.READ_CONTACTS\" />",
+          "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\" />",
+          "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" />",
+          "<uses-permission android:name=\"android.permission.INTERNET\" />",
+          "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" />",
+          "<uses-permission android:name=\"android.permission.FOREGROUND_SERVICE\" />"
         ]
       },
       "ios": {},
-      "sdkConfigs": {},
-      "icons": {
-        "android": {
-          "hdpi": "unpackage/res/icons/72x72.png",
-          "xhdpi": "unpackage/res/icons/96x96.png",
-          "xxhdpi": "unpackage/res/icons/144x144.png",
-          "xxxhdpi": "unpackage/res/icons/192x192.png"
-        },
-        "ios": {
-          "appstore": "unpackage/res/icons/1024x1024.png",
-          "ipad": {
-            "app": "unpackage/res/icons/76x76.png",
-            "app@2x": "unpackage/res/icons/152x152.png",
-            "notification": "unpackage/res/icons/20x20.png",
-            "notification@2x": "unpackage/res/icons/40x40.png",
-            "proapp@2x": "unpackage/res/icons/167x167.png",
-            "settings": "unpackage/res/icons/29x29.png",
-            "settings@2x": "unpackage/res/icons/58x58.png",
-            "spotlight": "unpackage/res/icons/40x40.png",
-            "spotlight@2x": "unpackage/res/icons/80x80.png"
-          },
-          "iphone": {
-            "app@2x": "unpackage/res/icons/120x120.png",
-            "app@3x": "unpackage/res/icons/180x180.png",
-            "notification@2x": "unpackage/res/icons/40x40.png",
-            "notification@3x": "unpackage/res/icons/60x60.png",
-            "settings@2x": "unpackage/res/icons/58x58.png",
-            "settings@3x": "unpackage/res/icons/87x87.png",
-            "spotlight@2x": "unpackage/res/icons/80x80.png",
-            "spotlight@3x": "unpackage/res/icons/120x120.png"
-          }
-        }
-      }
-    },
-    "compatible": {
-      "ignoreVersion": true
+      "sdkConfigs": {}
     }
   },
   "quickapp": {},
   "mp-weixin": {
     "appid": "wxbf3c1e0013b46343",
     "setting": {
-      "urlCheck": false,
-      "es6": true,
-      "minified": true
+      "urlCheck": false
     },
     "usingComponents": true,
+    "darkmode": true,
     "optimization": {
       "subPackages": true
-    },
-    "permission": {
-      "scope.record": {
-        "desc": "用于语音指令和声纹录入"
-      },
-      "scope.userLocation": {
-        "desc": "WiFi配网功能需要获取位置权限"
-      }
-    },
-    "requiredPrivateInfos": [
-      "getLocation"
-    ]
+    }
   },
   "mp-alipay": {
-    "usingComponents": true,
-    "styleIsolation": "shared"
+    "usingComponents": true
   },
   "mp-baidu": {
     "usingComponents": true
@@ -123,5 +85,25 @@
   "vueVersion": "3",
   "h5": {
     "router": {}
-  }
+  },
+  "mp-qq": {
+    "usingComponents": true
+  },
+  "mp-kuaishou": {
+    "usingComponents": true
+  },
+  "mp-lark": {
+    "usingComponents": true
+  },
+  "mp-jd": {
+    "usingComponents": true
+  },
+  "mp-xhs": {
+    "usingComponents": true
+  },
+  "mp-360": {
+    "usingComponents": true
+  },
+  "quickapp-webview": {},
+  "urlCheck": true
 }
