@@ -1,22 +1,8 @@
 <script lang="ts" setup>
-import type { V2ShareResponse } from '@/api/v2'
-import type { V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceTransferResponse, V2SelfCheckHistoryResponse } from '@/api/v2/types'
 import { onLoad } from '@dcloudio/uni-app'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
-import {
-  v2AcceptDeviceTransfer,
-  v2CancelDeviceTransfer,
-  v2CreateShare,
-  v2GetDeviceInfo,
-  v2ListSelfCheckHistory,
-  v2ListShares,
-  v2RequestDeviceTransfer,
-  v2RevokeShare,
-  v2SubmitTask,
-  v2UnbindDevice,
-  v2UpdateDeviceSupplies,
-} from '@/api/v2'
+import { v2GetDeviceInfo } from '@/api/v2'
 import { t } from '@/i18n'
 import DeviceInfoCard from './components/device-info-card.vue'
 import HealthCheck from './components/health-check.vue'
@@ -27,94 +13,95 @@ import TransferPanel from './components/transfer-panel.vue'
 import VoiceApproval from './components/voice-approval.vue'
 import VoiceCommand from './components/voice-command.vue'
 import WriteDrawPanel from './components/write-draw-panel.vue'
+import { useDeviceActions } from './composables/useDeviceActions'
+import { useDeviceEvents } from './composables/useDeviceEvents'
 import { useDeviceWebSocket } from './composables/useDeviceWebSocket'
 import { useVoiceApproval } from './composables/useVoiceApproval'
 
 defineOptions({ name: 'V2DeviceDetail' })
 const message = useMessage()
 const deviceId = ref('')
-const deviceInfo = ref<V2DeviceInfo | null>(null)
-const homeLoading = ref(false)
-const infoLoading = ref(false)
-const writeTextInput = ref('你好')
-const writeTextLoading = ref(false)
-const drawGeneratedLoading = ref(false)
-const healthCheckLoading = ref(false)
-const suppliesLoading = ref(false)
-const transferLoading = ref(false)
-const drawPromptInput = ref('星星')
-const deviceSupplies = ref<V2DeviceSupplyResponse | null>(null)
-const deviceTransfer = ref<V2DeviceTransferResponse | null>(null)
-const transferTargetPhone = ref('')
-const transferAcceptId = ref('')
-const latestPhase = ref('—')
-const latestProgressPercent = ref<number | null>(null)
-const latestProgressLabel = ref('')
-const latestDiagnosticStatus = ref('pending')
-const latestDiagnosticSummary = ref('No self-check result yet')
-const latestDiagnosticAt = ref('')
-const selfCheckHistory = ref<V2SelfCheckHistoryResponse[]>([])
-const shares = ref<V2ShareResponse[]>([])
-const shareLoading = ref(false)
-const sharePermission = ref('view')
-const shareExpiry = ref('7d')
-const unbindLoading = ref(false)
-let infoLoadingTimer: ReturnType<typeof setTimeout> | null = null
-
-const defaultWriteTextFontId = 'kai_basic_v1'
-const starterAssets = [
-  { id: 'starter_star', label: '星星' },
-  { id: 'starter_house', label: '小房子' },
-  { id: 'starter_tree', label: '树' },
-  { id: 'starter_fish', label: '鱼' },
-  { id: 'starter_flower', label: '花' },
-]
-const healthCheckPath = [
-  { cmd: 'M', x: 5, y: 5, z: 0 },
-  { cmd: 'L', x: 25, y: 5, z: 0 },
-  { cmd: 'L', x: 25, y: 25, z: 0 },
-  { cmd: 'L', x: 5, y: 25, z: 0 },
-  { cmd: 'L', x: 5, y: 5, z: 0 },
-]
-
-// --- Types ---
-interface WorkspaceMm { x?: number | string, y?: number | string, z?: number | string }
-interface MotionProgress { done_segments?: number | string, total_segments?: number | string, percent?: number | string }
-interface DeviceInfoReplyPayload { model?: string, hw_rev?: string, fw_rev?: string, workspace_mm?: WorkspaceMm | string }
-interface JobStatusPayload { phase?: string, capability?: string, progress?: MotionProgress }
-type SelfCheckStatus = 'pass' | 'warn' | 'fail' | 'pending' | string
-interface SelfCheckItem { name?: string, status?: SelfCheckStatus, detail?: string }
-interface SelfCheckPayload { check_id?: string, scope?: string, status?: SelfCheckStatus, checks?: SelfCheckItem[] | Record<string, SelfCheckItem | SelfCheckStatus | string> }
-
-// --- Error messages ---
-function taskSubmitErrorMessage(error: any) {
-  const text = String(error?.message || error || '')
-  if (text.includes('E_RUNTIME_STALE'))
-    return t('v2.detail.errorRuntimeStale')
-  if (text.includes('E_CONTENT_BLOCKED'))
-    return t('v2.detail.errorContentBlocked')
-  if (text.includes('E_INVALID_DRAWING'))
-    return t('v2.detail.errorInvalidDrawing')
-  if (text.includes('E_NOT_ENTITLED'))
-    return t('v2.detail.errorNotEntitled')
-  if (text.includes('E_NO_PAPER'))
-    return t('v2.detail.errorNoPaper')
-  return text || t('common.fail')
-}
-function showSubmitToast(key: string) {
-  uni.showToast({ title: t(key), icon: 'none' })
-}
-function clearInfoLoadingTimer() {
-  if (infoLoadingTimer) {
-    clearTimeout(infoLoadingTimer)
-    infoLoadingTimer = null
-  }
-}
 
 // --- WebSocket ---
 const { connected, logLines, latestEvent, connect: wsConnect, appendLog } = useDeviceWebSocket(deviceId)
 
-// --- Voice approval composable ---
+// --- WS 事件 + 进度 + 自检（P3.1 提取到 useDeviceEvents）---
+const {
+  deviceInfo,
+  infoLoading,
+  healthCheckLoading,
+  latestPhase,
+  latestProgressPercent,
+  latestProgressLabel,
+  latestDiagnosticStatus,
+  latestDiagnosticSummary,
+  latestDiagnosticAt,
+  selfCheckHistory,
+  phaseColor,
+  progressBarStyle,
+  workspaceLabel,
+  handleEdgeAEvent,
+  loadSelfCheckHistoryData,
+  clearInfoLoadingTimer,
+  startInfoLoadingTimer,
+  setPhase,
+  resetProgress,
+} = useDeviceEvents(() => deviceId.value, appendLog)
+
+// --- 任务派发 / 耗材 / 转移 / 分享 / 解绑（P3.1 提取到 useDeviceActions）---
+const {
+  homeLoading,
+  writeTextInput,
+  writeTextLoading,
+  drawGeneratedLoading,
+  suppliesLoading,
+  transferLoading,
+  drawPromptInput,
+  deviceSupplies,
+  deviceTransfer,
+  transferTargetPhone,
+  transferAcceptId,
+  shares,
+  shareLoading,
+  sharePermission,
+  shareExpiry,
+  unbindLoading,
+  starterAssets,
+  defaultWriteTextFontId,
+  paperSlotStateLabel,
+  penStateLabel,
+  transferStateLabel,
+  taskSubmitErrorMessage,
+  handleHome,
+  handleVoiceDispatched,
+  handleVoiceError,
+  handleWriteText,
+  handleDrawPrompt,
+  handleDrawStarter,
+  handleRefreshInfo,
+  handleHealthCheck,
+  updatePaper,
+  markNewPen,
+  handleRequestTransfer,
+  handleCancelTransfer,
+  handleAcceptTransfer,
+  loadShares,
+  handleCreateShare,
+  handleRevokeShare,
+  handleUnbind,
+} = useDeviceActions({
+  deviceId: () => deviceId.value,
+  message,
+  appendLog,
+  setPhase,
+  resetProgress,
+  infoLoading,
+  healthCheckLoading,
+  startInfoLoadingTimer,
+  clearInfoLoadingTimer,
+})
+
+// --- 语音审批（依赖 actions 的 taskSubmitErrorMessage）---
 const {
   pendingVoiceTasks,
   voiceApprovalLoading,
@@ -133,348 +120,6 @@ watch(latestEvent, (event) => {
     handleEdgeAEvent(event)
 })
 
-function handleEdgeAEvent(event: any) {
-  const payload = event?.payload as JobStatusPayload | DeviceInfoReplyPayload | SelfCheckPayload | undefined
-  if (event?.event_type === 'device_info_reply') {
-    applyDeviceInfoReply(event, payload as DeviceInfoReplyPayload)
-    return
-  }
-  if (event?.event_type === 'self_check') {
-    applySelfCheck(event, payload as SelfCheckPayload)
-    return
-  }
-  const jobPayload = payload as JobStatusPayload | undefined
-  appendLog(`seq=${event?.seq} ${jobPayload?.capability || ''} ${jobPayload?.phase || ''}`)
-  applyTaskProgress(jobPayload)
-  if (jobPayload?.phase)
-    latestPhase.value = jobPayload.phase
-}
-
-function applyTaskProgress(payload: JobStatusPayload | undefined) {
-  if (!payload?.phase)
-    return
-  if (['done', 'failed', 'cancelled', 'rejected'].includes(payload.phase))
-    healthCheckLoading.value = false
-  if (payload.phase === 'progress' && payload.progress) {
-    const pct = clampPercent(Number(payload.progress.percent || 0))
-    const done = Number(payload.progress.done_segments || 0)
-    const total = Number(payload.progress.total_segments || 0)
-    latestProgressPercent.value = pct
-    latestProgressLabel.value = total > 0 ? `${pct}% (${done}/${total})` : `${pct}%`
-    return
-  }
-  if (payload.phase === 'done') {
-    latestProgressPercent.value = 100
-    latestProgressLabel.value = '100%'
-    return
-  }
-  if (['accepted', 'running'].includes(payload.phase)) {
-    latestProgressPercent.value = null
-    latestProgressLabel.value = ''
-    return
-  }
-  if (['failed', 'cancelled', 'rejected'].includes(payload.phase)) {
-    latestProgressPercent.value = null
-    latestProgressLabel.value = ''
-  }
-}
-function clampPercent(v: number) {
-  return Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : 0
-}
-const progressBarStyle = computed(() => `width:${latestProgressPercent.value ?? 0}%;`)
-
-function normalizeWorkspace(value: WorkspaceMm | string | undefined) {
-  if (!value)
-    return null
-  if (typeof value === 'string') {
-    try {
-      return normalizeWorkspace(JSON.parse(value))
-    }
-    catch { return null }
-  }
-  return { x: Number(value.x || 0), y: Number(value.y || 0), z: Number(value.z || 0) }
-}
-
-function applyDeviceInfoReply(event: any, payload: DeviceInfoReplyPayload) {
-  const ws = normalizeWorkspace(payload?.workspace_mm)
-  deviceInfo.value = {
-    deviceId: event?.device_id || deviceId.value,
-    model: payload?.model || deviceInfo.value?.model || '',
-    hwRev: payload?.hw_rev || deviceInfo.value?.hwRev || '',
-    fwRev: payload?.fw_rev || deviceInfo.value?.fwRev || '',
-    workspaceMm: ws || deviceInfo.value?.workspaceMm || { x: 0, y: 0, z: 0 },
-    status: deviceInfo.value?.status || 'online',
-    lastSeenAt: event?.ts ? new Date(event.ts).toISOString() : new Date().toISOString(),
-  }
-  infoLoading.value = false
-  clearInfoLoadingTimer()
-  appendLog(`device_info_reply seq=${event?.seq || '-'} model=${payload?.model || '-'}`)
-}
-
-function applySelfCheck(event: any, payload: SelfCheckPayload) {
-  latestDiagnosticStatus.value = String(payload?.status || 'pending')
-  latestDiagnosticSummary.value = formatSelfCheckSummary(payload)
-  latestDiagnosticAt.value = event?.ts ? new Date(event.ts).toLocaleString() : new Date().toLocaleString()
-  selfCheckHistory.value = [{ id: Date.now(), deviceId: deviceId.value, checkId: payload?.check_id || 'startup', scope: payload?.scope || 'startup', status: latestDiagnosticStatus.value, summary: latestDiagnosticSummary.value, checksJson: payload?.checks ? JSON.stringify(payload.checks) : undefined, reportedAt: new Date().toISOString() }, ...selfCheckHistory.value].filter((v, i, l) => l.findIndex(o => o.id === v.id) === i).slice(0, 5)
-  appendLog(`self_check seq=${event?.seq || '-'} status=${latestDiagnosticStatus.value}`)
-}
-
-function formatSelfCheckSummary(payload: SelfCheckPayload | undefined) {
-  const names = ['nvs', 'wifi', 'u1_uart', 'audio']
-  const checks: Record<string, SelfCheckItem> = {}
-  const c = payload?.checks
-  if (Array.isArray(c)) {
-    c.forEach((i) => {
-      if (i?.name)
-        checks[i.name] = i
-    })
-  }
-  else if (c && typeof c === 'object') {
-    Object.entries(c).forEach(([n, v]) => {
-      checks[n] = v && typeof v === 'object' ? { name: n, ...(v as SelfCheckItem) } : { name: n, status: String(v) }
-    })
-  }
-  return `${payload?.scope || 'startup'} ${names.map(n => `${n}:${checks[n]?.status || 'missing'}`).join(' ')}`
-}
-
-async function loadSelfCheckHistoryData() {
-  try {
-    selfCheckHistory.value = await v2ListSelfCheckHistory(deviceId.value)
-    const latest = selfCheckHistory.value[0]
-    if (latest) {
-      latestDiagnosticStatus.value = latest.status || 'pending'
-      latestDiagnosticSummary.value = latest.summary || latest.checksJson || 'Self-check history loaded'
-      latestDiagnosticAt.value = latest.reportedAt ? new Date(latest.reportedAt).toLocaleString() : ''
-    }
-  }
-  catch (e) {
-    console.warn('load self-check history failed:', e)
-    selfCheckHistory.value = []
-  }
-}
-
-// --- Computed labels ---
-const phaseColor = computed(() => {
-  if (['running', 'accepted', 'progress'].includes(latestPhase.value))
-    return 'var(--accent)'
-  if (latestPhase.value === 'done')
-    return 'var(--green)'
-  if (latestPhase.value === 'failed')
-    return 'var(--danger)'
-  return 'var(--muted)'
-})
-const workspaceLabel = computed(() => {
-  const ws = normalizeWorkspace(deviceInfo.value?.workspaceMm as any)
-  return ws ? `${t('v2.detail.workspace')} X ${ws.x} / Y ${ws.y} / Z ${ws.z} mm` : `${t('v2.detail.workspace')} —`
-})
-const paperSlotStateLabel = computed(() => {
-  const s = deviceSupplies.value?.paperSlotState || 'unknown'
-  return s === 'loaded' ? t('v2.detail.paperLoaded') : s === 'empty' ? t('v2.detail.paperEmpty') : t('v2.detail.unknown')
-})
-const penStateLabel = computed(() => {
-  if (!deviceSupplies.value?.penInstalledAt)
-    return t('v2.detail.noPenRecord')
-  return `${t('v2.detail.inkEstimate')} ${deviceSupplies.value.penInkPercentEst ?? 100}%`
-})
-const transferStateLabel = computed(() => {
-  if (!deviceTransfer.value)
-    return t('v2.detail.noTransferPending')
-  return `#${deviceTransfer.value.transferId} ${deviceTransfer.value.status}`
-})
-
-// --- Actions ---
-async function handleHome() {
-  homeLoading.value = true
-  try {
-    const r = await v2SubmitTask(deviceId.value, 'home')
-    showSubmitToast('v2.detail.homeSubmitted')
-    appendLog(`home: ${r.taskId}`)
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    homeLoading.value = false
-  }
-}
-// 语音指令派发成功（voice-command 组件内部已确认 + 派发）。
-function handleVoiceDispatched(taskId: string, capability: string) {
-  showSubmitToast('v2.detail.voiceSubmitted')
-  appendLog(`voice ${capability}: ${taskId}`)
-}
-function handleVoiceError(msg: string) {
-  message.alert(msg)
-}
-async function handleWriteText() {
-  const text = writeTextInput.value.trim()
-  if (!text) {
-    message.alert(t('v2.detail.enterWriteText'))
-    return
-  }
-  writeTextLoading.value = true
-  try {
-    const r = await v2SubmitTask(deviceId.value, 'write_text', { text, font_id: defaultWriteTextFontId })
-    latestPhase.value = r.status
-    latestProgressPercent.value = null
-    latestProgressLabel.value = ''
-    showSubmitToast('v2.detail.writeSubmitted')
-    appendLog(`write_text: ${r.taskId}`)
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    writeTextLoading.value = false
-  }
-}
-async function submitDraw(params: Record<string, unknown>, label: string) {
-  drawGeneratedLoading.value = true
-  try {
-    const r = await v2SubmitTask(deviceId.value, 'draw_generated', params)
-    latestPhase.value = r.status
-    latestProgressPercent.value = null
-    latestProgressLabel.value = ''
-    showSubmitToast('v2.detail.drawSubmitted')
-    appendLog(`${label}: ${r.taskId}`)
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    drawGeneratedLoading.value = false
-  }
-}
-async function handleDrawPrompt() {
-  const p = drawPromptInput.value.trim()
-  if (!p) {
-    message.alert(t('v2.detail.enterDrawPrompt'))
-    return
-  }
-  await submitDraw({ prompt: p }, 'draw_generated')
-}
-async function handleDrawStarter(id: string) {
-  await submitDraw({ starter_id: id, use_starter_asset: true }, `draw_starter ${id}`)
-}
-async function handleRefreshInfo() {
-  infoLoading.value = true
-  clearInfoLoadingTimer()
-  try {
-    const r = await v2SubmitTask(deviceId.value, 'get_device_info')
-    latestPhase.value = r.status
-    showSubmitToast('v2.detail.infoSubmitted')
-    appendLog(`get_device_info: ${r.taskId}`)
-    infoLoadingTimer = setTimeout(() => {
-      infoLoading.value = false
-    }, 12000)
-  }
-  catch (e: any) {
-    infoLoading.value = false
-    message.alert(taskSubmitErrorMessage(e))
-  }
-}
-async function handleHealthCheck() {
-  healthCheckLoading.value = true
-  try {
-    const r = await v2SubmitTask(deviceId.value, 'run_path', { path: healthCheckPath, feed: 900 })
-    latestPhase.value = r.status
-    latestProgressPercent.value = null
-    latestProgressLabel.value = ''
-    latestDiagnosticSummary.value = 'Manual run_path submitted'
-    showSubmitToast('v2.detail.healthCheckSubmitted')
-    appendLog(`health_check: ${r.taskId}`)
-  }
-  catch (e: any) {
-    healthCheckLoading.value = false
-    message.alert(taskSubmitErrorMessage(e))
-  }
-}
-async function updatePaper(state: 'empty' | 'loaded' | 'unknown') {
-  suppliesLoading.value = true
-  try {
-    deviceSupplies.value = await v2UpdateDeviceSupplies(deviceId.value, { paperSlotState: state })
-    showSubmitToast(state === 'loaded' ? 'v2.detail.paperMarkedLoaded' : state === 'empty' ? 'v2.detail.paperMarkedEmpty' : 'v2.detail.paperMarkedUnknown')
-    appendLog(`supplies paper=${state}`)
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    suppliesLoading.value = false
-  }
-}
-async function markNewPen() {
-  suppliesLoading.value = true
-  try {
-    deviceSupplies.value = await v2UpdateDeviceSupplies(deviceId.value, { penInstalledAt: new Date().toISOString(), penInkPercentEst: 100, resetPenMileage: true })
-    showSubmitToast('v2.detail.penRecorded')
-    appendLog('supplies pen installed')
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    suppliesLoading.value = false
-  }
-}
-async function handleRequestTransfer() {
-  const target = transferTargetPhone.value.trim()
-  if (!target) {
-    message.alert(t('v2.detail.enterTargetPhone'))
-    return
-  }
-  transferLoading.value = true
-  try {
-    deviceTransfer.value = await v2RequestDeviceTransfer(deviceId.value, { targetPhone: target })
-    transferAcceptId.value = String(deviceTransfer.value.transferId)
-    showSubmitToast('v2.detail.transferCreated')
-    appendLog(`transfer id=${deviceTransfer.value.transferId}`)
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    transferLoading.value = false
-  }
-}
-async function handleCancelTransfer() {
-  const tid = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '') || null
-  if (!tid) {
-    message.alert(t('v2.detail.enterTransferId'))
-    return
-  }
-  transferLoading.value = true
-  try {
-    deviceTransfer.value = await v2CancelDeviceTransfer(tid)
-    showSubmitToast('v2.detail.transferCancelled')
-    appendLog(`transfer cancelled`)
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    transferLoading.value = false
-  }
-}
-async function handleAcceptTransfer() {
-  const tid = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '') || null
-  if (!tid) {
-    message.alert(t('v2.detail.enterTransferId'))
-    return
-  }
-  transferLoading.value = true
-  try {
-    deviceTransfer.value = await v2AcceptDeviceTransfer(tid)
-    showSubmitToast('v2.detail.transferAccepted')
-    appendLog(`transfer accepted`)
-  }
-  catch (e: any) {
-    message.alert(taskSubmitErrorMessage(e))
-  }
-  finally {
-    transferLoading.value = false
-  }
-}
-
 function navigateBack() {
   uni.navigateBack()
 }
@@ -486,81 +131,6 @@ function goToVoiceprint() {
 }
 function goToAgents() {
   uni.navigateTo({ url: '/pages/index/index' })
-}
-
-// ── 设备分享（AUDIT gap 实现）──
-async function loadShares() {
-  if (!deviceId.value)
-    return
-  try {
-    shares.value = await v2ListShares(deviceId.value)
-  }
-  catch (e: any) {
-    console.warn('load shares failed:', e?.message || e)
-  }
-}
-
-async function handleCreateShare() {
-  if (!deviceId.value)
-    return
-  shareLoading.value = true
-  try {
-    const days = Number.parseInt(shareExpiry.value.replace('d', ''), 10) || 7
-    const expiresAt = new Date(Date.now() + days * 86400000).toISOString()
-    await v2CreateShare(deviceId.value, sharePermission.value, expiresAt)
-    uni.showToast({ title: t('v2.detail.shareCreated'), icon: 'success' })
-    await loadShares()
-  }
-  catch (e: any) {
-    message.alert(e?.message || t('v2.detail.shareFailed'))
-  }
-  finally {
-    shareLoading.value = false
-  }
-}
-
-async function handleRevokeShare(shareToken: string) {
-  if (!deviceId.value)
-    return
-  shareLoading.value = true
-  try {
-    await v2RevokeShare(deviceId.value, shareToken)
-    uni.showToast({ title: t('v2.detail.shareRevoked'), icon: 'success' })
-    await loadShares()
-  }
-  catch (e: any) {
-    message.alert(e?.message || t('v2.detail.revokeFailed'))
-  }
-  finally {
-    shareLoading.value = false
-  }
-}
-
-// ── 设备解绑 ──
-async function handleUnbind() {
-  if (!deviceId.value)
-    return
-  uni.vibrateShort({ type: 'medium' })
-  try {
-    const confirmed = await message.confirm(t('v2.detail.unbindConfirm'))
-    if (!confirmed)
-      return
-  }
-  catch {
-    return
-  }
-  unbindLoading.value = true
-  try {
-    await v2UnbindDevice(deviceId.value)
-    uni.showToast({ title: t('v2.detail.unbindSuccess'), icon: 'success' })
-    setTimeout(() => uni.navigateBack(), 1000)
-  }
-  catch (e: any) {
-    message.alert(e?.message || t('v2.detail.unbindFailed'))
-  }
-  finally {
-    unbindLoading.value = false
-  }
 }
 
 onLoad((opt: any) => {

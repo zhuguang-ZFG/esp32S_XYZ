@@ -1,13 +1,11 @@
 <script lang="ts" setup>
-import type { Member } from '@/api/member'
-import type { ChatHistory, CreateSpeakerData, VoicePrint } from '@/api/voiceprint'
+import type { VoicePrint } from '@/api/voiceprint'
 import { onLoad } from '@dcloudio/uni-app'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
-import { useToast } from 'wot-design-uni/components/wd-toast'
-import { getMemberList } from '@/api/member'
-import { createVoicePrint, deleteVoicePrint, getAudioDownloadId, getChatHistory, getVoicePrintList, updateVoicePrint } from '@/api/voiceprint'
 import { t } from '@/i18n'
+import { useAudioPlayer } from './composables/useAudioPlayer'
+import { useVoicePrintCrud } from './composables/useVoicePrintCrud'
 
 defineOptions({
   name: 'VoicePrintManage',
@@ -37,334 +35,44 @@ safeAreaInsets = systemInfo.safeAreaInsets
 // #endif
 
 const message = useMessage()
-const toast = useToast()
-
-// 页面数据
-const voicePrintList = ref<VoicePrint[]>([])
-const chatHistoryList = ref<ChatHistory[]>([])
-const chatHistoryActions = ref<any[]>([])
-const memberList = ref<Member[]>([])
-const swipeStates = ref<Record<string, 'left' | 'close' | 'right'>>({})
-const loading = ref(false)
-
-// 音频播放相关
-const audioRef = ref<UniApp.InnerAudioContext | null>(null)
-const playingAudioId = ref<string>('')
 
 // 通过路由 query 参数接收 deviceId（页面导航用 onLoad，不是 props）
 const routeDeviceId = ref('')
 onLoad((opt: any) => {
   routeDeviceId.value = opt?.deviceId || ''
 })
+const currentDeviceId = computed(() => routeDeviceId.value)
 
-const currentDeviceId = computed(() => {
-  return routeDeviceId.value
-})
+// --- CRUD + 表单 + 成员/对话记录（P3.1 提取到 useVoicePrintCrud）---
+const {
+  voicePrintList,
+  chatHistoryActions,
+  memberList,
+  swipeStates,
+  loading,
+  showAddDialog,
+  showEditDialog,
+  showChatHistoryDialog,
+  addForm,
+  editForm,
+  memberPickerRange,
+  selectedMemberName,
+  loadVoicePrintList,
+  refresh,
+  loadMemberList,
+  onMemberChange,
+  loadChatHistory,
+  openAddDialog,
+  getSelectedAudioContent,
+  handleItemClick,
+  submitAdd,
+  submitEdit,
+  handleEdit,
+  handleDelete,
+} = useVoicePrintCrud(() => currentDeviceId.value, message)
 
-// 弹窗相关
-const showAddDialog = ref(false)
-const showEditDialog = ref(false)
-const showChatHistoryDialog = ref(false)
-const addForm = ref<CreateSpeakerData>({
-  deviceId: '',
-  memberId: '',
-  audioId: '',
-  sourceName: '',
-  introduce: '',
-})
-
-// 成员选择器数据
-const memberPickerRange = computed(() => {
-  return memberList.value.map(m => m.name)
-})
-const selectedMemberName = computed(() => {
-  const member = memberList.value.find(m => m.memberId === addForm.value.memberId)
-  return member?.name || ''
-})
-
-const editForm = ref<VoicePrint>({
-  id: '',
-  voiceprintId: '',
-  memberId: '',
-  memberName: '',
-  deviceId: '',
-  audioId: '',
-  sourceName: '',
-  introduce: '',
-  sampleCount: 0,
-  confidence: 0,
-  status: '',
-  createDate: '',
-  createdAt: '',
-})
-
-// 获取声纹列表
-async function loadVoicePrintList() {
-  try {
-    // 检查是否有当前选中的智能体
-    if (!currentDeviceId.value) {
-      voicePrintList.value = []
-      return
-    }
-
-    loading.value = true
-    const data = await getVoicePrintList(currentDeviceId.value)
-
-    // 初始化滑动状态
-    const list = data || []
-    list.forEach((item) => {
-      if (!swipeStates.value[item.id]) {
-        swipeStates.value[item.id] = 'close'
-      }
-    })
-
-    voicePrintList.value = list
-  }
-  catch (error) {
-    voicePrintList.value = []
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-// 暴露给父组件的刷新方法
-async function refresh() {
-  await loadVoicePrintList()
-}
-
-// 获取成员列表
-async function loadMemberList() {
-  if (!currentDeviceId.value) {
-    memberList.value = []
-    return
-  }
-  try {
-    const data = await getMemberList(currentDeviceId.value)
-    memberList.value = data || []
-  }
-  catch (error) {
-    memberList.value = []
-  }
-}
-
-// 选择成员
-function onMemberChange(event: any) {
-  const index = event?.detail?.value ?? event?.target?.value
-  const member = memberList.value[Number(index)]
-  if (member) {
-    addForm.value.memberId = member.memberId
-  }
-}
-
-// 获取语音对话记录
-async function loadChatHistory() {
-  try {
-    if (!currentDeviceId.value) {
-      toast.error(t('voiceprint.pleaseSelectAgent'))
-      return
-    }
-
-    const data = await getChatHistory(currentDeviceId.value)
-    chatHistoryList.value = data || []
-    // 转换为ActionSheet格式
-    chatHistoryActions.value = chatHistoryList.value.map((item, index) => ({
-      name: item.content,
-      audioId: item.audioId,
-      index,
-    }))
-  }
-  catch (error) {
-    toast.error(t('voiceprint.fetchHistoryFailed'))
-  }
-}
-
-// 打开添加弹窗
-async function openAddDialog() {
-  if (!currentDeviceId.value) {
-    toast.error(t('voiceprint.pleaseSelectAgent'))
-    return
-  }
-
-  if (memberList.value.length === 0) {
-    await loadMemberList()
-  }
-
-  if (memberList.value.length === 0) {
-    toast.error(t('voiceprint.noMembers'))
-    return
-  }
-
-  const defaultMember = memberList.value[0]
-  addForm.value = {
-    deviceId: currentDeviceId.value,
-    memberId: defaultMember.memberId,
-    audioId: '',
-    sourceName: '',
-    introduce: '',
-  }
-  showAddDialog.value = true
-}
-
-// 打开编辑弹窗
-function openEditDialog(item: VoicePrint) {
-  editForm.value = { ...item }
-  showEditDialog.value = true
-}
-
-// 获取选中音频的显示内容
-function getSelectedAudioContent(audioId: string) {
-  if (!audioId)
-    return t('voiceprint.clickToSelectVector')
-  const chatItem = chatHistoryList.value.find(item => item.audioId === audioId)
-  return chatItem ? chatItem.content : `已选择: ${audioId.substring(0, 8)}...`
-}
-
-// 选择声纹向量
-function selectAudioId({ item }: { item: any }) {
-  if (showAddDialog.value) {
-    addForm.value.audioId = item.audioId
-  }
-  else if (showEditDialog.value) {
-    editForm.value.audioId = item.audioId
-  }
-  showChatHistoryDialog.value = false
-}
-
-// 点击选择
-function handleItemClick(item: any) {
-  selectAudioId({ item })
-}
-
-// 提交添加说话人
-async function submitAdd() {
-  if (!addForm.value.sourceName.trim()) {
-    toast.error(t('voiceprint.pleaseInputName'))
-    return
-  }
-  if (!addForm.value.audioId) {
-    toast.error(t('voiceprint.pleaseSelectVector'))
-    return
-  }
-  if (!addForm.value.memberId.trim()) {
-    toast.error(t('voiceprint.pleaseSelectMember'))
-    return
-  }
-
-  try {
-    await createVoicePrint(addForm.value)
-    toast.success(t('voiceprint.addSuccess'))
-    showAddDialog.value = false
-    await loadVoicePrintList()
-  }
-  catch (error) {
-    toast.error(t('voiceprint.addFailed'))
-  }
-}
-
-// 提交编辑说话人
-async function submitEdit() {
-  if (!editForm.value.sourceName.trim()) {
-    toast.error(t('voiceprint.pleaseInputName'))
-    return
-  }
-  if (!editForm.value.audioId) {
-    toast.error(t('voiceprint.pleaseSelectVector'))
-    return
-  }
-
-  try {
-    await updateVoicePrint({ ...editForm.value })
-    toast.success(t('voiceprint.editSuccess'))
-    showEditDialog.value = false
-    await loadVoicePrintList()
-  }
-  catch (error) {
-    toast.error(t('voiceprint.editFailed'))
-  }
-}
-
-// 处理编辑操作
-function handleEdit(item: VoicePrint) {
-  openEditDialog(item)
-  swipeStates.value[item.id] = 'close'
-}
-
-// 删除声纹
-async function handleDelete(id: string) {
-  message.confirm({
-    msg: t('voiceprint.deleteConfirmMsg'),
-    title: t('voiceprint.deleteConfirmTitle'),
-  }).then(async () => {
-    await deleteVoicePrint(id)
-    toast.success(t('voiceprint.deleteSuccess'))
-    await loadVoicePrintList()
-  }).catch(() => {
-    // cancelled
-  })
-}
-
-// 播放音频
-async function playAudio(audioId: string, event: Event) {
-  event.stopPropagation() // 阻止事件冒泡，防止关闭下拉框
-
-  if (!audioId) {
-    toast.warning(t('voiceprint.audioNotExist'))
-    return
-  }
-
-  // 如果正在播放同一个音频，则停止
-  if (playingAudioId.value === audioId) {
-    stopAudio()
-    return
-  }
-
-  // 停止之前的音频
-  stopAudio()
-
-  try {
-    // 先获取音频播放地址
-    playingAudioId.value = audioId
-    const audioMeta = await getAudioDownloadId(audioId)
-
-    if (!audioMeta.url) {
-      toast.error(t('voiceprint.getAudioFailed'))
-      playingAudioId.value = ''
-      return
-    }
-
-    // 创建新的音频实例
-    audioRef.value = uni.createInnerAudioContext()
-    audioRef.value.src = audioMeta.url
-    audioRef.value.autoplay = true
-
-    // 监听播放结束
-    audioRef.value.onEnded(() => {
-      playingAudioId.value = ''
-    })
-
-    // 监听播放错误
-    audioRef.value.onError((error) => {
-      console.error('audio play error', error)
-      toast.error(t('voiceprint.audioPlayFailed'))
-      playingAudioId.value = ''
-    })
-  }
-  catch (error) {
-    toast.error(t('voiceprint.audioPlayFailed'))
-    playingAudioId.value = ''
-  }
-}
-
-// 停止音频
-function stopAudio() {
-  if (audioRef.value) {
-    audioRef.value.stop()
-    audioRef.value.destroy()
-    audioRef.value = null
-  }
-  playingAudioId.value = ''
-}
+// --- 音频试听（P3.1 提取到 useAudioPlayer）---
+const { playingAudioId, playAudio, stopAudio } = useAudioPlayer()
 
 watch(() => [showAddDialog.value, showEditDialog.value], (newValues) => {
   if (newValues.some((value: boolean) => value)) {

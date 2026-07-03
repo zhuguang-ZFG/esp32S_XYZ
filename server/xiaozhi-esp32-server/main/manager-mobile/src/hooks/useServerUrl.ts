@@ -7,6 +7,7 @@ import {
   isValidServerBaseUrl,
   setServerBaseUrlOverride,
 } from '@/utils'
+import { HEALTH_CHECK_TIMEOUT_MS } from '@/config/timeouts'
 import { t } from '@/i18n'
 
 /**
@@ -40,7 +41,7 @@ export function useServerUrl(onUrlChanged: () => void) {
       const response = await uni.request({
         url: `${baseUrlInput.value.replace(/\/$/, '')}/health`,
         method: 'GET',
-        timeout: 3000,
+        timeout: HEALTH_CHECK_TIMEOUT_MS,
       })
       if (response.statusCode === 200)
         return true

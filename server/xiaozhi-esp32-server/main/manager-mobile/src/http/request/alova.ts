@@ -6,6 +6,7 @@ import { createAlova } from 'alova'
 import { createServerTokenAuthentication } from 'alova/client'
 import VueHook from 'alova/vue'
 import { v2RefreshToken } from '@/api/v2'
+import { API_DEFAULT_TIMEOUT_MS, REFRESH_COOLDOWN_MS } from '@/config/timeouts'
 import { getEnvBaseUrl } from '@/utils'
 import { toast } from '@/utils/toast'
 import { ContentTypeEnum, ResultEnum, ShowMessage } from './enum'
@@ -23,7 +24,6 @@ const langMap: Record<Language, string> = {
  * 此处要求两次刷新间隔 ≥ REFRESH_COOLDOWN_MS，否则视为刷新无效，回退登录页。
  */
 let lastRefreshAt = 0
-const REFRESH_COOLDOWN_MS = 30_000
 
 /**
  * 创建请求实例
@@ -79,7 +79,7 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
 const alovaInstance = createAlova({
   baseURL: getEnvBaseUrl(),
   ...AdapterUniapp(),
-  timeout: 15000,
+  timeout: API_DEFAULT_TIMEOUT_MS,
   statesHook: VueHook,
 
   beforeRequest: onAuthRequired((method) => {

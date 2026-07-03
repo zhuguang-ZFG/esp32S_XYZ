@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useToast } from 'wot-design-uni/components/wd-toast'
+import { SOFTAP_PROBE_TIMEOUT_MS, SOFTAP_SCAN_TIMEOUT_MS } from '@/config/timeouts'
 import { t } from '@/i18n'
 import { provisioningContract, softApUrl } from '../provisioning-contract'
 
@@ -53,7 +54,7 @@ async function checkESP32Connection() {
     const response = await uni.request({
       url: softApUrl(provisioningContract.softApScanPath),
       method: 'GET',
-      timeout: 3000,
+      timeout: SOFTAP_PROBE_TIMEOUT_MS,
     })
     isConnectedToESP32.value = response.statusCode === 200
     emit('connection-status', isConnectedToESP32.value)
@@ -80,7 +81,7 @@ async function scanWifi() {
     const response = await uni.request({
       url: softApUrl(provisioningContract.softApScanPath),
       method: 'GET',
-      timeout: 10000,
+      timeout: SOFTAP_SCAN_TIMEOUT_MS,
     })
 
     if (response.statusCode === 200 && response.data) {

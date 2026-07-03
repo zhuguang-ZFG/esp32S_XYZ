@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { SOFTAP_PROBE_TIMEOUT_MS, SOFTAP_SUBMIT_TIMEOUT_MS } from '@/config/timeouts'
 import { t } from '@/i18n'
 import { toast } from '@/utils/toast'
 import { provisioningContract, softApUrl } from '../provisioning-contract'
@@ -38,7 +39,7 @@ async function checkESP32Connection() {
     const response = await uni.request({
       url: softApUrl(provisioningContract.softApScanPath),
       method: 'GET',
-      timeout: 3000,
+      timeout: SOFTAP_PROBE_TIMEOUT_MS,
     })
     return response.statusCode === 200
   }
@@ -72,7 +73,7 @@ async function submitConfig() {
         ssid: props.selectedNetwork.ssid,
         password: props.selectedNetwork.authmode > 0 ? props.password : '',
       },
-      timeout: 15000,
+      timeout: SOFTAP_SUBMIT_TIMEOUT_MS,
     })
 
     if (response.statusCode === 200 && (response.data as any)?.success) {
@@ -82,7 +83,7 @@ async function submitConfig() {
         uni.request({
           url: softApUrl(provisioningContract.softApExitPath),
           method: 'POST',
-          timeout: 15000,
+          timeout: SOFTAP_SUBMIT_TIMEOUT_MS,
         })
       }, 1500)
     }

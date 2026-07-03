@@ -74,6 +74,18 @@ jobs:
             firmware/u8-xiaozhi/main/boards/zhuguang/dlc-motor-control-p1-ai/test_u8_protocol_logic.cpp \
             -o /tmp/test_u8_protocol_logic && /tmp/test_u8_protocol_logic
 
+      - name: Compile and run U8 OTA allowlist tests
+        run: |
+          g++ -std=c++17 \
+            firmware/u8-xiaozhi/main/test_u8_ota_allowlist.cpp \
+            -o /tmp/test_u8_ota_allowlist && /tmp/test_u8_ota_allowlist
+
+      - name: Compile and run U8 MQTT hex-decode tests
+        run: |
+          g++ -std=c++17 \
+            firmware/u8-xiaozhi/main/test_u8_mqtt_hex_decode.cpp \
+            -o /tmp/test_u8_mqtt_hex_decode && /tmp/test_u8_mqtt_hex_decode
+
       - name: Verify no E009 regression in Protocol.cpp
         run: |
           if grep -n '"E009"' firmware/u1-grbl/Grbl_Esp32/src/Protocol.cpp; then
@@ -124,6 +136,12 @@ jobs:
 
       - name: Type check
         run: corepack pnpm run type-check
+
+      - name: Check i18n key consistency
+        run: corepack pnpm run check:i18n
+
+      - name: Unit tests (vitest)
+        run: corepack pnpm run test
 
       - name: Build WeChat mini program
         run: corepack pnpm run build:mp-weixin

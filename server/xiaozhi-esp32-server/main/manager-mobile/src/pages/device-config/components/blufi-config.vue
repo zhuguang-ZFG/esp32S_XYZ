@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { BLE_CONNECT_TIMEOUT_MS } from '@/config/timeouts'
 import { toast } from '@/utils/toast'
 import {
   createDesignTimeBlufiCredentialPayload,
@@ -161,7 +162,7 @@ async function connectBlufiDevice(device: BlufiDevice) {
     await stopBlufiScan()
     await bluetooth.createBLEConnection({
       deviceId: device.deviceId,
-      timeout: 10000,
+      timeout: BLE_CONNECT_TIMEOUT_MS,
     })
     connectedDeviceId.value = device.deviceId
     connectedDeviceName.value = device.name

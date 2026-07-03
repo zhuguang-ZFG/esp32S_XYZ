@@ -1,4 +1,5 @@
 import type { V2BindResponse, V2DeletionResponse, V2DeviceInfo, V2DeviceSupplyResponse, V2DeviceSupplyUpdateRequest, V2DeviceTransferRequest, V2DeviceTransferResponse, V2LoginResponse, V2MeResponse, V2PendingVoiceTaskResponse, V2SelfCheckHistoryResponse, V2SubmitTaskResponse, V2TaskInfo, V2TaskListResponse } from './types'
+import { LOGIN_TIMEOUT_MS } from '@/config/timeouts'
 import { http } from '@/http/request/alova'
 import { getEnvBaseUrl } from '@/utils'
 
@@ -15,7 +16,6 @@ const appPrefix = '/device/v1/app'
  * - timeout 设为 30s，覆盖微信 jscode2session 偶发慢响应 + 网络抖动。
  * - 对 timeout / network 类错误自动重试 1 次，避免单次网络抖动导致登录失败。
  */
-const LOGIN_TIMEOUT_MS = 30000
 const LOGIN_MAX_RETRIES = 2
 
 async function _doLoginRequest(code: string): Promise<UniApp.RequestSuccessCallbackResult> {
