@@ -4,7 +4,6 @@ import { onMounted, ref, watch } from 'vue'
 import { usePageAuth } from '@/hooks/usePageAuth'
 import { t } from '@/i18n'
 import { tabBarI18nKeys } from '@/layouts/fg-tabbar/tabbarList'
-import { useConfigStore } from '@/store'
 import { useLangStore } from '@/store/lang'
 import { applyM6PendingTabBarBadge } from '@/utils'
 import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only'
@@ -13,7 +12,6 @@ const isOnline = ref(true)
 
 usePageAuth()
 
-const configStore = useConfigStore()
 const langStore = useLangStore()
 
 onLaunch(() => {
@@ -22,10 +20,6 @@ onLaunch(() => {
     backgroundColor: '#0b0e13',
     backgroundColorTop: '#0b0e13',
     backgroundColorBottom: '#0b0e13',
-  })
-  // 获取公共配置
-  configStore.fetchPublicConfig().catch(() => {
-    // ignore; config falls back to env defaults
   })
   // 监听网络状态
   uni.onNetworkStatusChange((res) => {

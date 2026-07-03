@@ -33,7 +33,6 @@ export const useUserStore = defineStore(
     // 删除用户信息
     const removeUserInfo = () => {
       userInfo.value = { ...userInfoState }
-      uni.removeStorageSync('userInfo')
       uni.removeStorageSync('token')
     }
     /**

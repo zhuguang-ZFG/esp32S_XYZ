@@ -4,7 +4,8 @@ import pagesJson from '@/pages.json'
 import { isMpWeixin } from './platform'
 
 const pages = pagesJson.pages
-const safeSubPackages = (pagesJson as any).subPackages || []
+type SubPackage = { root: string; pages: { path: string }[] }
+const safeSubPackages = (pagesJson as { subPackages?: SubPackage[] }).subPackages || []
 
 /**
  * 运行时服务端地址覆盖存储键
@@ -73,7 +74,7 @@ export function getLastPage() {
  */
 export function currRoute() {
   const lastPage = getLastPage()
-  const currRoute = (lastPage as any).$page
+  const currRoute = (lastPage as unknown as { $page?: { fullPath: string } }).$page
   // console.log('lastPage.$page:', currRoute)
   // console.log('lastPage.$page.fullpath:', currRoute.fullPath)
   // console.log('lastPage.$page.options:', currRoute.options)
@@ -130,14 +131,14 @@ export function getAllPages(key = 'needLogin') {
     }))
 
   // 这里处理分包
-  const subPages: any[] = []
+  const subPages: { path: string }[] = []
   safeSubPackages.forEach((subPageObj) => {
     // console.log(subPageObj)
     const { root } = subPageObj
 
     subPageObj.pages
       .filter(page => !key || page[key])
-      .forEach((page: { path: string } & Record<string, any>) => {
+      .forEach((page) => {
         subPages.push({
           ...page,
           path: `/${root}/${page.path}`,
@@ -430,18 +431,20 @@ export function deepClone<T extends DeepCloneTarget>(target: T): T {
   }
 
   if (target instanceof Date) {
-    return new Date(target.getTime()) as any
+    return new Date(target.getTime()) as T
   }
 
   if (Array.isArray(target)) {
-    return target.map(item => deepClone(item)) as any
+    return target.map(item => deepClone(item)) as T
   }
 
   if (target instanceof Object) {
-    const clonedObj = {} as T
-    for (const key in target) {
-      if (Object.prototype.hasOwnProperty.call(target, key)) {
-        (clonedObj as any)[key] = deepClone((target as any)[key])
+    const clonedObj = Object.create(Object.getPrototypeOf(target)) as T
+    const source = target as Record<string, DeepCloneTarget>
+    const dest = clonedObj as Record<string, DeepCloneTarget>
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        dest[key] = deepClone(source[key])
       }
     }
     return clonedObj

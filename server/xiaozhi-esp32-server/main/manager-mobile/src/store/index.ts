@@ -13,6 +13,5 @@ store.use(
 
 export default store
 
-export * from './config'
 // 模块统一导出
 export * from './user'

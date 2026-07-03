@@ -1,3 +1,4 @@
+import { http } from '@/http/request/alova'
 import { getBearerToken, getChatBaseUrl } from '@/utils'
 
 export interface ChatMessage {
@@ -128,34 +129,23 @@ export async function chatCompletion(
 ): Promise<string> {
   const baseUrl = getChatBaseUrl(model).replace(/\/$/, '')
   const token = getBearerToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token)
+    headers.Authorization = `Bearer ${token}`
 
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${baseUrl}/v1/chat/completions`,
-      method: 'POST',
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
-      },
-      data: {
-        model,
-        messages: messages.filter(m => m.role !== 'system'),
-        temperature,
-        max_tokens,
-      },
-      timeout: 120000,
-      success: (res) => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`HTTP ${res.statusCode}`))
-          return
-        }
-        const data = res.data as any
-        const content = data.choices?.[0]?.message?.content?.trim() || ''
-        resolve(content)
-      },
-      fail: (err) => {
-        reject(new Error(err.errMsg || '请求失败'))
-      },
-    })
-  })
+  interface ChatCompletionResponse {
+    choices?: Array<{ message?: { content?: string } }>
+  }
+
+  const res = await http.Post<ChatCompletionResponse>(
+    `${baseUrl}/v1/chat/completions`,
+    {
+      model,
+      messages: messages.filter(m => m.role !== 'system'),
+      temperature,
+      max_tokens,
+    },
+    { meta: { ignoreAuth: true, toast: false }, timeout: 120000, headers },
+  )
+  return res.choices?.[0]?.message?.content?.trim() || ''
 }
