@@ -75,6 +75,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "upload:mp-weixin": "node scripts/upload-mp-weixin.js",
+    "check:i18n": "node scripts/check-i18n-keys.mjs",
     "test": "vitest run"
   },
   "dependencies": {

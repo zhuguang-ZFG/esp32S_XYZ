@@ -1,15 +1,9 @@
 import path from 'node:path'
-import process from 'node:process'
 // manifest.config.ts
 import { defineManifestConfig } from '@uni-helper/vite-plugin-uni-manifest'
 import { loadEnv } from 'vite'
+import { getMode } from './scripts/get-mode'
 
-// 手动解析命令行参数获取 mode
-function getMode() {
-  const args = process.argv.slice(2)
-  const modeFlagIndex = args.findIndex(arg => arg === '--mode')
-  return modeFlagIndex !== -1 ? args[modeFlagIndex + 1] : args[0] === 'build' ? 'production' : 'development' // 默认 development
-}
 // 获取环境变量的范例
 const env = loadEnv(getMode(), path.resolve(process.cwd(), 'env'))
 const {
@@ -24,8 +18,8 @@ export default defineManifestConfig({
   'name': VITE_APP_TITLE,
   'appid': VITE_UNI_APPID,
   'description': '',
-  'versionName': '3.8.3',
-  'versionCode': '383',
+  'versionName': '3.8.4',
+  'versionCode': '384',
   'transformPx': false,
   'locale': VITE_FALLBACK_LOCALE, // 'zh-Hans'
   'h5': {
