@@ -1052,6 +1052,11 @@ namespace WebUI {
 
     //Web Update handler
     void Web_Server::handleUpdate() {
+#ifdef OTA_DISABLED_BY_DEFAULT
+        _upload_status = UploadStatusType::NONE;
+        _webserver->send(403, "text/plain", "OTA is disabled by default.\n");
+        return;
+#endif
         AuthenticationLevel auth_level = is_authenticated();
         if (auth_level != AuthenticationLevel::LEVEL_ADMIN) {
             _upload_status = UploadStatusType::NONE;
@@ -1078,6 +1083,12 @@ namespace WebUI {
 
     //File upload for Web update
     void Web_Server::WebUpdateUpload() {
+#ifdef OTA_DISABLED_BY_DEFAULT
+        _upload_status = UploadStatusType::FAILED;
+        grbl_send(CLIENT_ALL, "[MSG:OTA is disabled by default]\r\n");
+        pushError(ESP_ERROR_UPLOAD, "OTA is disabled by default", 403);
+        return;
+#endif
         static size_t   last_upload_update;
         static uint32_t maxSketchSpace = 0;
 

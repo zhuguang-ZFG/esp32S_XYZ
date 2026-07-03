@@ -133,6 +133,12 @@ const int MAX_N_AXIS = 6;
 // "friendly suggestion" to prevent unwitting dangerous actions, rather than
 // as effective security against malice.
 // #define ENABLE_AUTHENTICATION
+
+// U1 的 WebUI OTA 默认关闭。当前实现无固件签名/SHA 校验，且认证默认关闭，
+// 一旦启用 WiFi 可被同网攻击者刷入任意固件。如需启用 OTA，必须先实现
+// 类似 U8 的 fail-closed + 签名 + 白名单机制，并启用 ENABLE_AUTHENTICATION。
+#define OTA_DISABLED_BY_DEFAULT
+
 //CONFIGURE_EYECATCH_END (DO NOT MODIFY THIS LINE)
 
 #ifdef ENABLE_AUTHENTICATION
