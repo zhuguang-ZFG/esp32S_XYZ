@@ -5,11 +5,13 @@
 #include "config.h"
 #include "esp32_camera.h"
 #include "mcp_server.h"
+#include "system_info.h"
 #include "websocket_control_server.h"
 
 #include <driver/gpio.h>
 #include <driver/i2c_master.h>
 #include <esp_log.h>
+#include <nvs.h>
 #include <cJSON.h>
 
 #include <string>
@@ -58,6 +60,65 @@ private:
     U1ProtocolClient protocol_;
     MotionEventEmitter emitter_;
     MotionExecutor executor_;
+
+    // --- DLC API helpers (strategy-1: device calls dlc_api to generate path) ---
+
+    // SEC-007: Read per-device token from NVS; never compiled into firmware
+    std::string GetDlcApiToken() {
+        char token[128] = {0};
+        size_t len = sizeof(token);
+        nvs_handle_t handle;
+        if (nvs_open("dlc", NVS_READONLY, &handle) == ESP_OK) {
+            nvs_get_str(handle, "api_token", token, &len);
+            nvs_close(handle);
+        }
+        return std::string(token);
+    }
+
+    // SEC-007: Force HTTPS; reject http:// to protect token
+    // SEC-005: Validate response size after ReadAll to prevent OOM
+    std::string PostDlcApi(const std::string& path, const std::string& body) {
+        const std::string base_url = DLC_API_BASE_URL;
+        if (base_url.rfind("https://", 0) != 0) {
+            ESP_LOGE(TAG, "DLC_API_BASE_URL must be https://");
+            return "";
+        }
+
+        const std::string token = GetDlcApiToken();
+        if (token.empty()) {
+            ESP_LOGE(TAG, "dlc api_token not found in NVS");
+            return "";
+        }
+
+        auto& board = Board::GetInstance();
+        auto http = board.GetNetwork()->CreateHttp(0);
+        http->SetHeader("Content-Type", "application/json");
+        http->SetHeader("Accept", "application/json");
+        http->SetHeader("Authorization", "Bearer " + token);
+        http->SetContent(body);
+
+        std::string url = base_url + path;
+        if (!http->Open("POST", url)) {
+            ESP_LOGE(TAG, "dlc_api POST failed: cannot connect to %s", url.c_str());
+            return "";
+        }
+
+        int status = http->GetStatusCode();
+        std::string response = http->ReadAll();
+        http->Close();
+
+        // SEC-005: Reject oversized responses
+        if (response.size() > DLC_API_MAX_RESPONSE_BYTES) {
+            ESP_LOGE(TAG, "dlc_api response too large: %zu bytes", response.size());
+            return "";
+        }
+
+        if (status != 200) {
+            ESP_LOGE(TAG, "dlc_api returned status %d", status);
+            return "";
+        }
+        return response;
+    }
 
     void InitializeI2c() {
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -216,6 +277,106 @@ private:
                            [this](const PropertyList& properties) -> ReturnValue {
                                return executor_.RunPath(properties["path_json"].value<std::string>(),
                                                         properties["feed"].value<int>());
+                           });
+
+        // --- Strategy-1 high-level tools: device calls dlc_api then executes locally ---
+
+        mcp_server.AddTool("self.plotter.write_text",
+                           "在绘图机上写字。先通过云端生成路径，再本地执行。",
+                           PropertyList({
+                               Property("text", kPropertyTypeString),
+                               Property("feed", kPropertyTypeInteger, 1200, 1, 20000)
+                           }),
+                           [this](const PropertyList& properties) -> ReturnValue {
+                               std::string text = properties["text"].value<std::string>();
+                               int feed = properties["feed"].value<int>();
+                               if (text.empty() || text.length() > 40) {
+                                   return std::string("invalid text length");
+                               }
+
+                               // 1. Call dlc_api to generate path
+                               cJSON* req = cJSON_CreateObject();
+                               cJSON_AddStringToObject(req, "type", "write_text");
+                               cJSON* payload = cJSON_CreateObject();
+                               cJSON_AddStringToObject(payload, "text", text.c_str());
+                               cJSON_AddItemToObject(req, "payload", payload);
+                               cJSON_AddStringToObject(req, "device_id", SystemInfo::GetMacAddress().c_str());
+                               char* body = cJSON_PrintUnformatted(req);
+                               std::string resp = PostDlcApi("/dlc/tasks/preview", body);
+                               cJSON_free(body);
+                               cJSON_Delete(req);
+
+                               if (resp.empty()) {
+                                   return std::string("路径生成失败：dlc_api 无响应");
+                               }
+
+                               // 2. Parse response and extract path_data
+                               cJSON* root = cJSON_Parse(resp.c_str());
+                               if (root == nullptr) {
+                                   return std::string("路径生成失败：dlc_api 返回异常");
+                               }
+                               cJSON* path_data = cJSON_GetObjectItemCaseSensitive(root, "path_data");
+                               if (!cJSON_IsArray(path_data)) {
+                                   cJSON_Delete(root);
+                                   return std::string("路径生成失败：dlc_api 未返回 path_data");
+                               }
+
+                               // 3. Execute path locally
+                               char* path_json = cJSON_PrintUnformatted(path_data);
+                               std::string task_id = protocol_.NextLocalTaskId("mcp_write");
+                               ReturnValue rv = executor_.RunPathWithTaskId(task_id, path_json, feed, true);
+                               cJSON_free(path_json);
+                               cJSON_Delete(root);
+                               return rv;
+                           });
+
+        mcp_server.AddTool("self.plotter.draw_generated",
+                           "在绘图机上画图。先通过云端 AI 生成图像并矢量化为路径，再本地执行。",
+                           PropertyList({
+                               Property("prompt", kPropertyTypeString),
+                               Property("feed", kPropertyTypeInteger, 1200, 1, 20000)
+                           }),
+                           [this](const PropertyList& properties) -> ReturnValue {
+                               std::string prompt = properties["prompt"].value<std::string>();
+                               int feed = properties["feed"].value<int>();
+                               if (prompt.empty() || prompt.length() > 80) {
+                                   return std::string("invalid prompt length");
+                               }
+
+                               // 1. Call dlc_api to generate path
+                               cJSON* req = cJSON_CreateObject();
+                               cJSON_AddStringToObject(req, "type", "draw_generated");
+                               cJSON* payload = cJSON_CreateObject();
+                               cJSON_AddStringToObject(payload, "prompt", prompt.c_str());
+                               cJSON_AddItemToObject(req, "payload", payload);
+                               cJSON_AddStringToObject(req, "device_id", SystemInfo::GetMacAddress().c_str());
+                               char* body = cJSON_PrintUnformatted(req);
+                               std::string resp = PostDlcApi("/dlc/tasks/preview", body);
+                               cJSON_free(body);
+                               cJSON_Delete(req);
+
+                               if (resp.empty()) {
+                                   return std::string("绘图生成失败：dlc_api 无响应");
+                               }
+
+                               // 2. Parse response and extract path_data
+                               cJSON* root = cJSON_Parse(resp.c_str());
+                               if (root == nullptr) {
+                                   return std::string("绘图生成失败：dlc_api 返回异常");
+                               }
+                               cJSON* path_data = cJSON_GetObjectItemCaseSensitive(root, "path_data");
+                               if (!cJSON_IsArray(path_data)) {
+                                   cJSON_Delete(root);
+                                   return std::string("绘图生成失败：dlc_api 未返回 path_data");
+                               }
+
+                               // 3. Execute path locally
+                               char* path_json = cJSON_PrintUnformatted(path_data);
+                               std::string task_id = protocol_.NextLocalTaskId("mcp_draw");
+                               ReturnValue rv = executor_.RunPathWithTaskId(task_id, path_json, feed, true);
+                               cJSON_free(path_json);
+                               cJSON_Delete(root);
+                               return rv;
                            });
     }
 

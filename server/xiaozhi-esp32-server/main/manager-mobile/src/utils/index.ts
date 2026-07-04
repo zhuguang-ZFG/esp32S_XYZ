@@ -199,13 +199,9 @@ export function getEnvBaseUrl() {
 
 /**
  * 获取 AI 对话 baseUrl。
- * 未登录且使用默认模型时，走阿里云 pilot（仅免费后端），降低主节点压力。
+ * 瘦身后：对话走小智云，此函数仅保留为兼容引用，统一返回 dlc_api 地址。
  */
-export function getChatBaseUrl(model = 'lima-1.3'): string {
-  const token = getBearerToken()
-  if (!token && (model === 'lima' || model === 'lima-1.3')) {
-    return 'https://aliyun.donglicao.com'
-  }
+export function getChatBaseUrl(_model = 'lima-1.3'): string {
   return getEnvBaseUrl()
 }
 

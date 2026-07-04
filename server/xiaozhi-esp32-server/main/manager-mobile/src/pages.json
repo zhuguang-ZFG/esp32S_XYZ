@@ -62,27 +62,6 @@
       }
     },
     {
-      "path": "pages/chat/chat",
-      "type": "page",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "AI 对话"
-      }
-    },
-    {
-      "path": "pages/chat-history/detail",
-      "type": "page",
-      "layout": "default",
-      "style": {
-        "navigationStyle": "custom",
-        "navigationBarTitleText": "聊天详情"
-      }
-    },
-    {
-      "path": "pages/chat-history/index",
-      "type": "page"
-    },
-    {
       "path": "pages/create/ai-draw",
       "type": "page",
       "style": {

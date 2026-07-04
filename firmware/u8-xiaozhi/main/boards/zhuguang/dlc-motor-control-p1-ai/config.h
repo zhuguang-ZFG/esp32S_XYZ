@@ -59,4 +59,13 @@
 
 #define XCLK_FREQ_HZ 24000000
 
+// DLC API base URL (from Kconfig, must be https:// for token safety)
+#ifndef CONFIG_DLC_API_BASE_URL
+#define CONFIG_DLC_API_BASE_URL "https://chat.donglicao.com"
+#endif
+#define DLC_API_BASE_URL CONFIG_DLC_API_BASE_URL
+
+// DLC API response size limit (SEC-005: prevent OOM from oversized responses)
+#define DLC_API_MAX_RESPONSE_BYTES (128 * 1024)
+
 #endif // _BOARD_CONFIG_H_

@@ -25,8 +25,8 @@ safeAreaTop.value = systemInfo.statusBarHeight || 0
 // D2: 数据加载 + 派生状态（loadData / primaryDevice / onlineCount）
 const { devices, recentTasks, loading, primaryDevice, onlineCount, loadData } = useHomeData()
 
-// D2: 导航跳转（8 个 goXxx）
-const { goChat, goDraw, goImageDraw, goDigitalHuman, goDevices, goDeviceDetail, goConfig, goSettings } = useHomeNavigation()
+// 瘦身后：对话走小智云，仅保留 draw/image-draw/devices/config/settings
+const { goDraw, goImageDraw, goDevices, goDeviceDetail, goConfig, goSettings } = useHomeNavigation()
 
 // D2: 任务状态格式化（label / color / progress）
 const { taskStatusLabel, taskStatusColor, taskProgress } = useTaskFormatters()
@@ -147,28 +147,6 @@ onShow(() => {
           </text>
           <text class="create-desc">
             {{ t('workshop.imageDrawDesc') }}
-          </text>
-        </view>
-        <view class="create-card workshop-panel-interactive" @click="goChat">
-          <view class="create-icon chat">
-            <text>💬</text>
-          </view>
-          <text class="create-name">
-            {{ t('workshop.aiChat') }}
-          </text>
-          <text class="create-desc">
-            {{ t('workshop.aiChatDesc') }}
-          </text>
-        </view>
-        <view class="create-card workshop-panel-interactive" @click="goDigitalHuman">
-          <view class="create-icon human">
-            <text>◉</text>
-          </view>
-          <text class="create-name">
-            {{ t('workshop.digitalHuman') }}
-          </text>
-          <text class="create-desc">
-            {{ t('workshop.digitalHumanDesc') }}
           </text>
         </view>
       </view>

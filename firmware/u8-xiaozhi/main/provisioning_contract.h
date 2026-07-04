@@ -6,8 +6,8 @@ namespace ProvisioningContract {
 inline constexpr const char* kPrimaryChannel = "ble_blufi";
 inline constexpr const char* kFallbackChannel = "softap_http";
 
-inline constexpr const char* kBlufiDeviceName = "Xiaozhi-Blufi";
-inline constexpr const char* kSoftApSsidPrefix = "Xiaozhi";
+inline constexpr const char* kBlufiDeviceName = "DLC-Blufi";
+inline constexpr const char* kSoftApSsidPrefix = "DLC";
 inline constexpr const char* kSoftApBaseUrl = "http://192.168.4.1";
 inline constexpr const char* kSoftApScanPath = "/scan";
 inline constexpr const char* kSoftApSubmitPath = "/submit";

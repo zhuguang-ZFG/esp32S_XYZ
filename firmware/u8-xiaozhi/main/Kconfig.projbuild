@@ -6,6 +6,15 @@ config OTA_URL
     help
         The application will access this URL to check for new firmwares and server address.
 
+config DLC_API_BASE_URL
+    string "DLC API Base URL"
+    default "https://chat.donglicao.com"
+    help
+        Base URL for the DLC drawing/writing API.
+        Must be https:// — the firmware rejects http:// to protect the per-device token.
+        The token itself is stored in NVS (namespace "dlc", key "api_token"),
+        never compiled into the firmware image.
+
 config OTA_VERIFY_PUBLIC_KEY_PEM
     string "OTA release signature public key PEM"
     default ""
