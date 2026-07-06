@@ -89,6 +89,9 @@ async function handleAcceptIncomingTransfer(transferId: string) {
 function openDevice(deviceId: string) {
   uni.navigateTo({ url: `/pages/v2/device-detail/index?deviceId=${deviceId}` })
 }
+function goToProvision() {
+  uni.navigateTo({ url: '/pages/device-config/index' })
+}
 
 async function quickControl(deviceId: string, action: string) {
   const key = `${deviceId}-${action}`
@@ -122,7 +125,7 @@ function deviceIconName(model?: string) {
 
 <template>
   <view class="device-list-page page-enter">
-    <wd-navbar :title="t('v2.deviceList.title')" placeholder safe-area-inset-top fixed />
+    <wd-navbar :title="t('v2.deviceList.title')" safe-area-inset-top placeholder fixed />
 
     <wd-status-tip v-if="loading" image="loading" tip="" />
 
@@ -157,9 +160,14 @@ function deviceIconName(model?: string) {
       <text class="empty-title">
         {{ t('v2.deviceList.empty') }}
       </text>
-      <wd-button type="primary" round custom-class="!mt-[24rpx]" @click="showBind = true; bindSn = ''; bindCode = ''">
-        {{ t('v2.deviceList.addDevice') }}
-      </wd-button>
+      <view class="empty-actions">
+        <wd-button type="primary" round @click="showBind = true; bindSn = ''; bindCode = ''">
+          {{ t('v2.deviceList.addDevice') }}
+        </wd-button>
+        <wd-button type="info" plain round @click="goToProvision">
+          {{ t('v2.deviceList.provisionDevice') }}
+        </wd-button>
+      </view>
     </view>
 
     <!-- Device Cards -->
@@ -215,6 +223,9 @@ function deviceIconName(model?: string) {
     <view v-if="!loading && devices.length" class="add-device-bar">
       <wd-button type="primary" round block @click="showBind = true; bindSn = ''; bindCode = ''">
         {{ t('v2.deviceList.addDevice') }}
+      </wd-button>
+      <wd-button type="info" plain round block @click="goToProvision">
+        {{ t('v2.deviceList.provisionDevice') }}
       </wd-button>
     </view>
 
@@ -309,6 +320,12 @@ function deviceIconName(model?: string) {
   }
 }
 
+.empty-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
 /* Device Grid */
 .device-grid {
   display: flex;
@@ -383,6 +400,8 @@ function deviceIconName(model?: string) {
 
 .add-device-bar {
   padding: 24rpx;
+  display: flex;
+  gap: 20rpx;
 }
 
 .bind-title {

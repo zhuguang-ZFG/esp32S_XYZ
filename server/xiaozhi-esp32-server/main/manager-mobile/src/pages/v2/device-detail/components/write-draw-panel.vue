@@ -6,6 +6,7 @@ defineProps<{
   drawGeneratedLoading: boolean
   starterAssets: { id: string, label: string }[]
   defaultFontId: string
+  deviceBusy?: boolean
 }>()
 const emit = defineEmits<{
   writeText: []
@@ -22,6 +23,9 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
     <view class="bento-title">
       {{ t('v2.detail.writeDemo') }}
     </view>
+    <text v-if="deviceBusy" class="busy-hint">
+      {{ t('v2.detail.deviceBusyHint') }}
+    </text>
     <text class="hint-text">
       {{ t('v2.detail.defaultFont') }}: {{ defaultFontId }}
     </text>
@@ -30,11 +34,13 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
       clearable
       :maxlength="40"
       :placeholder="t('v2.detail.writePlaceholder')"
+      :disabled="deviceBusy"
       custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"
       :loading="writeTextLoading"
+      :disabled="deviceBusy"
       custom-class="!h-[88rpx] !text-[30rpx]"
       @click="emit('writeText')"
     >
@@ -47,6 +53,9 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
     <view class="bento-title">
       {{ t('v2.detail.drawDemo') }}
     </view>
+    <text v-if="deviceBusy" class="busy-hint">
+      {{ t('v2.detail.deviceBusyHint') }}
+    </text>
     <text class="hint-text">
       {{ t('v2.detail.drawDesc') }}
     </text>
@@ -55,11 +64,13 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
       clearable
       :maxlength="60"
       :placeholder="t('v2.detail.drawPlaceholder')"
+      :disabled="deviceBusy"
       custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"
       :loading="drawGeneratedLoading"
+      :disabled="deviceBusy"
       custom-class="!h-[88rpx] !text-[30rpx]"
       @click="emit('drawPrompt')"
     >
@@ -69,8 +80,8 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
       <wd-button
         v-for="asset in starterAssets"
         :key="asset.id"
-        type="info" plain round size="small"
-        :disabled="drawGeneratedLoading"
+        type="info" round plain size="small"
+        :disabled="drawGeneratedLoading || deviceBusy"
         custom-class="starter-btn"
         @click="emit('drawStarter', asset.id)"
       >
@@ -102,6 +113,13 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: 'æ˜Ÿæ˜
   font-size: 24rpx;
   color: var(--dim);
   margin-bottom: 20rpx;
+}
+
+.busy-hint {
+  display: block;
+  font-size: 24rpx;
+  color: var(--danger);
+  margin-bottom: 12rpx;
 }
 
 .starter-row {

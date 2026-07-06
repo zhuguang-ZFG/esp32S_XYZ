@@ -11,7 +11,6 @@ import SuppliesPanel from './components/supplies-panel.vue'
 import TaskStatus from './components/task-status.vue'
 import TransferPanel from './components/transfer-panel.vue'
 import VoiceApproval from './components/voice-approval.vue'
-import VoiceCommand from './components/voice-command.vue'
 import WriteDrawPanel from './components/write-draw-panel.vue'
 import { useDeviceActions } from './composables/useDeviceActions'
 import { useDeviceEvents } from './composables/useDeviceEvents'
@@ -40,6 +39,7 @@ const {
   phaseColor,
   progressBarStyle,
   workspaceLabel,
+  isDeviceBusy,
   handleEdgeAEvent,
   loadSelfCheckHistoryData,
   clearInfoLoadingTimer,
@@ -73,8 +73,6 @@ const {
   transferStateLabel,
   taskSubmitErrorMessage,
   handleHome,
-  handleVoiceDispatched,
-  handleVoiceError,
   handleWriteText,
   handleDrawPrompt,
   handleDrawStarter,
@@ -97,6 +95,7 @@ const {
   resetProgress,
   infoLoading,
   healthCheckLoading,
+  isDeviceBusy,
   startInfoLoadingTimer,
   clearInfoLoadingTimer,
 })
@@ -157,9 +156,9 @@ onUnmounted(() => {
 
 <template>
   <wd-config-provider theme-color="var(--accent)" />
-  <wd-navbar :title="t('v2.deviceDetail.title')" safe-area-inset-top left-arrow placeholder fixed @click-left="navigateBack" />
+  <wd-navbar :title="t('v2.deviceDetail.title')" safe-area-inset-top placeholder left-arrow fixed @click-left="navigateBack" />
 
-  <view class="bento-page page-enter">
+  <view class="page-enter bento-page">
     <device-info-card :device-info="deviceInfo" :device-id="deviceId" :connected="connected" :workspace-label="workspaceLabel" :info-loading="infoLoading" />
     <supplies-panel v-model:supplies-loading="suppliesLoading" :device-supplies="deviceSupplies" :paper-slot-state-label="paperSlotStateLabel" :pen-state-label="penStateLabel" @update-paper="updatePaper" @new-pen="markNewPen" />
 
@@ -174,8 +173,7 @@ onUnmounted(() => {
     </view>
 
     <task-status :latest-phase="latestPhase" :latest-progress-percent="latestProgressPercent" :latest-progress-label="latestProgressLabel" :phase-color="phaseColor" :progress-bar-style="progressBarStyle" />
-    <write-draw-panel v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
-    <voice-command :device-id="deviceId" @dispatched="handleVoiceDispatched" @error="handleVoiceError" />
+    <write-draw-panel v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" :device-busy="isDeviceBusy" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
     <health-check v-model:health-check-loading="healthCheckLoading" :latest-diagnostic-status="latestDiagnosticStatus" :latest-diagnostic-summary="latestDiagnosticSummary" :latest-diagnostic-at="latestDiagnosticAt" :self-check-history="selfCheckHistory" @run-health-check="handleHealthCheck" />
     <transfer-panel v-model:transfer-loading="transferLoading" v-model:transfer-target-phone="transferTargetPhone" v-model:transfer-accept-id="transferAcceptId" :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />
     <share-panel v-model:share-loading="shareLoading" v-model:share-permission="sharePermission" v-model:share-expiry="shareExpiry" :shares="shares" @create-share="handleCreateShare" @revoke-share="handleRevokeShare" />

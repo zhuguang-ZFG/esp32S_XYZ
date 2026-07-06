@@ -31,4 +31,4 @@ This document explains how to enable and use BluFi (BLE-based WiFi provisioning)
 - When running repeated tests, clear or overwrite the stored SSID (`wifi` NVS namespace) to avoid stale credentials interfering with the next run.
 - If you write your own BluFi client, follow the official protocol frame format linked above.
 - The EspBlufi app download links are listed in the official documentation.
-- Because the BluFi API changed in IDF 5.5.2, firmware built with 5.5.2 advertises the Bluetooth name as `"Xiaozhi-Blufi"`, while 5.5.1 uses `"BLUFI_DEVICE"`.
+- The advertised Bluetooth name is set by the `BLUFI_DEVICE_NAME` macro in `boards/common/blufi.cpp` (currently `"DLC-Blufi"`) via `esp_ble_gap_set_device_name()` before `esp_blufi_adv_start()`. The mini-program filters BLE advertisements by this exact name (see `provisioning_contract.h::kBlufiDeviceName`), so the macro, the contract header, and the client must stay in sync.

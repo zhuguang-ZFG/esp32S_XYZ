@@ -5,12 +5,36 @@
 
 #define TAG_EXECUTOR "MotionExecutor"
 
+namespace {
+
+struct BusyGuard {
+    std::atomic<bool>& flag;
+    ~BusyGuard() { flag.store(false, std::memory_order_release); }
+};
+
+}  // namespace
+
 MotionExecutor::MotionExecutor(U1ProtocolClient& protocol,
                                MotionEventEmitter& emitter)
     : protocol_(protocol), emitter_(emitter) {}
 
+bool MotionExecutor::TryAcquireMotionLock() {
+    bool expected = false;
+    return motion_busy_.compare_exchange_strong(expected, true,
+                                                std::memory_order_acq_rel);
+}
+
+void MotionExecutor::ReleaseMotionLock() {
+    motion_busy_.store(false, std::memory_order_release);
+}
+
 ReturnValue MotionExecutor::ExecuteHomeWithTaskId(
     const std::string& task_id) {
+    if (!TryAcquireMotionLock()) {
+        return std::string("device is busy: a motion task is already running");
+    }
+    BusyGuard guard{motion_busy_};
+
     const uint32_t msg_id = protocol_.NextProtocolMessageId();
     return protocol_.ParseCapabilityResponse(
         protocol_.SendU1ProtocolCommand(msg_id, task_id, "HOME", 250), msg_id,
@@ -42,12 +66,8 @@ ReturnValue MotionExecutor::ExecuteControlWithTaskId(
         task_id, cmd);
 }
 
-ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
+ReturnValue MotionExecutor::ExecuteMoveWithTaskIdUnlocked(
     const std::string& task_id, int x, int y, int z, int feed) {
-    if (feed < 1 || feed > 20000) {
-        return std::string("invalid move params: feed must be within [1, 20000]");
-    }
-
     const uint32_t msg_id = protocol_.NextProtocolMessageId();
     cJSON* extra = cJSON_CreateObject();
     cJSON_AddNumberToObject(extra, "x", x);
@@ -58,6 +78,20 @@ ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
         protocol_.SendU1ProtocolJson(msg_id, task_id, "MOVE", extra, 200);
     cJSON_Delete(extra);
     return protocol_.ParseCapabilityResponse(response, msg_id, task_id, "MOVE");
+}
+
+ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
+    const std::string& task_id, int x, int y, int z, int feed) {
+    if (feed < 1 || feed > 20000) {
+        return std::string("invalid move params: feed must be within [1, 20000]");
+    }
+
+    if (!TryAcquireMotionLock()) {
+        return std::string("device is busy: a motion task is already running");
+    }
+    BusyGuard guard{motion_busy_};
+
+    return ExecuteMoveWithTaskIdUnlocked(task_id, x, y, z, feed);
 }
 
 ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId(
@@ -74,6 +108,11 @@ ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId(
         return std::string(
             "relative move rejected: at least one axis step is required");
     }
+
+    if (!TryAcquireMotionLock()) {
+        return std::string("device is busy: a motion task is already running");
+    }
+    BusyGuard guard{motion_busy_};
 
     double current_x = 0.0;
     double current_y = 0.0;
@@ -122,7 +161,7 @@ ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId(
         return std::string("relative move rejected: target outside workspace");
     }
 
-    return ExecuteMoveWithTaskId(
+    return ExecuteMoveWithTaskIdUnlocked(
         task_id, static_cast<int>(target_x), static_cast<int>(target_y),
         static_cast<int>(target_z), feed);
 }
@@ -174,6 +213,11 @@ ReturnValue MotionExecutor::RunPathWithTaskId(const std::string& task_id,
                                                const std::string& path_json,
                                                int feed_rate,
                                                bool emit_progress) {
+    if (!TryAcquireMotionLock()) {
+        return std::string("device is busy: a motion task is already running");
+    }
+    BusyGuard guard{motion_busy_};
+
     cJSON* root = cJSON_Parse(path_json.c_str());
     if (root == nullptr || !cJSON_IsArray(root)) {
         if (root != nullptr) {

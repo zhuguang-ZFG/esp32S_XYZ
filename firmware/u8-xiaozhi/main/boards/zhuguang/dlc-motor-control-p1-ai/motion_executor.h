@@ -1,6 +1,7 @@
 #ifndef MOTION_EXECUTOR_H
 #define MOTION_EXECUTOR_H
 
+#include <atomic>
 #include <string>
 
 #include "motion_event_emitter.h"
@@ -40,6 +41,14 @@ public:
 private:
     U1ProtocolClient& protocol_;
     MotionEventEmitter& emitter_;
+    std::atomic<bool> motion_busy_{false};
+
+    bool TryAcquireMotionLock();
+    void ReleaseMotionLock();
+
+    // Internal helpers that assume the motion lock is already held.
+    ReturnValue ExecuteMoveWithTaskIdUnlocked(const std::string& task_id,
+                                               int x, int y, int z, int feed);
 };
 
 #endif  // MOTION_EXECUTOR_H

@@ -1,3 +1,4 @@
+import type { ComputedRef } from 'vue'
 import type { V2ShareResponse } from '@/api/v2'
 import type { V2DeviceSupplyResponse, V2DeviceTransferResponse } from '@/api/v2/types'
 import { computed, ref } from 'vue'
@@ -56,10 +57,11 @@ export function useDeviceActions(opts: {
   resetProgress: () => void
   infoLoading: { value: boolean }
   healthCheckLoading: { value: boolean }
+  isDeviceBusy: ComputedRef<boolean>
   startInfoLoadingTimer: () => void
   clearInfoLoadingTimer: () => void
 }) {
-  const { deviceId, message, appendLog, setPhase, resetProgress, infoLoading, healthCheckLoading, startInfoLoadingTimer, clearInfoLoadingTimer } = opts
+  const { deviceId, message, appendLog, setPhase, resetProgress, infoLoading, healthCheckLoading, isDeviceBusy, startInfoLoadingTimer, clearInfoLoadingTimer } = opts
 
   const homeLoading = ref(false)
   const writeTextInput = ref('你好')
@@ -102,6 +104,10 @@ export function useDeviceActions(opts: {
   })
 
   async function handleHome() {
+    if (isDeviceBusy.value) {
+      showSubmitToast('v2.detail.deviceBusy')
+      return
+    }
     homeLoading.value = true
     try {
       const r = await v2SubmitTask(deviceId(), 'home')
@@ -116,15 +122,11 @@ export function useDeviceActions(opts: {
     }
   }
 
-  function handleVoiceDispatched(taskId: string, capability: string) {
-    showSubmitToast('v2.detail.voiceSubmitted')
-    appendLog(`voice ${capability}: ${taskId}`)
-  }
-  function handleVoiceError(msg: string) {
-    message.alert(msg)
-  }
-
   async function handleWriteText() {
+    if (isDeviceBusy.value) {
+      showSubmitToast('v2.detail.deviceBusy')
+      return
+    }
     const text = writeTextInput.value.trim()
     if (!text) {
       message.alert(t('v2.detail.enterWriteText'))
@@ -147,6 +149,10 @@ export function useDeviceActions(opts: {
   }
 
   async function submitDraw(params: Record<string, unknown>, label: string) {
+    if (isDeviceBusy.value) {
+      showSubmitToast('v2.detail.deviceBusy')
+      return
+    }
     drawGeneratedLoading.value = true
     try {
       const r = await v2SubmitTask(deviceId(), 'draw_generated', params)
@@ -191,6 +197,10 @@ export function useDeviceActions(opts: {
   }
 
   async function handleHealthCheck() {
+    if (isDeviceBusy.value) {
+      showSubmitToast('v2.detail.deviceBusy')
+      return
+    }
     healthCheckLoading.value = true
     try {
       const r = await v2SubmitTask(deviceId(), 'run_path', { path: healthCheckPath, feed: 900 })
@@ -393,8 +403,6 @@ export function useDeviceActions(opts: {
     transferStateLabel,
     taskSubmitErrorMessage,
     handleHome,
-    handleVoiceDispatched,
-    handleVoiceError,
     handleWriteText,
     handleDrawPrompt,
     handleDrawStarter,

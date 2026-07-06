@@ -34,4 +34,4 @@ BluFi
 - 若多次测试，建议清除或覆盖存储的 SSID（`wifi` 命名空间），避免旧配置干扰。
 - 如果使用自定义 BluFi 客户端，需遵循官方协议帧格式，参考上文官方文档链接。
 - 官方文档中已提供EspBlufi APP下载地址
-- 由于IDF5.5.2的blufi接口发生变化,5.5.2版本编译后蓝牙名称为"Xiaozhi-Blufi",5.5.1版本中蓝牙名称为"BLUFI_DEVICE"
+- 广播的蓝牙名称由 `boards/common/blufi.cpp` 中的 `BLUFI_DEVICE_NAME` 宏决定（当前为 `"DLC-Blufi"`），在 `esp_blufi_adv_start()` 之前通过 `esp_ble_gap_set_device_name()` 设置。小程序按此名称精确过滤 BLE 广播（见 `provisioning_contract.h::kBlufiDeviceName`），因此固件宏、契约头、客户端三者必须保持一致。

@@ -178,6 +178,7 @@ export function useDeviceEvents(deviceId: () => string, appendLog: (msg: string)
     return 'var(--muted)'
   })
   const progressBarStyle = computed(() => `width:${latestProgressPercent.value ?? 0}%;`)
+  const isDeviceBusy = computed(() => ['running', 'accepted', 'progress'].includes(latestPhase.value))
   const workspaceLabel = computed(() => {
     const ws = normalizeWorkspace(deviceInfo.value?.workspaceMm as any)
     return ws ? `${t('v2.detail.workspace')} X ${ws.x} / Y ${ws.y} / Z ${ws.z} mm` : `${t('v2.detail.workspace')} —`
@@ -197,6 +198,7 @@ export function useDeviceEvents(deviceId: () => string, appendLog: (msg: string)
     phaseColor,
     progressBarStyle,
     workspaceLabel,
+    isDeviceBusy,
     handleEdgeAEvent,
     loadSelfCheckHistoryData,
     clearInfoLoadingTimer,

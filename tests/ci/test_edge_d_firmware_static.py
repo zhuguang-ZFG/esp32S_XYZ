@@ -366,7 +366,7 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         for token in (
             'kPrimaryChannel = "ble_blufi"',
             'kFallbackChannel = "softap_http"',
-            'kBlufiDeviceName = "Xiaozhi-Blufi"',
+            'kBlufiDeviceName = "DLC-Blufi"',
             'kSoftApBaseUrl = "http://192.168.4.1"',
             'kSoftApScanPath = "/scan"',
             'kSoftApSubmitPath = "/submit"',
@@ -527,6 +527,52 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertIn("ReturnValueJsonGuard info_guard(info_rv);", relative_move)
         self.assertNotIn("FreeReturnValueIfJson(status_rv)", relative_move)
         self.assertNotIn("FreeReturnValueIfJson(info_rv)", relative_move)
+
+    def test_u8_motion_executor_has_atomic_busy_lock(self):
+        header = U8_BOARD_DIR.joinpath("motion_executor.h").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        impl = U8_BOARD_DIR.joinpath("motion_executor.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        self.assertIn("std::atomic<bool> motion_busy_", header)
+        self.assertIn("compare_exchange_strong", impl)
+        self.assertIn("struct BusyGuard", impl)
+        self.assertIn("device is busy: a motion task is already running", impl)
+
+    def test_u8_motion_executor_busy_lock_covers_run_path_and_moves(self):
+        impl = U8_BOARD_DIR.joinpath("motion_executor.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        for func_name in (
+            "RunPathWithTaskId",
+            "ExecuteHomeWithTaskId",
+            "ExecuteMoveWithTaskId",
+            "ExecuteMoveRelWithTaskId",
+        ):
+            func_start = impl.index(f"ReturnValue MotionExecutor::{func_name}(")
+            func_end = impl.index("\n}\n", func_start)
+            body = impl[func_start:func_end]
+            self.assertIn("TryAcquireMotionLock", body, f"{func_name} missing busy lock")
+            self.assertIn("BusyGuard", body, f"{func_name} missing RAII guard")
+
+    def test_u8_motion_executor_pause_resume_stop_are_not_blocked_by_busy_lock(self):
+        impl = U8_BOARD_DIR.joinpath("motion_executor.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+
+        for func_name in (
+            "ExecutePauseCapability",
+            "ExecuteResumeCapability",
+            "ExecuteStopCapability",
+        ):
+            func_start = impl.index(f"ReturnValue MotionExecutor::{func_name}(")
+            func_end = impl.index("\n}\n", func_start)
+            body = impl[func_start:func_end]
+            self.assertNotIn("TryAcquireMotionLock", body, f"{func_name} must not use busy lock")
+            self.assertNotIn("BusyGuard", body, f"{func_name} must not use RAII busy guard")
 
     def test_u8_exposes_get_device_info_contract(self):
         text = _read_u8_board_sources()
