@@ -6,7 +6,9 @@ overrides:
   # miniprogram-ci 上传链路经 @babel/helper-compilation-targets 依赖 lru-cache，
   # 若解析到 lru-cache@11（无默认导出构造器）会抛 "_lruCache is not a constructor"。
   # 锁定到 v5（named/default 构造器）修复微信 CLI 上传失败。
-  '@babel/helper-compilation-targets>lru-cache': ^5.1.1
+  # 必须用全局 pin 而非 scoped：.npmrc 开了 shamefully_hoist=true，会把 lru-cache@11
+  # 拍平到顶层 node_modules，从而覆盖 babel helper 私有的 v5；全局 pin 才能让顶层也是 v5。
+  'lru-cache': 5.1.1
 
 patchedDependencies:
   '@dcloudio/uni-h5': patches/@dcloudio__uni-h5.patch
