@@ -71,7 +71,7 @@
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
     "type-check": "vue-tsc --noEmit",
     "openapi-ts-request": "openapi-ts",
-    "prepare": "git init && husky",
+    "prepare": "node -e \"const c=require('child_process'),p=require('path');try{const t=p.resolve(c.execSync('git rev-parse --show-toplevel',{stdio:['ignore','pipe','ignore']}).toString().trim());if(t===p.resolve(process.cwd()))c.execSync('husky',{stdio:'inherit'});}catch{}\"",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "upload:mp-weixin": "node scripts/upload-mp-weixin.js",
