@@ -75,8 +75,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "upload:mp-weixin": "node scripts/upload-mp-weixin.js",
-    "check:i18n": "node scripts/check-i18n-keys.mjs",
-    "test": "vitest run"
+    "check:i18n": "node scripts/check-i18n-keys.mjs"
   },
   "dependencies": {
     "@alova/adapter-uniapp": "^2.0.14",
@@ -96,7 +95,6 @@
     "wot-design-uni": "^1.9.1"
   },
   "devDependencies": {
-    "@alova/wormhole": "^1.0.8",
     "@antfu/eslint-config": "^4.15.0",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
@@ -126,7 +124,6 @@
     "eslint": "^9.29.0",
     "eslint-plugin-format": "^1.0.1",
     "husky": "^9.1.7",
-    "jsdom": "^29.1.1",
     "lint-staged": "^15.2.10",
     "miniprogram-ci": "^2.1.31",
     "openapi-ts-request": "^1.1.2",
@@ -140,7 +137,6 @@
     "unplugin-auto-import": "^0.17.8",
     "vite": "5.2.8",
     "vite-plugin-restart": "^0.4.2",
-    "vitest": "^3.2.6",
     "vue-tsc": "^2.2.10"
   },
   "resolutions": {
