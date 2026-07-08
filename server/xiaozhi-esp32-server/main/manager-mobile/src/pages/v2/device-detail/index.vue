@@ -122,14 +122,8 @@ watch(latestEvent, (event) => {
 function navigateBack() {
   uni.navigateBack()
 }
-function goToChatHistory() {
-  uni.navigateTo({ url: `/pages/chat-history/index?deviceId=${deviceId.value || ''}` })
-}
 function goToVoiceprint() {
   uni.navigateTo({ url: `/pages/voiceprint/index?deviceId=${deviceId.value || ''}` })
-}
-function goToAgents() {
-  uni.navigateTo({ url: '/pages/index/index' })
 }
 
 onLoad((opt: any) => {
@@ -185,19 +179,9 @@ onUnmounted(() => {
         {{ t('v2.detail.quickLinks') }}
       </view>
       <view class="quick-links">
-        <view class="quick-link" @click="goToChatHistory">
-          <wd-icon name="chat" size="20" color="var(--muted)" />
-          <text>{{ t('v2.detail.chatHistory') }}</text>
-          <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
-        </view>
         <view class="quick-link" @click="goToVoiceprint">
           <wd-icon name="volume" size="20" color="var(--muted)" />
           <text>{{ t('v2.detail.voiceprintMgmt') }}</text>
-          <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
-        </view>
-        <view class="quick-link" @click="goToAgents">
-          <wd-icon name="robot" size="20" color="var(--muted)" />
-          <text>{{ t('v2.detail.manageAgents') }}</text>
           <wd-icon name="arrow-right" size="14" color="#c7c7cc" custom-class="ml-auto" />
         </view>
       </view>
