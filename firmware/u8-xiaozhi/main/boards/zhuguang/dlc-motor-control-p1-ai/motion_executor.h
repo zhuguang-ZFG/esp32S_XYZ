@@ -17,6 +17,9 @@ public:
     ReturnValue ExecuteGetDeviceInfoWithTaskId(const std::string& task_id);
     ReturnValue ExecuteControlWithTaskId(const std::string& task_id,
                                           const char* cmd);
+    // 固件审查 P2：STOP/ESTOP 走抢占式路径，绕过 UART 锁阻塞。
+    ReturnValue ExecuteStopWithTaskId(const std::string& task_id);
+    ReturnValue ExecuteEstopWithTaskId(const std::string& task_id);
     ReturnValue ExecuteMoveWithTaskId(const std::string& task_id, int x, int y,
                                        int z, int feed);
     // 固件审查 P1：z 缺失时不下压 Z 轴（has_z=false），防 2D 移动落笔/撞机。
@@ -32,6 +35,7 @@ public:
     ReturnValue ExecutePauseCapability();
     ReturnValue ExecuteResumeCapability();
     ReturnValue ExecuteStopCapability();
+    ReturnValue ExecuteEstopCapability();
     ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed);
     ReturnValue ExecuteMoveRelCapability(int dx, int dy, int dz, int feed);
 
@@ -53,6 +57,12 @@ private:
     ReturnValue ExecuteMoveWithTaskIdUnlocked(const std::string& task_id,
                                                int x, int y, int z, int feed,
                                                bool has_z = true);
+
+    // Fetch workspace_mm from device info and sanity-check dimensions.
+    // Returns an empty string on success, or a human-readable error message.
+    std::string FetchWorkspaceMm(const std::string& task_id,
+                                  double& workspace_x, double& workspace_y,
+                                  double& workspace_z);
 };
 
 #endif  // MOTION_EXECUTOR_H

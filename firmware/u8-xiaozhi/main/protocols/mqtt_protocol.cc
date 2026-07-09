@@ -351,16 +351,28 @@ void MqttProtocol::ParseServerHello(const cJSON* root) {
         ESP_LOGE(TAG, "UDP is not specified");
         return;
     }
-    udp_server_ = cJSON_GetObjectItem(udp, "server")->valuestring;
-    udp_port_ = cJSON_GetObjectItem(udp, "port")->valueint;
-    auto key = cJSON_GetObjectItem(udp, "key")->valuestring;
-    auto nonce = cJSON_GetObjectItem(udp, "nonce")->valuestring;
+    // 固件审查 P2：hello 报文畸形时逐项判空，避免空指针解引用崩溃。
+    auto server_item = cJSON_GetObjectItem(udp, "server");
+    auto port_item = cJSON_GetObjectItem(udp, "port");
+    auto key_item = cJSON_GetObjectItem(udp, "key");
+    auto nonce_item = cJSON_GetObjectItem(udp, "nonce");
+    if (!cJSON_IsString(server_item) || server_item->valuestring == nullptr ||
+        !cJSON_IsNumber(port_item) ||
+        !cJSON_IsString(key_item) || key_item->valuestring == nullptr ||
+        !cJSON_IsString(nonce_item) || nonce_item->valuestring == nullptr) {
+        ESP_LOGE(TAG, "UDP config missing or malformed in hello");
+        return;
+    }
+    udp_server_ = server_item->valuestring;
+    udp_port_ = port_item->valueint;
 
     // auto encryption = cJSON_GetObjectItem(udp, "encryption")->valuestring;
     // ESP_LOGI(TAG, "UDP server: %s, port: %d, encryption: %s", udp_server_.c_str(), udp_port_, encryption);
-    aes_nonce_ = DecodeHexString(nonce);
+    aes_nonce_ = DecodeHexString(nonce_item->valuestring);
     mbedtls_aes_init(&aes_ctx_);
-    mbedtls_aes_setkey_enc(&aes_ctx_, (const unsigned char*)DecodeHexString(key).c_str(), 128);
+    mbedtls_aes_setkey_enc(
+        &aes_ctx_,
+        (const unsigned char*)DecodeHexString(key_item->valuestring).c_str(), 128);
     local_sequence_ = 0;
     remote_sequence_ = 0;
     xEventGroupSetBits(event_group_handle_, MQTT_PROTOCOL_SERVER_HELLO_EVENT);
@@ -377,6 +389,11 @@ static inline uint8_t CharToHex(char c) {
 
 std::string MqttProtocol::DecodeHexString(const std::string& hex_string) {
     std::string decoded;
+    // 固件审查 P2：奇数长度会导致 hex_string[i+1] 越界读；无效 hex 静默置 0 也会弱化密钥。
+    if (hex_string.empty() || (hex_string.size() % 2) != 0) {
+        ESP_LOGE(TAG, "DecodeHexString: invalid length %zu", hex_string.size());
+        return decoded;
+    }
     decoded.reserve(hex_string.size() / 2);
     for (size_t i = 0; i < hex_string.size(); i += 2) {
         char byte = (CharToHex(hex_string[i]) << 4) | CharToHex(hex_string[i + 1]);

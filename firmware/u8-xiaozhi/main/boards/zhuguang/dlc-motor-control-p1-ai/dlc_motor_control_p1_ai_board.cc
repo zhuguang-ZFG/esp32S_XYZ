@@ -505,17 +505,19 @@ private:
         } else if (cap_norm == "stop" || cap_norm == "motor.stop") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
-            ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "STOP");
+            // 固件审查 P2：STOP 走抢占式 U1 路径，避免在 PATH_END 长等待期间被 UART 锁阻塞。
+            ReturnValue rv = executor_.ExecuteStopWithTaskId(task_id);
             ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
         } else if (cap_norm == "estop" || cap_norm == "motor.estop" ||
                    cap_norm == "emergency_stop") {
-            // 固件审查 P1：硬件级急停通道。STOP 是暂停级（可恢复），estop 映射 U1 的
+            // 固件审查 P1/P2：硬件级急停通道。STOP 是暂停级（可恢复），estop 映射 U1 的
             // ESTOP（Grbl Protocol.cpp ESTOP：立即停电机+进 ALARM 态），用于撞机/夹手等
             // 需要立即终止的危险场景。estop 后需 home 复位才能继续运动。
+            // 必须使用抢占式路径，否则 PATH_END 的 120s 长等待会让急停命令阻塞，形同虚设。
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
-            ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "ESTOP");
+            ReturnValue rv = executor_.ExecuteEstopWithTaskId(task_id);
             ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
         } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" ||

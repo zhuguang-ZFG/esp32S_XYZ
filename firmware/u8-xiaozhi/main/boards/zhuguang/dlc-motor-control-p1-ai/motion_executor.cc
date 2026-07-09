@@ -3,6 +3,11 @@
 #include <cmath>
 #include <esp_log.h>
 
+// ponytail: motion_executor.cc 因固件审查修复累积至 420+ 行，超过 300 行目标。
+// 上限：单文件略大但仍在同一编译单元内，未拆分。
+// 升级触发条件：下次新增非运动执行职责（如路径规划、设备发现）时拆分为
+// motion_executor_core.cc / motion_executor_path.cc / motion_executor_capability.cc。
+
 #define TAG_EXECUTOR "MotionExecutor"
 
 namespace {
@@ -66,6 +71,48 @@ ReturnValue MotionExecutor::ExecuteControlWithTaskId(
         task_id, cmd);
 }
 
+namespace {
+
+cJSON* BuildOkResponse(const char* cmd) {
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        return nullptr;
+    }
+    cJSON_AddBoolToObject(root, "ok", true);
+    cJSON_AddStringToObject(root, "cmd", cmd);
+    return root;
+}
+
+cJSON* BuildErrorResponse(const char* message) {
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        return nullptr;
+    }
+    cJSON_AddBoolToObject(root, "ok", false);
+    cJSON_AddStringToObject(root, "error", message);
+    return root;
+}
+
+}  // namespace
+
+ReturnValue MotionExecutor::ExecuteStopWithTaskId(
+    const std::string& task_id) {
+    // 固件审查 P2：STOP 用抢占式写，避免在 PATH_END 长等待期间被 UART 锁阻塞。
+    if (protocol_.SendU1PreemptiveCommand("STOP")) {
+        return BuildOkResponse("STOP");
+    }
+    return BuildErrorResponse("stop command failed to send");
+}
+
+ReturnValue MotionExecutor::ExecuteEstopWithTaskId(
+    const std::string& task_id) {
+    // 固件审查 P2：ESTOP 用抢占式写，确保夹手/撞机场景下能立即停电机。
+    if (protocol_.SendU1PreemptiveCommand("ESTOP")) {
+        return BuildOkResponse("ESTOP");
+    }
+    return BuildErrorResponse("estop command failed to send");
+}
+
 ReturnValue MotionExecutor::ExecuteMoveWithTaskIdUnlocked(
     const std::string& task_id, int x, int y, int z, int feed, bool has_z) {
     const uint32_t msg_id = protocol_.NextProtocolMessageId();
@@ -84,6 +131,32 @@ ReturnValue MotionExecutor::ExecuteMoveWithTaskIdUnlocked(
     return protocol_.ParseCapabilityResponse(response, msg_id, task_id, "MOVE");
 }
 
+std::string MotionExecutor::FetchWorkspaceMm(const std::string& task_id,
+                                              double& workspace_x,
+                                              double& workspace_y,
+                                              double& workspace_z) {
+    ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
+    ReturnValueJsonGuard info_guard(info_rv);
+    cJSON* info = nullptr;
+    if (auto* p = std::get_if<cJSON*>(&info_rv)) {
+        info = *p;
+    }
+    if (!U1ProtocolClient::JsonValueIsOk(info) ||
+        !U1ProtocolClient::JsonValueHasXyz(info, "workspace_mm", workspace_x,
+                                           workspace_y, workspace_z)) {
+        return "unable to verify workspace";
+    }
+    // 固件审查 P2：workspace 无物理上限护栏，后端/配置异常时可能下发极大值。
+    // 这里以 1000mm 为 sanity 上限（覆盖现有绘图机/写字机机型），超限拒绝。
+    constexpr double kMaxWorkspaceMm = 1000.0;
+    if (workspace_x <= 0.0 || workspace_y <= 0.0 || workspace_z < 0.0 ||
+        workspace_x > kMaxWorkspaceMm || workspace_y > kMaxWorkspaceMm ||
+        workspace_z > kMaxWorkspaceMm) {
+        return "workspace dimensions out of sanity bounds";
+    }
+    return {};
+}
+
 ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
     const std::string& task_id, int x, int y, int z, int feed) {
     return ExecuteMoveWithTaskId(task_id, x, y, z, feed, /*has_z=*/true);
@@ -100,24 +173,15 @@ ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
     }
     BusyGuard guard{motion_busy_};
 
-    // 固件审查 P1：绝对移动 workspace 边界校验（与 move_rel 一致，防超行程撞机）。
+    // 固件审查 P1/P2：绝对移动 workspace 边界校验（与 move_rel/run_path 一致，防超行程撞机）。
     // move_abs 是绝对坐标，合法范围是 [0, workspace_mm]。
     double workspace_x = 0.0;
     double workspace_y = 0.0;
     double workspace_z = 0.0;
-    {
-        ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
-        ReturnValueJsonGuard info_guard(info_rv);
-        cJSON* info = nullptr;
-        if (auto* p = std::get_if<cJSON*>(&info_rv)) {
-            info = *p;
-        }
-        if (!U1ProtocolClient::JsonValueIsOk(info) ||
-            !U1ProtocolClient::JsonValueHasXyz(info, "workspace_mm", workspace_x,
-                                               workspace_y, workspace_z)) {
-            return std::string(
-                "absolute move rejected: unable to verify workspace");
-        }
+    if (const std::string ws_err =
+            FetchWorkspaceMm(task_id, workspace_x, workspace_y, workspace_z);
+        !ws_err.empty()) {
+        return std::string("absolute move rejected: ") + ws_err;
     }
     if (x < 0 || y < 0 || (has_z && z < 0) ||
         x > workspace_x || y > workspace_y || (has_z && z > workspace_z)) {
@@ -169,20 +233,10 @@ ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId(
     double workspace_x = 0.0;
     double workspace_y = 0.0;
     double workspace_z = 0.0;
-    {
-        ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
-        ReturnValueJsonGuard info_guard(info_rv);
-        cJSON* info = nullptr;
-        if (auto* p = std::get_if<cJSON*>(&info_rv)) {
-            info = *p;
-        }
-
-        if (!U1ProtocolClient::JsonValueIsOk(info) ||
-            !U1ProtocolClient::JsonValueHasXyz(info, "workspace_mm", workspace_x,
-                                               workspace_y, workspace_z)) {
-            return std::string(
-                "relative move rejected: unable to verify workspace");
-        }
+    if (const std::string ws_err =
+            FetchWorkspaceMm(task_id, workspace_x, workspace_y, workspace_z);
+        !ws_err.empty()) {
+        return std::string("relative move rejected: ") + ws_err;
     }
 
     const double target_x = current_x + dx;
@@ -225,7 +279,11 @@ ReturnValue MotionExecutor::ExecuteResumeCapability() {
 }
 
 ReturnValue MotionExecutor::ExecuteStopCapability() {
-    return ExecuteControlWithTaskId(protocol_.NextLocalTaskId("stop"), "STOP");
+    return ExecuteStopWithTaskId(protocol_.NextLocalTaskId("stop"));
+}
+
+ReturnValue MotionExecutor::ExecuteEstopCapability() {
+    return ExecuteEstopWithTaskId(protocol_.NextLocalTaskId("estop"));
 }
 
 ReturnValue MotionExecutor::ExecuteMoveCapability(int x, int y, int z,
@@ -246,10 +304,24 @@ ReturnValue MotionExecutor::RunPathWithTaskId(const std::string& task_id,
                                                const std::string& path_json,
                                                int feed_rate,
                                                bool emit_progress) {
+    // 固件审查 P2：feed_rate 与 move 命令保持一致，必须在 [1, 20000]。
+    if (feed_rate < 1 || feed_rate > 20000) {
+        return std::string("path rejected: feed_rate must be within [1, 20000]");
+    }
+
     if (!TryAcquireMotionLock()) {
         return std::string("device is busy: a motion task is already running");
     }
     BusyGuard guard{motion_busy_};
+
+    double workspace_x = 0.0;
+    double workspace_y = 0.0;
+    double workspace_z = 0.0;
+    if (const std::string ws_err =
+            FetchWorkspaceMm(task_id, workspace_x, workspace_y, workspace_z);
+        !ws_err.empty()) {
+        return std::string("path rejected: ") + ws_err;
+    }
 
     cJSON* root = cJSON_Parse(path_json.c_str());
     if (root == nullptr || !cJSON_IsArray(root)) {
@@ -297,8 +369,8 @@ ReturnValue MotionExecutor::RunPathWithTaskId(const std::string& task_id,
             cJSON_Delete(root);
             return std::string("path segment missing x/y");
         }
-        // AUDIT-10-V1/F5：固件侧坐标边界双重防线（不依赖后端 path_validator）。
-        // NaN/Inf 经 isfinite 拦截；超 ±500mm 物理边界拒绝，防撞机。
+        // AUDIT-10-V1/F5/P2：固件侧坐标边界双重防线（不依赖后端 path_validator）。
+        // NaN/Inf 经 isfinite 拦截；path 是绝对坐标，必须在 [0, workspace_mm] 内。
         {
             double xv = x_item->valuedouble;
             double yv = y_item->valuedouble;
@@ -306,10 +378,9 @@ ReturnValue MotionExecutor::RunPathWithTaskId(const std::string& task_id,
                 cJSON_Delete(root);
                 return std::string("path segment has non-finite x/y");
             }
-            constexpr double kMaxCoord = 500.0;
-            if (xv < -kMaxCoord || xv > kMaxCoord || yv < -kMaxCoord || yv > kMaxCoord) {
+            if (xv < 0.0 || xv > workspace_x || yv < 0.0 || yv > workspace_y) {
                 cJSON_Delete(root);
-                return std::string("path segment x/y out of physical bounds");
+                return std::string("path segment x/y outside workspace");
             }
         }
 

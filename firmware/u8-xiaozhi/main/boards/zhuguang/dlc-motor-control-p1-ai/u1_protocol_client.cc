@@ -156,6 +156,23 @@ std::string U1ProtocolClient::SendU1ProtocolJson(uint32_t msg_id,
     return SendU1Line("@" + line, timeout_ms);
 }
 
+bool U1ProtocolClient::SendU1PreemptiveCommand(const std::string& cmd) {
+    // 固件审查 P2：急停命令必须绕过 uart_mutex_，否则 PATH_END 等长等待会阻塞
+    // STOP/ESTOP 达 120s，导致夹手/撞机时无法立即停车。
+    // 本函数不持锁、不等待响应，直接写 UART；U1 收到 ESTOP 后立即停电机。
+    std::string line = cmd + "\n";
+    const int written =
+        uart_write_bytes(U1_UART_PORT_NUM, line.data(), line.size());
+    if (written < 0 || static_cast<size_t>(written) != line.size()) {
+        ESP_LOGE(TAG_U1_PROTOCOL,
+                 "Failed to write preemptive U1 command: %d/%u", written,
+                 static_cast<unsigned>(line.size()));
+        return false;
+    }
+    ESP_LOGI(TAG_U1_PROTOCOL, "U8 -> U1 (preemptive): %s", cmd.c_str());
+    return true;
+}
+
 // --- Static helpers ---
 
 std::string U1ProtocolClient::NormalizeResponse(std::string text) {

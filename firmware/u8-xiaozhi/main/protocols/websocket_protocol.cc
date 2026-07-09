@@ -118,11 +118,21 @@ bool WebsocketProtocol::OpenAudioChannel() {
         if (binary) {
             if (on_incoming_audio_ != nullptr) {
                 if (version_ == 2) {
+                    // 固件审查 P2：先校验二进制帧长度，防止 payload_size 越界读。
+                    if (len < sizeof(BinaryProtocol2)) {
+                        ESP_LOGE(TAG, "WS v2 audio frame too short: %zu", len);
+                        return;
+                    }
                     BinaryProtocol2* bp2 = (BinaryProtocol2*)data;
                     bp2->version = ntohs(bp2->version);
                     bp2->type = ntohs(bp2->type);
                     bp2->timestamp = ntohl(bp2->timestamp);
                     bp2->payload_size = ntohl(bp2->payload_size);
+                    if (bp2->payload_size > len - sizeof(BinaryProtocol2)) {
+                        ESP_LOGE(TAG, "WS v2 payload_size %u exceeds frame len %zu",
+                                 bp2->payload_size, len);
+                        return;
+                    }
                     auto payload = (uint8_t*)bp2->payload;
                     on_incoming_audio_(std::make_unique<AudioStreamPacket>(AudioStreamPacket{
                         .sample_rate = server_sample_rate_,
@@ -132,9 +142,19 @@ bool WebsocketProtocol::OpenAudioChannel() {
                         .payload = std::vector<uint8_t>(payload, payload + bp2->payload_size)
                     }));
                 } else if (version_ == 3) {
+                    // 固件审查 P2：先校验二进制帧长度，防止 payload_size 越界读。
+                    if (len < sizeof(BinaryProtocol3)) {
+                        ESP_LOGE(TAG, "WS v3 audio frame too short: %zu", len);
+                        return;
+                    }
                     BinaryProtocol3* bp3 = (BinaryProtocol3*)data;
                     bp3->type = bp3->type;
                     bp3->payload_size = ntohs(bp3->payload_size);
+                    if (bp3->payload_size > len - sizeof(BinaryProtocol3)) {
+                        ESP_LOGE(TAG, "WS v3 payload_size %u exceeds frame len %zu",
+                                 bp3->payload_size, len);
+                        return;
+                    }
                     auto payload = (uint8_t*)bp3->payload;
                     on_incoming_audio_(std::make_unique<AudioStreamPacket>(AudioStreamPacket{
                         .sample_rate = server_sample_rate_,

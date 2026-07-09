@@ -405,6 +405,12 @@ void Blufi::_dh_negotiate_data_handler(uint8_t* data, int len, uint8_t** output_
             }
 
             m_sec->dh_param_len = (data[1] << 8) | data[2];
+            // 固件审查 P2：限制 DH 参数长度，防止后续 malloc 过大或 type 0x01 越界读。
+            if (m_sec->dh_param_len == 0 || m_sec->dh_param_len > 2048) {
+                ESP_LOGE(BLUFI_TAG, "DH param len invalid: %u", m_sec->dh_param_len);
+                btc_blufi_report_error(ESP_BLUFI_DATA_FORMAT_ERROR);
+                return;
+            }
             if (m_sec->dh_param) {
                 free(m_sec->dh_param);
                 m_sec->dh_param = nullptr;
@@ -413,12 +419,20 @@ void Blufi::_dh_negotiate_data_handler(uint8_t* data, int len, uint8_t** output_
             if (m_sec->dh_param == nullptr) {
                 ESP_LOGE(BLUFI_TAG, "DH malloc failed");
                 btc_blufi_report_error(ESP_BLUFI_DH_MALLOC_ERROR);
+                return;
             }
             break;
         case 0x01: {
             if (m_sec->dh_param == nullptr) {
                 ESP_LOGE(BLUFI_TAG, "DH param not allocated");
                 btc_blufi_report_error(ESP_BLUFI_DH_PARAM_ERROR);
+                return;
+            }
+            // 固件审查 P2：type 0x01 包实际长度必须能容纳声明的 dh_param_len。
+            if (m_sec->dh_param_len > len - 1) {
+                ESP_LOGE(BLUFI_TAG, "DH param len %u exceeds packet len %d",
+                         m_sec->dh_param_len, len);
+                btc_blufi_report_error(ESP_BLUFI_DATA_FORMAT_ERROR);
                 return;
             }
             uint8_t* param = m_sec->dh_param;
@@ -864,18 +878,30 @@ void Blufi::_handle_event(esp_blufi_cb_event_t event, esp_blufi_cb_param_t* para
             m_sta_config.sta.bssid_set = true;
             ESP_LOGI(BLUFI_TAG, "Recv STA BSSID");
             break;
-        case ESP_BLUFI_EVENT_RECV_STA_SSID:
-            strncpy((char*)m_sta_config.sta.ssid, (char*)param->sta_ssid.ssid,
-                    param->sta_ssid.ssid_len);
-            m_sta_config.sta.ssid[param->sta_ssid.ssid_len] = '\0';
+        case ESP_BLUFI_EVENT_RECV_STA_SSID: {
+            // 固件审查 P2：防御性截断，避免 ssid_len >= 32 时越界写相邻字段。
+            const size_t ssid_len = std::min(
+                static_cast<size_t>(param->sta_ssid.ssid_len),
+                sizeof(m_sta_config.sta.ssid) - 1);
+            memcpy((char*)m_sta_config.sta.ssid, (char*)param->sta_ssid.ssid,
+                   ssid_len);
+            m_sta_config.sta.ssid[ssid_len] = '\0';
             ESP_LOGI(BLUFI_TAG, "Recv STA SSID: %s", m_sta_config.sta.ssid);
             break;
-        case ESP_BLUFI_EVENT_RECV_STA_PASSWD:
-            strncpy((char*)m_sta_config.sta.password, (char*)param->sta_passwd.passwd,
-                    param->sta_passwd.passwd_len);
-            m_sta_config.sta.password[param->sta_passwd.passwd_len] = '\0';
-            ESP_LOGI(BLUFI_TAG, "Recv STA PASSWORD : %s", m_sta_config.sta.password);
+        }
+        case ESP_BLUFI_EVENT_RECV_STA_PASSWD: {
+            // 固件审查 P2：防御性截断，避免 passwd_len >= 64 时越界写相邻字段。
+            const size_t passwd_len = std::min(
+                static_cast<size_t>(param->sta_passwd.passwd_len),
+                sizeof(m_sta_config.sta.password) - 1);
+            memcpy((char*)m_sta_config.sta.password, (char*)param->sta_passwd.passwd,
+                   passwd_len);
+            m_sta_config.sta.password[passwd_len] = '\0';
+            // 安全修复：禁止把 WiFi 密码明文打印到日志（UART 输出可被物理接触/售后读取）。
+            ESP_LOGI(BLUFI_TAG, "Recv STA PASSWORD (len=%u, redacted)",
+                     param->sta_passwd.passwd_len);
             break;
+        }
         case ESP_BLUFI_EVENT_GET_WIFI_LIST: {
             ESP_LOGI(BLUFI_TAG, "BLUFI get wifi list");
             // Case 1: a scan is already in flight (init scan or refresh scan started by

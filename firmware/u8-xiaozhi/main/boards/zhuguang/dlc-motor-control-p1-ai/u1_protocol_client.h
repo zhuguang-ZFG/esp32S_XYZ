@@ -75,6 +75,10 @@ public:
                                    const std::string& cmd, cJSON* extra,
                                    int timeout_ms = 120);
 
+    // 固件审查 P2：抢占式 U1 命令发送（不持 uart_mutex_、不等待响应）。
+    // 专用于 STOP/ESTOP 等急停命令，避免在 PATH_END 120s 长等待期间被 UART 锁阻塞。
+    bool SendU1PreemptiveCommand(const std::string& cmd);
+
     // Response parsing
     ReturnValue ParseCapabilityResponse(const std::string& raw_response,
                                         uint32_t msg_id,

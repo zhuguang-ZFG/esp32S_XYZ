@@ -524,9 +524,17 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
             text.index("// --- Capability wrappers")
         ]
         self.assertIn("ReturnValueJsonGuard status_guard(status_rv);", relative_move)
-        self.assertIn("ReturnValueJsonGuard info_guard(info_rv);", relative_move)
+        self.assertIn("FetchWorkspaceMm(", relative_move)
         self.assertNotIn("FreeReturnValueIfJson(status_rv)", relative_move)
-        self.assertNotIn("FreeReturnValueIfJson(info_rv)", relative_move)
+
+        # workspace 查询已抽到 FetchWorkspaceMm，其内部仍用 ReturnValueJsonGuard。
+        fetch_workspace = text[
+            text.index("std::string MotionExecutor::FetchWorkspaceMm("):
+            text.index("ReturnValue MotionExecutor::ExecuteMoveWithTaskId(",
+                       text.index("std::string MotionExecutor::FetchWorkspaceMm("))
+        ]
+        self.assertIn("ReturnValueJsonGuard info_guard(info_rv);", fetch_workspace)
+        self.assertNotIn("FreeReturnValueIfJson(info_rv)", fetch_workspace)
 
     def test_u8_motion_executor_has_atomic_busy_lock(self):
         header = U8_BOARD_DIR.joinpath("motion_executor.h").read_text(
@@ -552,11 +560,26 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
             "ExecuteMoveWithTaskId",
             "ExecuteMoveRelWithTaskId",
         ):
-            func_start = impl.index(f"ReturnValue MotionExecutor::{func_name}(")
-            func_end = impl.index("\n}\n", func_start)
-            body = impl[func_start:func_end]
-            self.assertIn("TryAcquireMotionLock", body, f"{func_name} missing busy lock")
-            self.assertIn("BusyGuard", body, f"{func_name} missing RAII guard")
+            # ExecuteMoveWithTaskId 有两个重载（委托器与实现体），取所有实现体并
+            # 要求至少一个持有运动锁。
+            signature = f"ReturnValue MotionExecutor::{func_name}("
+            bodies = []
+            start = 0
+            while True:
+                func_start = impl.find(signature, start)
+                if func_start == -1:
+                    break
+                func_end = impl.index("\n}\n", func_start)
+                bodies.append(impl[func_start:func_end])
+                start = func_end + 2
+            self.assertTrue(
+                bodies,
+                f"{func_name} not found in motion_executor.cc",
+            )
+            self.assertTrue(
+                any("TryAcquireMotionLock" in b and "BusyGuard" in b for b in bodies),
+                f"{func_name} missing busy lock",
+            )
 
     def test_u8_motion_executor_pause_resume_stop_are_not_blocked_by_busy_lock(self):
         impl = U8_BOARD_DIR.joinpath("motion_executor.cc").read_text(
@@ -647,6 +670,21 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertIn('"total_segments"', text)
         self.assertIn('"percent"', text)
         self.assertIn("RunPathWithTaskId(", text)
+
+    def test_u8_run_path_validates_feed_rate_and_workspace(self):
+        impl = U8_BOARD_DIR.joinpath("motion_executor.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        run_path = impl[
+            impl.index("ReturnValue MotionExecutor::RunPathWithTaskId"):
+            impl.index("ReturnValue MotionExecutor::RunPath(")
+        ]
+        # feed_rate 必须在 [1, 20000]，与 move 命令保持一致。
+        self.assertIn("feed_rate < 1 || feed_rate > 20000", run_path)
+        self.assertIn("path rejected: feed_rate must be within [1, 20000]", run_path)
+        # 整段 path 必须能拿到 workspace 才继续；每段坐标在 [0, workspace_mm] 内。
+        self.assertIn("FetchWorkspaceMm(", run_path)
+        self.assertIn("path segment x/y outside workspace", run_path)
 
     def test_u1_error_codes_are_edge_d_schema_codes(self):
         text = U1_PROTOCOL.read_text(encoding="utf-8", errors="replace")
