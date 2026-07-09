@@ -207,9 +207,17 @@ export async function v2UpdateDeviceSupplies(deviceId: string, request: V2Device
 }
 
 export function v2RequestDeviceTransfer(deviceId: string, request: V2DeviceTransferRequest) {
+  const target = request.targetPhone.trim()
+  const payload: Record<string, string> = { reason: 'manager-mobile transfer request' }
+  if (/^1\d{10}$/.test(target))
+    payload.toPhone = target
+  else if (target.startsWith('o') || target.startsWith('wx:'))
+    payload.toOpenid = target
+  else
+    payload.toPhone = target
   return http.Post<V2DeviceTransferResponse>(
     `${appPrefix}/devices/${deviceId}/transfer`,
-    { toPhone: request.targetPhone, reason: 'manager-mobile transfer request' },
+    payload,
     { meta: { ignoreAuth: false, toast: false } },
   ).then(toTransferResponse)
 }

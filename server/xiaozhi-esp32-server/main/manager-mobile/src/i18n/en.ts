@@ -549,7 +549,7 @@ export default {
   'v2.detail.noPenRecord': 'No pen change record',
   'v2.detail.inkEstimate': 'Ink estimate',
   'v2.detail.transfer': 'Device Transfer',
-  'v2.detail.targetPhone': 'Target account phone',
+  'v2.detail.targetPhone': 'Recipient phone or WeChat openid',
   'v2.detail.requestTransfer': 'Request Transfer',
   'v2.detail.cancelTransfer': 'Cancel Transfer',
   'v2.detail.acceptTransfer': 'Accept Transfer',

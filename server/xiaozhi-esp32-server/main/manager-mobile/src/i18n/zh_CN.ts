@@ -549,7 +549,7 @@ export default {
   'v2.detail.noPenRecord': '未记录换笔',
   'v2.detail.inkEstimate': '墨水估算',
   'v2.detail.transfer': '设备转赠',
-  'v2.detail.targetPhone': '目标账号手机号',
+  'v2.detail.targetPhone': '目标账号手机号或微信 openid',
   'v2.detail.requestTransfer': '发起转赠',
   'v2.detail.cancelTransfer': '取消转赠',
   'v2.detail.acceptTransfer': '接受转赠',
