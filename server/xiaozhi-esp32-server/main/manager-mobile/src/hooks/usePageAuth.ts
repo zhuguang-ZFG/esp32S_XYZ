@@ -2,7 +2,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { isSessionActive } from '@/utils/auth'
 import { needLoginPages as _needLoginPages, getNeedLoginPages } from '@/utils'
 
-const loginRoute = import.meta.env.VITE_LOGIN_URL
+const loginRoute = import.meta.env.VITE_LOGIN_URL || '/pages/v2/login/index'
 const isDev = import.meta.env.DEV
 function isLogined() {
   return isSessionActive()

@@ -7,6 +7,7 @@ import {
   v2CancelDeviceTransfer,
   v2CreateShare,
   v2ListShares,
+  v2RenderAsset,
   v2RequestDeviceTransfer,
   v2RevokeShare,
   v2SubmitTask,
@@ -60,8 +61,9 @@ export function useDeviceActions(opts: {
   isDeviceBusy: ComputedRef<boolean>
   startInfoLoadingTimer: () => void
   clearInfoLoadingTimer: () => void
+  applyRuntimeStatus: (deviceId: string) => Promise<void>
 }) {
-  const { deviceId, message, appendLog, setPhase, resetProgress, infoLoading, healthCheckLoading, isDeviceBusy, startInfoLoadingTimer, clearInfoLoadingTimer } = opts
+  const { deviceId, message, appendLog, setPhase, resetProgress, infoLoading, healthCheckLoading, isDeviceBusy, startInfoLoadingTimer, clearInfoLoadingTimer, applyRuntimeStatus } = opts
 
   const homeLoading = ref(false)
   const writeTextInput = ref('你好')
@@ -177,18 +179,33 @@ export function useDeviceActions(opts: {
     await submitDraw({ prompt: p }, 'draw_generated')
   }
   async function handleDrawStarter(id: string) {
-    await submitDraw({ starter_id: id, use_starter_asset: true }, `draw_starter ${id}`)
+    if (isDeviceBusy.value) {
+      showSubmitToast('v2.detail.deviceBusy')
+      return
+    }
+    drawGeneratedLoading.value = true
+    try {
+      const r = await v2RenderAsset(id, deviceId())
+      setPhase(r.status)
+      resetProgress()
+      showSubmitToast('v2.detail.drawSubmitted')
+      appendLog(`draw_starter ${id}: ${r.taskId}`)
+    }
+    catch (e: any) {
+      message.alert(taskSubmitErrorMessage(e))
+    }
+    finally {
+      drawGeneratedLoading.value = false
+    }
   }
 
   async function handleRefreshInfo() {
     infoLoading.value = true
     clearInfoLoadingTimer()
     try {
-      const r = await v2SubmitTask(deviceId(), 'get_device_info')
-      setPhase(r.status)
+      await applyRuntimeStatus(deviceId())
       showSubmitToast('v2.detail.infoSubmitted')
-      appendLog(`get_device_info: ${r.taskId}`)
-      startInfoLoadingTimer()
+      appendLog('refresh device status')
     }
     catch (e: any) {
       infoLoading.value = false

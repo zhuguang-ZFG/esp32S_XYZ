@@ -111,6 +111,26 @@ export async function v2GetDeviceInfo(deviceId: string) {
   return toDeviceInfo(res)
 }
 
+export async function v2GetDeviceRuntimeStatus(deviceId: string) {
+  return http.Get<{
+    deviceId: string
+    online: boolean
+    working: boolean
+    activeTaskId?: string | null
+    firmwareVersion?: string | null
+    protocolVersion?: string | null
+    lastSeenAt?: string | null
+  }>(`${appPrefix}/devices/${deviceId}/status`, { meta: { ignoreAuth: false, toast: false } })
+}
+
+export function v2RenderAsset(assetId: string, deviceId: string) {
+  return http.Post<{ taskId: string, status: string }>(
+    `${appPrefix}/assets/${assetId}/render`,
+    { deviceId },
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
 export function v2GetHandwritingOptions() {
   return http.Get<{
     fonts: Record<string, string>

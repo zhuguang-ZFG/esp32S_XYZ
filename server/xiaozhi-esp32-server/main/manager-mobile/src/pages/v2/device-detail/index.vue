@@ -32,7 +32,7 @@ const message = useMessage()
 const deviceId = ref('')
 
 // --- WebSocket ---
-const { connected, logLines, latestEvent, connect: wsConnect, appendLog } = useDeviceWebSocket(deviceId)
+const { connected, deviceOnline, logLines, latestEvent, connect: wsConnect, appendLog } = useDeviceWebSocket(deviceId)
 
 // --- WS 事件 + 进度 + 自检（P3.1 提取到 useDeviceEvents）---
 const {
@@ -56,6 +56,7 @@ const {
   startInfoLoadingTimer,
   setPhase,
   resetProgress,
+  applyRuntimeStatus,
 } = useDeviceEvents(() => deviceId.value, appendLog)
 
 // --- 任务派发 / 耗材 / 转移 / 分享 / 解绑（P3.1 提取到 useDeviceActions）---
@@ -108,6 +109,7 @@ const {
   isDeviceBusy,
   startInfoLoadingTimer,
   clearInfoLoadingTimer,
+  applyRuntimeStatus,
 })
 
 // --- 语音审批（依赖 actions 的 taskSubmitErrorMessage）---
@@ -151,7 +153,6 @@ onMounted(async () => {
   await loadPendingVoiceTasks()
   await loadSelfCheckHistoryData()
   await loadShares()
-  wsConnect()
 })
 onUnmounted(() => {
   clearInfoLoadingTimer()
@@ -163,7 +164,7 @@ onUnmounted(() => {
   <wd-navbar :title="t('v2.deviceDetail.title')" safe-area-inset-top placeholder left-arrow fixed @click-left="navigateBack" />
 
   <view class="page-enter bento-page">
-    <device-info-card :device-info="deviceInfo" :device-id="deviceId" :connected="connected" :workspace-label="workspaceLabel" :info-loading="infoLoading" />
+    <device-info-card :device-info="deviceInfo" :device-id="deviceId" :device-online="deviceOnline" :workspace-label="workspaceLabel" :info-loading="infoLoading" />
     <supplies-panel v-model:supplies-loading="suppliesLoading" :device-supplies="deviceSupplies" :paper-slot-state-label="paperSlotStateLabel" :pen-state-label="penStateLabel" @update-paper="updatePaper" @new-pen="markNewPen" />
 
     <!-- 主操作按钮 -->

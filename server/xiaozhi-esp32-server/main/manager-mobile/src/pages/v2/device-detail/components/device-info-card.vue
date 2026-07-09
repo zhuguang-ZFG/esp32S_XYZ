@@ -5,7 +5,7 @@ import { t } from '@/i18n'
 defineProps<{
   deviceInfo: V2DeviceInfo | null
   deviceId: string
-  connected: boolean
+  deviceOnline: boolean
   workspaceLabel: string
   infoLoading: boolean
 }>()
@@ -17,7 +17,7 @@ defineProps<{
       <view class="device-name">
         {{ deviceInfo?.model || deviceId }}
       </view>
-      <view class="status-dot" :class="connected ? 'online' : 'offline'" />
+      <view class="status-dot" :class="deviceOnline ? 'online' : 'offline'" />
     </view>
     <view class="device-meta">
       <text>{{ t('v2.detail.hwRev') }} {{ deviceInfo?.hwRev || '—' }} · {{ t('v2.detail.fwRev') }} {{ deviceInfo?.fwRev || '—' }}</text>

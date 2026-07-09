@@ -1,6 +1,6 @@
 import type { V2DeviceInfo, V2SelfCheckHistoryResponse } from '@/api/v2/types'
 import { computed, ref } from 'vue'
-import { v2ListSelfCheckHistory } from '@/api/v2'
+import { v2ListSelfCheckHistory, v2GetDeviceRuntimeStatus } from '@/api/v2'
 import { t } from '@/i18n'
 
 // --- WS 事件 payload 类型 ---
@@ -69,6 +69,22 @@ export function useDeviceEvents(deviceId: () => string, appendLog: (msg: string)
 
   function handleEdgeAEvent(event: any) {
     const payload = event?.payload as JobStatusPayload | DeviceInfoReplyPayload | SelfCheckPayload | undefined
+    if (event?.event_type === 'status_snapshot') {
+      const snap = payload as Record<string, unknown> | undefined
+      if (deviceInfo.value) {
+        deviceInfo.value = {
+          ...deviceInfo.value,
+          status: snap?.online ? 'online' : 'offline',
+          fwRev: String(snap?.firmwareVersion || deviceInfo.value.fwRev || ''),
+          lastSeenAt: String(snap?.lastSeenAt || deviceInfo.value.lastSeenAt || ''),
+        }
+      }
+      infoLoading.value = false
+      clearInfoLoadingTimer()
+      if (snap?.working)
+        latestPhase.value = 'running'
+      return
+    }
     if (event?.event_type === 'device_info_reply') {
       applyDeviceInfoReply(event, payload as DeviceInfoReplyPayload)
       return
@@ -184,6 +200,22 @@ export function useDeviceEvents(deviceId: () => string, appendLog: (msg: string)
     return ws ? `${t('v2.detail.workspace')} X ${ws.x} / Y ${ws.y} / Z ${ws.z} mm` : `${t('v2.detail.workspace')} —`
   })
 
+  async function applyRuntimeStatus(deviceIdValue: string) {
+    const status = await v2GetDeviceRuntimeStatus(deviceIdValue)
+    if (deviceInfo.value) {
+      deviceInfo.value = {
+        ...deviceInfo.value,
+        status: status.online ? 'online' : 'offline',
+        fwRev: status.firmwareVersion || deviceInfo.value.fwRev,
+        lastSeenAt: status.lastSeenAt || deviceInfo.value.lastSeenAt,
+      }
+    }
+    infoLoading.value = false
+    clearInfoLoadingTimer()
+    if (status.working)
+      latestPhase.value = 'running'
+  }
+
   return {
     deviceInfo,
     infoLoading,
@@ -205,5 +237,6 @@ export function useDeviceEvents(deviceId: () => string, appendLog: (msg: string)
     startInfoLoadingTimer,
     setPhase,
     resetProgress,
+    applyRuntimeStatus,
   }
 }

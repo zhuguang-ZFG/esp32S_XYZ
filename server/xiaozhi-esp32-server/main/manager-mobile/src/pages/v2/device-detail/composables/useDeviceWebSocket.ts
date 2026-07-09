@@ -25,6 +25,7 @@ export interface EdgeAEvent {
 
 export function useDeviceWebSocket(deviceId: Ref<string>) {
   const connected = ref(false)
+  const deviceOnline = ref(false)
   const logLines = ref<string[]>([])
   const latestEvent = ref<EdgeAEvent | null>(null)
 
@@ -85,7 +86,7 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
     const payload = ev.payload || {}
     switch (ev.event) {
       case 'status_snapshot':
-        // 快照包含 online/working/activeTaskId/firmwareVersion
+        deviceOnline.value = Boolean(payload.online)
         return {
           event_type: 'status_snapshot',
           device_id: did,
@@ -106,9 +107,11 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
           payload: { capability: '', phase: 'done' },
         }
       case 'device_online':
+        deviceOnline.value = true
         appendLog('设备上线')
         return null
       case 'device_offline':
+        deviceOnline.value = false
         appendLog('设备离线')
         return null
       default:
@@ -213,5 +216,5 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
     }
   })
 
-  return { connected, logLines, latestEvent, connect, disconnect, reconnect, appendLog }
+  return { connected, deviceOnline, logLines, latestEvent, connect, disconnect, reconnect, appendLog }
 }
