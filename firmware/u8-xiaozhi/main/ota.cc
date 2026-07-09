@@ -61,7 +61,8 @@ static bool IsAllowedEndpointUrl(const std::string& url) {
         "localhost",
     };
     std::string host_part;
-    const std::string kSchemes[] = {"wss://", "ws://", "mqtts://", "mqtt://"};
+    // AUDIT-FW-03: plaintext schemes (ws://, mqtt://) are not allowed in production.
+    const std::string kSchemes[] = {"wss://", "mqtts://"};
     bool has_scheme = false;
     for (const auto& scheme : kSchemes) {
         if (url.rfind(scheme, 0) == 0) {
