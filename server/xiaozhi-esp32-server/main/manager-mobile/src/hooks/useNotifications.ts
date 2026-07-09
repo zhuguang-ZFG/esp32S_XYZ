@@ -4,13 +4,18 @@ import { useToast } from 'wot-design-uni/components/wd-toast'
 import { v2ListNotificationSubscriptions, v2SubscribeNotifications, v2UnsubscribeNotification } from '@/api/v2'
 import { t } from '@/i18n'
 
-// 微信订阅消息模板
-const NOTIFICATION_TEMPLATES = [
-  'task_completed',
-  'task_failed',
-  'device_offline',
-  'firmware_update',
-]
+const WX_TEMPLATE_ENV_KEYS = [
+  'VITE_WX_TMPL_TASK_COMPLETED',
+  'VITE_WX_TMPL_TASK_FAILED',
+  'VITE_WX_TMPL_DEVICE_OFFLINE',
+  'VITE_WX_TMPL_FIRMWARE_UPDATE',
+] as const
+
+function configuredWxTemplateIds(): string[] {
+  return WX_TEMPLATE_ENV_KEYS
+    .map(key => String(import.meta.env[key] || '').trim())
+    .filter(Boolean)
+}
 
 /**
  * 通知订阅管理 composable（P2-19 从 settings/index.vue 提取）
@@ -37,7 +42,6 @@ export function useNotifications() {
     notificationLoading.value = true
     try {
       if (notificationEnabled.value) {
-        // 关闭：取消所有活跃订阅
         for (const sub of notificationSubs.value) {
           if (sub.status === 'active')
             await v2UnsubscribeNotification(sub.subscriptionId)
@@ -46,9 +50,12 @@ export function useNotifications() {
         toast.success(t('settings.notificationsOff'))
       }
       else {
-        // 开启：请求微信订阅授权 → 后端订阅
         // #ifdef MP-WEIXIN
-        const reqTemplateIds = NOTIFICATION_TEMPLATES.map(tid => `tmpl_${tid}`)
+        const reqTemplateIds = configuredWxTemplateIds()
+        if (!reqTemplateIds.length) {
+          toast.warning(t('settings.notificationsNotConfigured'))
+          return
+        }
         const wxRes = await uni.requestSubscribeMessage({ tmplIds: reqTemplateIds })
         const accepted = reqTemplateIds.filter(tid => (wxRes as any)[tid] === 'accept')
         if (!accepted.length) {

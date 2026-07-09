@@ -4,7 +4,7 @@
  * 可以设置路由白名单，或者黑名单，看业务需要选哪一个
  * 我这里应为大部分都可以随便进入，所以使用黑名单
  */
-import { useUserStore } from '@/store'
+import { isSessionActive } from '@/utils/auth'
 import { needLoginPages as _needLoginPages, getLastPage, getNeedLoginPages } from '@/utils'
 
 const loginRoute = import.meta.env.VITE_LOGIN_URL || '/pages/v2/login/index'
@@ -13,8 +13,7 @@ if (!import.meta.env.VITE_LOGIN_URL) {
 }
 
 function isLogined() {
-  const userStore = useUserStore()
-  return !!userStore.userInfo.accountId
+  return isSessionActive()
 }
 
 const isDev = import.meta.env.DEV

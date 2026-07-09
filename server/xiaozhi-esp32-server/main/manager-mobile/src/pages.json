@@ -54,6 +54,7 @@
     {
       "path": "pages/v2/device-list/index",
       "type": "home",
+      "needLogin": true,
       "layout": "tabbar",
       "style": {
         "navigationStyle": "custom",
@@ -63,6 +64,7 @@
     {
       "path": "pages/device-config/index",
       "type": "page",
+      "needLogin": true,
       "style": {
         "navigationBarTitleText": "设备配置",
         "navigationStyle": "custom"
@@ -107,6 +109,7 @@
     {
       "path": "pages/settings/index",
       "type": "page",
+      "needLogin": true,
       "layout": "tabbar",
       "style": {
         "navigationBarTitleText": "设置",
@@ -124,11 +127,21 @@
     },
     {
       "path": "pages/voiceprint/index",
-      "type": "page"
+      "type": "page",
+      "needLogin": true,
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "声纹管理"
+      }
     },
     {
       "path": "pages/v2/device-detail/index",
-      "type": "page"
+      "type": "page",
+      "needLogin": true,
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "设备详情"
+      }
     },
     {
       "path": "pages/v2/login/index",

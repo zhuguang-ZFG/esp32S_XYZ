@@ -1,3 +1,13 @@
+<route lang="jsonc" type="page">
+{
+  "needLogin": true,
+  "style": {
+    "navigationStyle": "custom",
+    "navigationBarTitleText": "设备详情"
+  }
+}
+</route>
+
 <script lang="ts" setup>
 import { onLoad } from '@dcloudio/uni-app'
 import { onMounted, onUnmounted, ref, watch } from 'vue'

@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildDeviceStatusWsUrl, getBearerToken } from '@/utils'
+import { v2IssueDeviceStatusWsTicket } from '@/api/v2'
+import { buildDeviceStatusWsUrl } from '@/utils'
 
 /**
  * 设备状态 WS 推送的服务端事件（M2 协议，device_app_status_ws.py）。
@@ -114,60 +115,65 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
     }
   }
 
-  function connect() {
+  async function connect() {
     if (!deviceId.value)
       return
 
-    const token = getBearerToken() || ''
-    const url = buildDeviceStatusWsUrl(deviceId.value, token)
-    appendLog(`连接 ${url.split('?')[0]}`)
+    try {
+      const { ticket } = await v2IssueDeviceStatusWsTicket(deviceId.value)
+      const url = buildDeviceStatusWsUrl(deviceId.value, ticket)
+      appendLog(`连接 ${url.split('?')[0]}`)
 
-    socketTask = uni.connectSocket({
-      url,
-      header: { Authorization: `Bearer ${token}` },
-    }) as unknown as UniApp.SocketTask
+      socketTask = uni.connectSocket({
+        url,
+      }) as unknown as UniApp.SocketTask
 
-    socketTask.onOpen(() => {
-      connected.value = true
-      reconnectAttempt = 0
-      appendLog('已连接')
-      startHeartbeat()
-    })
+      socketTask.onOpen(() => {
+        connected.value = true
+        reconnectAttempt = 0
+        appendLog('已连接')
+        startHeartbeat()
+      })
 
-    socketTask.onMessage(({ data }) => {
-      try {
-        const m = typeof data === 'string' ? JSON.parse(data) : data
-        // 服务端协议：{ event: 'status_snapshot'|'task_started'|..., payload: {...} }
-        if (m.event) {
-          const mapped = mapServerEvent(m as ServerWsEvent)
-          if (mapped)
-            latestEvent.value = mapped
+      socketTask.onMessage(({ data }) => {
+        try {
+          const m = typeof data === 'string' ? JSON.parse(data) : data
+          if (m.event) {
+            const mapped = mapServerEvent(m as ServerWsEvent)
+            if (mapped)
+              latestEvent.value = mapped
+          }
+          else if (m.type === 'pong') {
+            // 心跳回复
+          }
+          else if (m.type === 'error' || m.detail) {
+            appendLog(`错误: ${m.code || m.detail || '未知'}`)
+          }
         }
-        else if (m.type === 'pong') {
-          // 心跳回复
+        catch {
+          appendLog(`原始数据: ${String(data).slice(0, 120)}`)
         }
-        else if (m.type === 'error' || m.detail) {
-          appendLog(`错误: ${m.code || m.detail || '未知'}`)
-        }
-      }
-      catch {
-        appendLog(`原始数据: ${String(data).slice(0, 120)}`)
-      }
-    })
+      })
 
-    socketTask.onClose(() => {
-      connected.value = false
-      stopHeartbeat()
-      appendLog('连接关闭')
+      socketTask.onClose(() => {
+        connected.value = false
+        stopHeartbeat()
+        appendLog('连接关闭')
+        scheduleReconnect()
+      })
+
+      socketTask.onError(() => {
+        connected.value = false
+        stopHeartbeat()
+        appendLog('传输错误')
+        scheduleReconnect()
+      })
+    }
+    catch (error) {
+      console.error('device status ws ticket failed:', error)
+      appendLog('连接失败：无法获取 WS ticket')
       scheduleReconnect()
-    })
-
-    socketTask.onError(() => {
-      connected.value = false
-      stopHeartbeat()
-      appendLog('传输错误')
-      scheduleReconnect()
-    })
+    }
   }
 
   function disconnect() {

@@ -2,9 +2,9 @@
 import { onLoad } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
-import { v2Login } from '@/api/v2'
+import { v2Login, bootstrapSessionAfterLogin } from '@/api/v2'
 import { t } from '@/i18n'
-import { getEnvBaseUrl } from '@/utils'
+import { getEnvBaseUrl, getBearerToken } from '@/utils'
 
 defineOptions({ name: 'V2Login' })
 const message = useMessage()
@@ -13,7 +13,7 @@ const errorInfo = ref('')
 const isDev = import.meta.env.DEV
 
 onLoad(() => {
-  if (uni.getStorageSync('token'))
+  if (getBearerToken())
     uni.switchTab({ url: '/pages/v2/device-list/index' })
 })
 
@@ -45,8 +45,7 @@ async function handleLogin() {
     }
 
     const data = await v2Login(loginRes.code)
-    const expireAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 86400)
-    uni.setStorageSync('token', JSON.stringify({ token: data.token, expireAt }))
+    await bootstrapSessionAfterLogin(data)
     uni.switchTab({ url: '/pages/v2/device-list/index' })
     // #endif
     // #ifndef MP-WEIXIN

@@ -70,21 +70,25 @@ export async function v2RefreshToken(): Promise<{ token: string, expireAt: numbe
   if (!res.code)
     throw new Error('wechat code unavailable')
   const data = await v2Login(res.code)
+  await bootstrapSessionAfterLogin(data)
   const expireAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 86400)
-  uni.setStorageSync('token', JSON.stringify({ token: data.token, expireAt }))
   return { token: data.token, expireAt }
 }
 
 export async function v2GetMe() {
   const res = await http.Get<V2MeResponse>(`${appPrefix}/auth/me`, { meta: { ignoreAuth: false, toast: false } })
-  return {
+  const profile = {
     accountId: res.accountId || '',
+    openid: res.openid || '',
     phone: res.phone || '',
     nickname: res.nickname || '',
     avatarUrl: res.avatarUrl || '',
     role: res.role || 'user',
     createdAt: res.createdAt || '',
   }
+  if (profile.openid)
+    uni.setStorageSync('openid', profile.openid)
+  return profile
 }
 
 export function v2BindDevice(deviceSn: string, activationCode: string) {
@@ -297,6 +301,32 @@ export function v2UnsubscribeNotification(subscriptionId: string) {
     `${appPrefix}/notifications/subscriptions/${subscriptionId}`,
     { meta: { ignoreAuth: false, toast: false } },
   )
+}
+
+export async function v2IssueDeviceStatusWsTicket(deviceId: string) {
+  return http.Post<{ ticket: string, expires_in: number }>(
+    `${appPrefix}/devices/${deviceId}/ws/ticket`,
+    {},
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
+export async function bootstrapSessionAfterLogin(data: V2LoginResponse) {
+  const expireAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 86400)
+  uni.setStorageSync('token', JSON.stringify({ token: data.token, expireAt }))
+  if (data.openid)
+    uni.setStorageSync('openid', data.openid)
+  const { useUserStore } = await import('@/store')
+  const userStore = useUserStore()
+  const accountId = data.accountId || data.userId || ''
+  if (accountId)
+    userStore.setUserInfo({ ...userStore.userInfo, accountId })
+  try {
+    await userStore.getUserInfo()
+  }
+  catch (error) {
+    console.warn('bootstrapSessionAfterLogin: getUserInfo failed', error)
+  }
 }
 
 function toDeviceInfo(raw: unknown): V2DeviceInfo {

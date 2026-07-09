@@ -4,8 +4,9 @@ import { onMounted, ref, watch } from 'vue'
 import { usePageAuth } from '@/hooks/usePageAuth'
 import { t } from '@/i18n'
 import { tabBarI18nKeys } from '@/layouts/fg-tabbar/tabbarList'
+import { useUserStore } from '@/store'
 import { useLangStore } from '@/store/lang'
-import { applyM6PendingTabBarBadge } from '@/utils'
+import { applyM6PendingTabBarBadge, getBearerToken } from '@/utils'
 import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only'
 
 const isOnline = ref(true)
@@ -15,6 +16,12 @@ usePageAuth()
 const langStore = useLangStore()
 
 onLaunch(() => {
+  if (getBearerToken()) {
+    const userStore = useUserStore()
+    userStore.getUserInfo().catch((error) => {
+      console.warn('App launch: sync user profile failed', error)
+    })
+  }
   // 设置全局深色背景
   uni.setBackgroundColor({
     backgroundColor: '#0b0e13',

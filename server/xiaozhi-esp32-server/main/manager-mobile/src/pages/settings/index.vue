@@ -1,5 +1,6 @@
 <route lang="jsonc" type="page">
 {
+  "needLogin": true,
   "layout": "tabbar",
   "style": {
     "navigationBarTitleText": "设置",
@@ -13,6 +14,7 @@ import type { Language } from '@/store/lang'
 import { onMounted, ref } from 'vue'
 import { useToast } from 'wot-design-uni/components/wd-toast'
 import { changeLanguage, getCurrentLanguage, getSupportedLanguages, t } from '@/i18n'
+import manifest from '@/manifest.json'
 import { isMp } from '@/utils/platform'
 import SectionCard from '@/components/section-card.vue'
 import { useAccountDeletion } from '@/hooks/useAccountDeletion'
@@ -73,7 +75,7 @@ function showAbout() {
     title: t('settings.aboutApp', { appName: import.meta.env.VITE_APP_TITLE }),
     content: t('settings.aboutContent', {
       appName: import.meta.env.VITE_APP_TITLE,
-      version: '0.9.3',
+      version: manifest.versionName,
     }),
     showCancel: false,
     confirmText: t('common.confirm'),

@@ -1,3 +1,13 @@
+<route lang="jsonc" type="page">
+{
+  "needLogin": true,
+  "style": {
+    "navigationStyle": "custom",
+    "navigationBarTitleText": "声纹管理"
+  }
+}
+</route>
+
 <script lang="ts" setup>
 import type { VoicePrint } from '@/api/voiceprint'
 import { onLoad } from '@dcloudio/uni-app'

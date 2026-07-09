@@ -199,13 +199,17 @@ export function getEnvBaseUrl() {
 /**
  * 构建单设备实时状态 WebSocket URL（M2 协议，服务端已实现）。
  * 路径：/device/v1/app/devices/{deviceId}/ws
- * 鉴权：URL query param ?authorization=Bearer xxx
+ * 鉴权：一次性 ticket（由 POST /ws/ticket 换取），避免 Bearer token 出现在 URL。
  */
-export function buildDeviceStatusWsUrl(deviceId: string, token: string): string {
+export function buildDeviceStatusWsUrl(deviceId: string, ticket: string): string {
   const base = getEnvBaseUrl().replace(/\/$/, '')
   const proto = base.startsWith('https') ? 'wss' : 'ws'
   const rest = base.replace(/^https?:\/\//, '')
-  return `${proto}://${rest}/device/v1/app/devices/${deviceId}/ws?authorization=Bearer ${encodeURIComponent(token)}`
+  return `${proto}://${rest}/device/v1/app/devices/${deviceId}/ws?ticket=${encodeURIComponent(ticket)}`
+}
+
+export function persistDeviceIds(deviceIds: string[]) {
+  uni.setStorageSync('device_ids', deviceIds.filter(Boolean))
 }
 
 /**

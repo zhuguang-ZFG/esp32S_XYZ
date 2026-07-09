@@ -14,8 +14,8 @@ interface WiFiNetwork {
   channel: number
 }
 
-// 配网类型
-const configType = ref<'ble_blufi' | 'softap_http' | 'wifi' | 'ultrasonic'>('ble_blufi')
+// 配网类型（默认 SoftAP；BLE 需 Espressif BluFi 协议帧，暂未接入）
+const configType = ref<'ble_blufi' | 'softap_http' | 'wifi' | 'ultrasonic'>('softap_http')
 
 // 配网模式选择器状态
 const configTypeSelectorShow = ref(false)
@@ -35,17 +35,9 @@ const selectedWifiInfo = ref<{
 // 配网模式选项
 const configTypeOptions = [
   {
-    name: 'BLE / BluFi',
-    value: 'ble_blufi' as const,
-  },
-  {
     name: 'SoftAP HTTP',
     value: 'softap_http' as const,
   },
-  // {
-  //   name: t('deviceConfig.ultrasonicConfig'),
-  //   value: 'ultrasonic' as const,
-  // },
 ]
 
 // 显示配网模式选择器
@@ -179,6 +171,7 @@ onMounted(() => {
 
 <route lang="jsonc" type="page">
 {
+  "needLogin": true,
   "style": {
     "navigationBarTitleText": "设备配置",
     "navigationStyle": "custom"

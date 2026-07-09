@@ -1,5 +1,6 @@
 <route lang="jsonc" type="home">
 {
+  "needLogin": true,
   "layout": "tabbar",
   "style": {
     "navigationStyle": "custom",
@@ -15,7 +16,7 @@ import { computed, ref } from 'vue'
 import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import { v2AcceptDeviceTransfer, v2BindDevice, v2GetDevices, v2ListPendingIncomingDeviceTransfers, v2SubmitTask } from '@/api/v2'
 import { t } from '@/i18n'
-import { updateM6PendingTabBarBadge } from '@/utils'
+import { persistDeviceIds, updateM6PendingTabBarBadge } from '@/utils'
 
 defineOptions({ name: 'V2DeviceList' })
 const message = useMessage()
@@ -44,8 +45,12 @@ async function loadDevices() {
   try {
     const res = await v2GetDevices()
     devices.value = res.rows || []
+    persistDeviceIds(devices.value.map(d => d.deviceId))
   }
-  catch (e) { console.error(e) }
+  catch (e) {
+    console.error(e)
+    uni.showToast({ title: t('v2.deviceList.loadFailed'), icon: 'none' })
+  }
   finally { loading.value = false }
 }
 

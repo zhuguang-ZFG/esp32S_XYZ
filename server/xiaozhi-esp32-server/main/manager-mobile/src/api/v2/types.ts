@@ -54,9 +54,16 @@ export interface V2SelfCheckHistoryResponse {
   checksJson?: string
   reportedAt?: string
 }
-export interface V2LoginResponse { token: string, userId: string, expiresIn?: number }
+export interface V2LoginResponse {
+  token: string
+  userId: string
+  accountId?: string
+  openid?: string
+  expiresIn?: number
+}
 export interface V2MeResponse {
   accountId: string
+  openid?: string
   phone?: string
   nickname?: string
   avatarUrl?: string
