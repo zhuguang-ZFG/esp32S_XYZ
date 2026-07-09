@@ -32,6 +32,7 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
   let reconnectAttempt = 0
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  let connectInFlight = false
   const MAX_RECONNECT = 10
   const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 16000, 30000, 30000, 30000, 30000]
 
@@ -116,9 +117,10 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
   }
 
   async function connect() {
-    if (!deviceId.value)
+    if (!deviceId.value || connectInFlight)
       return
 
+    connectInFlight = true
     try {
       const { ticket } = await v2IssueDeviceStatusWsTicket(deviceId.value)
       const url = buildDeviceStatusWsUrl(deviceId.value, ticket)
@@ -173,6 +175,9 @@ export function useDeviceWebSocket(deviceId: Ref<string>) {
       console.error('device status ws ticket failed:', error)
       appendLog('连接失败：无法获取 WS ticket')
       scheduleReconnect()
+    }
+    finally {
+      connectInFlight = false
     }
   }
 

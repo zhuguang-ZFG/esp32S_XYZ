@@ -49,8 +49,7 @@ export async function v2Login(code: string): Promise<V2LoginResponse> {
     }
     const data = res.data as V2LoginResponse | undefined
     if (res.statusCode !== 200 || !data || !data.token) {
-      const detail = `statusCode=${res.statusCode}, data=${JSON.stringify(res.data)}, errMsg=${res.errMsg || 'none'}`
-      throw new Error(`WeChat login failed: ${detail}`)
+      throw new Error(`WeChat login failed (statusCode=${res.statusCode})`)
     }
     return data
   }
