@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <variant>
 
@@ -93,6 +94,9 @@ public:
     static std::string ToLowerAscii(std::string s);
     static std::string NormalizeMotionCapabilityName(const char* raw);
     static int MotionParamsGetInt(cJSON* params, const char* key, int default_value);
+    // 固件审查 P1：返回 std::optional 以区分"字段缺失"与"显式传 0"。
+    // move_abs 用它判断是否下发 z：缺失 z 时不下压 Z 轴（防 2D 移动落笔/撞机）。
+    static std::optional<int> MotionParamsGetOptionalInt(cJSON* params, const char* key);
     static bool JsonNumberToString(cJSON* item, char* buffer, size_t buffer_size);
 
 private:

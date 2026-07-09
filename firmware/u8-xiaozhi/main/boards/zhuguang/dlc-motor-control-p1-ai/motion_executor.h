@@ -19,6 +19,9 @@ public:
                                           const char* cmd);
     ReturnValue ExecuteMoveWithTaskId(const std::string& task_id, int x, int y,
                                        int z, int feed);
+    // 固件审查 P1：z 缺失时不下压 Z 轴（has_z=false），防 2D 移动落笔/撞机。
+    ReturnValue ExecuteMoveWithTaskId(const std::string& task_id, int x, int y,
+                                       int z, int feed, bool has_z);
     ReturnValue ExecuteMoveRelWithTaskId(const std::string& task_id, int dx,
                                           int dy, int dz, int feed);
 
@@ -48,7 +51,8 @@ private:
 
     // Internal helpers that assume the motion lock is already held.
     ReturnValue ExecuteMoveWithTaskIdUnlocked(const std::string& task_id,
-                                               int x, int y, int z, int feed);
+                                               int x, int y, int z, int feed,
+                                               bool has_z = true);
 };
 
 #endif  // MOTION_EXECUTOR_H

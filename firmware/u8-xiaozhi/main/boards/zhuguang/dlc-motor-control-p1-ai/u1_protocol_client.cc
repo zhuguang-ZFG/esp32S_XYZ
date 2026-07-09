@@ -259,6 +259,18 @@ int U1ProtocolClient::MotionParamsGetInt(cJSON* params, const char* key,
     return static_cast<int>(it->valuedouble);
 }
 
+std::optional<int> U1ProtocolClient::MotionParamsGetOptionalInt(cJSON* params,
+                                                                const char* key) {
+    if (params == nullptr || !cJSON_IsObject(params)) {
+        return std::nullopt;
+    }
+    cJSON* it = cJSON_GetObjectItemCaseSensitive(params, key);
+    if (it == nullptr || !cJSON_IsNumber(it)) {
+        return std::nullopt;
+    }
+    return static_cast<int>(it->valuedouble);
+}
+
 bool U1ProtocolClient::JsonNumberToString(cJSON* item, char* buffer,
                                            size_t buffer_size) {
     if (item == nullptr || buffer == nullptr || buffer_size == 0 ||

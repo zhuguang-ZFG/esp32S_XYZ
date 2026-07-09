@@ -67,12 +67,16 @@ ReturnValue MotionExecutor::ExecuteControlWithTaskId(
 }
 
 ReturnValue MotionExecutor::ExecuteMoveWithTaskIdUnlocked(
-    const std::string& task_id, int x, int y, int z, int feed) {
+    const std::string& task_id, int x, int y, int z, int feed, bool has_z) {
     const uint32_t msg_id = protocol_.NextProtocolMessageId();
     cJSON* extra = cJSON_CreateObject();
     cJSON_AddNumberToObject(extra, "x", x);
     cJSON_AddNumberToObject(extra, "y", y);
-    cJSON_AddNumberToObject(extra, "z", z);
+    // 固件审查 P1：仅当调用方显式传入 z 时才下发，否则不写 z 字段，让 U1 保持当前 Z。
+    // 这避免 2D move_abs 因默认 z=0 而意外落笔/撞机。
+    if (has_z) {
+        cJSON_AddNumberToObject(extra, "z", z);
+    }
     cJSON_AddNumberToObject(extra, "feed", feed);
     auto response =
         protocol_.SendU1ProtocolJson(msg_id, task_id, "MOVE", extra, 200);
@@ -82,6 +86,11 @@ ReturnValue MotionExecutor::ExecuteMoveWithTaskIdUnlocked(
 
 ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
     const std::string& task_id, int x, int y, int z, int feed) {
+    return ExecuteMoveWithTaskId(task_id, x, y, z, feed, /*has_z=*/true);
+}
+
+ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
+    const std::string& task_id, int x, int y, int z, int feed, bool has_z) {
     if (feed < 1 || feed > 20000) {
         return std::string("invalid move params: feed must be within [1, 20000]");
     }
@@ -91,7 +100,31 @@ ReturnValue MotionExecutor::ExecuteMoveWithTaskId(
     }
     BusyGuard guard{motion_busy_};
 
-    return ExecuteMoveWithTaskIdUnlocked(task_id, x, y, z, feed);
+    // 固件审查 P1：绝对移动 workspace 边界校验（与 move_rel 一致，防超行程撞机）。
+    // move_abs 是绝对坐标，合法范围是 [0, workspace_mm]。
+    double workspace_x = 0.0;
+    double workspace_y = 0.0;
+    double workspace_z = 0.0;
+    {
+        ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
+        ReturnValueJsonGuard info_guard(info_rv);
+        cJSON* info = nullptr;
+        if (auto* p = std::get_if<cJSON*>(&info_rv)) {
+            info = *p;
+        }
+        if (!U1ProtocolClient::JsonValueIsOk(info) ||
+            !U1ProtocolClient::JsonValueHasXyz(info, "workspace_mm", workspace_x,
+                                               workspace_y, workspace_z)) {
+            return std::string(
+                "absolute move rejected: unable to verify workspace");
+        }
+    }
+    if (x < 0 || y < 0 || (has_z && z < 0) ||
+        x > workspace_x || y > workspace_y || (has_z && z > workspace_z)) {
+        return std::string("absolute move rejected: target outside workspace");
+    }
+
+    return ExecuteMoveWithTaskIdUnlocked(task_id, x, y, z, feed, has_z);
 }
 
 ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId(

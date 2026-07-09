@@ -68,15 +68,30 @@ private:
         char token[128] = {0};
         size_t len = sizeof(token);
         nvs_handle_t handle;
-        if (nvs_open("dlc", NVS_READONLY, &handle) == ESP_OK) {
-            nvs_get_str(handle, "api_token", token, &len);
-            nvs_close(handle);
+        // 固件审查 P1：检查 nvs_get_str 返回值，禁止静默截断（token 超长时曾无声截断）。
+        esp_err_t err = nvs_open("dlc", NVS_READONLY, &handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "dlc api_token: NVS open failed (%s)",
+                     esp_err_to_name(err));
+            return std::string();
+        }
+        err = nvs_get_str(handle, "api_token", token, &len);
+        nvs_close(handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "dlc api_token: NVS read failed (%s)",
+                     esp_err_to_name(err));
+            return std::string();
+        }
+        if (len > sizeof(token)) {
+            // 理论不会到这（nvs_get_str 会截断返回 ESP_ERR_NVS_INVALID_LENGTH），防御性记录。
+            ESP_LOGE(TAG, "dlc api_token too long (%zu bytes), refusing truncated token", len);
+            return std::string();
         }
         return std::string(token);
     }
 
     // SEC-007: Force HTTPS; reject http:// to protect token
-    // SEC-005: Validate response size after ReadAll to prevent OOM
+    // SEC-005: Validate response size BEFORE ReadAll to prevent OOM
     std::string PostDlcApi(const std::string& path, const std::string& body) {
         const std::string base_url = DLC_API_BASE_URL;
         if (base_url.rfind("https://", 0) != 0) {
@@ -91,7 +106,8 @@ private:
         }
 
         auto& board = Board::GetInstance();
-        auto http = board.GetNetwork()->CreateHttp(0);
+        // 固件审查 P1：CreateHttp(timeout_seconds)。0=无限阻塞，改 15s 防半开连接挂死 MCP 线程。
+        auto http = board.GetNetwork()->CreateHttp(15);
         http->SetHeader("Content-Type", "application/json");
         http->SetHeader("Accept", "application/json");
         http->SetHeader("Authorization", "Bearer " + token);
@@ -103,13 +119,24 @@ private:
             return "";
         }
 
+        // 固件审查 P1：SEC-005 修正——在 ReadAll 前用 Content-Length 预检，超限直接 Close，
+        // 避免恶意响应先占满堆内存再丢弃。GetBodyLength() 在 Open 后、ReadAll 前可调。
+        size_t body_length = http->GetBodyLength();
+        if (body_length > 0 && body_length > DLC_API_MAX_RESPONSE_BYTES) {
+            ESP_LOGE(TAG, "dlc_api response too large (declared %zu bytes), aborting",
+                     body_length);
+            http->Close();
+            return "";
+        }
+
         int status = http->GetStatusCode();
         std::string response = http->ReadAll();
         http->Close();
 
-        // SEC-005: Reject oversized responses
+        // SEC-005: 兜底——Content-Length 缺失（chunked）时，读后再校验累计大小。
         if (response.size() > DLC_API_MAX_RESPONSE_BYTES) {
-            ESP_LOGE(TAG, "dlc_api response too large: %zu bytes", response.size());
+            ESP_LOGE(TAG, "dlc_api response exceeded limit after read: %zu bytes",
+                     response.size());
             return "";
         }
 
@@ -186,6 +213,9 @@ private:
     void InitializeWebSocketControlServer() {
         ws_control_server_ = new WebSocketControlServer();
         if (!ws_control_server_->Start(8080)) {
+            // 安全修复：未配 control_ws_token 时 Start 拒绝启动。记录错误（非静默），
+            // 本地控制功能禁用直至 NVS 配置 token。
+            ESP_LOGE(TAG, "Local control WS disabled: control_ws_token not configured");
             delete ws_control_server_;
             ws_control_server_ = nullptr;
         }
@@ -478,17 +508,31 @@ private:
             ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "STOP");
             ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
+        } else if (cap_norm == "estop" || cap_norm == "motor.estop" ||
+                   cap_norm == "emergency_stop") {
+            // 固件审查 P1：硬件级急停通道。STOP 是暂停级（可恢复），estop 映射 U1 的
+            // ESTOP（Grbl Protocol.cpp ESTOP：立即停电机+进 ALARM 态），用于撞机/夹手等
+            // 需要立即终止的危险场景。estop 后需 home 复位才能继续运动。
+            emitter_.EmitPhase(task_id, "accepted");
+            emitter_.EmitPhase(task_id, "running");
+            ReturnValue rv = executor_.ExecuteControlWithTaskId(task_id, "ESTOP");
+            ReturnValueJsonGuard rv_guard(rv);
+            emitter_.EmitDoneOrFailed(rv, task_id);
         } else if (cap_norm == "move_abs" || cap_norm == "motor.move_abs" ||
                    cap_norm == "move" || cap_norm == "motor.move") {
             emitter_.EmitPhase(task_id, "accepted");
             emitter_.EmitPhase(task_id, "running");
             const int x = U1ProtocolClient::MotionParamsGetInt(params, "x", 0);
             const int y = U1ProtocolClient::MotionParamsGetInt(params, "y", 0);
-            const int z = U1ProtocolClient::MotionParamsGetInt(params, "z", 0);
+            // 固件审查 P1：仅当 params 显式含 z 时才下压 Z 轴，避免 2D 移动落笔/撞机。
+            const auto z_opt =
+                U1ProtocolClient::MotionParamsGetOptionalInt(params, "z");
             const int feed =
                 U1ProtocolClient::MotionParamsGetInt(params, "feed", 1000);
+            const int z = z_opt.value_or(0);
             ReturnValue rv =
-                executor_.ExecuteMoveWithTaskId(task_id, x, y, z, feed);
+                executor_.ExecuteMoveWithTaskId(task_id, x, y, z, feed,
+                                                 /*has_z=*/z_opt.has_value());
             ReturnValueJsonGuard rv_guard(rv);
             emitter_.EmitDoneOrFailed(rv, task_id);
         } else if (cap_norm == "move_rel" || cap_norm == "motor.move_rel") {
