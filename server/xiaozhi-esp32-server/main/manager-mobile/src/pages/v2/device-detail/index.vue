@@ -21,6 +21,7 @@ import SuppliesPanel from './components/supplies-panel.vue'
 import TaskStatus from './components/task-status.vue'
 import TransferPanel from './components/transfer-panel.vue'
 import VoiceApproval from './components/voice-approval.vue'
+import GalleryPanel from './components/gallery-panel.vue'
 import WriteDrawPanel from './components/write-draw-panel.vue'
 import { useDeviceActions } from './composables/useDeviceActions'
 import { useDeviceEvents } from './composables/useDeviceEvents'
@@ -65,6 +66,7 @@ const {
   writeTextInput,
   writeTextLoading,
   drawGeneratedLoading,
+  drawFromImageLoading,
   suppliesLoading,
   transferLoading,
   drawPromptInput,
@@ -87,6 +89,7 @@ const {
   handleWriteText,
   handleDrawPrompt,
   handleDrawStarter,
+  handleDrawFromImage,
   handleRefreshInfo,
   handleHealthCheck,
   updatePaper,
@@ -178,6 +181,12 @@ onUnmounted(() => {
     </view>
 
     <task-status :latest-phase="latestPhase" :latest-progress-percent="latestProgressPercent" :latest-progress-label="latestProgressLabel" :phase-color="phaseColor" :progress-bar-style="progressBarStyle" />
+    <gallery-panel
+      :device-busy="isDeviceBusy"
+      :draw-from-image-loading="drawFromImageLoading"
+      @draw-from-image="handleDrawFromImage"
+    />
+
     <write-draw-panel v-model:write-text-input="writeTextInput" v-model:draw-prompt-input="drawPromptInput" :write-text-loading="writeTextLoading" :draw-generated-loading="drawGeneratedLoading" :starter-assets="starterAssets" :default-font-id="defaultWriteTextFontId" :device-busy="isDeviceBusy" @write-text="handleWriteText" @draw-prompt="handleDrawPrompt" @draw-starter="handleDrawStarter" />
     <health-check v-model:health-check-loading="healthCheckLoading" :latest-diagnostic-status="latestDiagnosticStatus" :latest-diagnostic-summary="latestDiagnosticSummary" :latest-diagnostic-at="latestDiagnosticAt" :self-check-history="selfCheckHistory" @run-health-check="handleHealthCheck" />
     <transfer-panel v-model:transfer-loading="transferLoading" v-model:transfer-target-phone="transferTargetPhone" v-model:transfer-accept-id="transferAcceptId" :device-transfer="deviceTransfer" :transfer-state-label="transferStateLabel" @request-transfer="handleRequestTransfer" @cancel-transfer="handleCancelTransfer" @accept-transfer="handleAcceptTransfer" />

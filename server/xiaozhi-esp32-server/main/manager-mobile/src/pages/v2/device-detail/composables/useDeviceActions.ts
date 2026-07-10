@@ -2,6 +2,8 @@ import type { ComputedRef } from 'vue'
 import type { V2ShareResponse } from '@/api/v2'
 import type { V2DeviceSupplyResponse, V2DeviceTransferResponse } from '@/api/v2/types'
 import { computed, ref } from 'vue'
+import type { GalleryImage } from '@/api/gallery'
+import { getGalleryDownloadUrl } from '@/api/gallery'
 import {
   v2AcceptDeviceTransfer,
   v2CancelDeviceTransfer,
@@ -69,6 +71,7 @@ export function useDeviceActions(opts: {
   const writeTextInput = ref('你好')
   const writeTextLoading = ref(false)
   const drawGeneratedLoading = ref(false)
+  const drawFromImageLoading = ref(false)
   const suppliesLoading = ref(false)
   const transferLoading = ref(false)
   const drawPromptInput = ref('星星')
@@ -178,6 +181,34 @@ export function useDeviceActions(opts: {
     }
     await submitDraw({ prompt: p }, 'draw_generated')
   }
+
+  async function handleDrawFromImage(image: GalleryImage) {
+    if (isDeviceBusy.value) {
+      showSubmitToast('v2.detail.deviceBusy')
+      return
+    }
+    drawFromImageLoading.value = true
+    try {
+      const download = await getGalleryDownloadUrl(image.id)
+      const imageUrl = download.url
+      if (!imageUrl) {
+        message.alert(t('v2.detail.galleryDownloadFailed'))
+        return
+      }
+      const r = await v2SubmitTask(deviceId(), 'draw_generated', { image_url: imageUrl, prompt: '' })
+      setPhase(r.status)
+      resetProgress()
+      showSubmitToast('v2.detail.galleryDrawSubmitted')
+      appendLog(`draw_generated(image): ${r.taskId}`)
+    }
+    catch (e: any) {
+      message.alert(taskSubmitErrorMessage(e))
+    }
+    finally {
+      drawFromImageLoading.value = false
+    }
+  }
+
   async function handleDrawStarter(id: string) {
     if (isDeviceBusy.value) {
       showSubmitToast('v2.detail.deviceBusy')
@@ -401,6 +432,7 @@ export function useDeviceActions(opts: {
     writeTextInput,
     writeTextLoading,
     drawGeneratedLoading,
+    drawFromImageLoading,
     suppliesLoading,
     transferLoading,
     drawPromptInput,
@@ -423,6 +455,7 @@ export function useDeviceActions(opts: {
     handleWriteText,
     handleDrawPrompt,
     handleDrawStarter,
+    handleDrawFromImage,
     handleRefreshInfo,
     handleHealthCheck,
     updatePaper,
