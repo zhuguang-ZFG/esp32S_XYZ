@@ -1,5 +1,5 @@
 import type { GalleryImage } from '@/api/gallery'
-import { getBearerToken, getEnvBaseUrl } from '@/utils'
+import { getEnvBaseUrl } from '@/utils'
 
 export const GALLERY_PRELOAD_DEFAULT_COUNT = 6
 
@@ -13,18 +13,13 @@ export function galleryThumbSrc(
   image: Pick<GalleryImage, 'id' | 'thumbPath' | 'thumbToken'>,
 ): string {
   const base = getEnvBaseUrl().replace(/\/$/, '')
-  const path = image.thumbPath || `/device/v1/app/gallery/${image.id}/thumb`
-  const url = `${base}${path}`
-  if (image.thumbToken) {
-    const sep = url.includes('?') ? '&' : '?'
-    return `${url}${sep}thumb_token=${encodeURIComponent(image.thumbToken)}`
-  }
-  const token = getBearerToken()
-  if (!token) {
+  const path = image.thumbPath || /device/v1/app/gallery//thumb
+  const url = ${base}
+  if (!image.thumbToken) {
     return url
   }
   const sep = url.includes('?') ? '&' : '?'
-  return `${url}${sep}access_token=${encodeURIComponent(token)}`
+  return ${url}thumb_token=
 }
 
 export type GalleryPreloadOptions = {
