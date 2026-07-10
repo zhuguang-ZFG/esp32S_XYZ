@@ -7,6 +7,7 @@ export interface GalleryImage {
   sizeBytes: number
   thumbUrl?: string
   thumbPath?: string
+  thumbToken?: string
   fileUrl?: string
   filePath?: string
   tags: string[]

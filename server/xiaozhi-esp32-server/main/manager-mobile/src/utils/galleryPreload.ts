@@ -9,11 +9,17 @@ export function clearGalleryPreloadCache(): void {
   _preloadedSrc.clear()
 }
 
-export function galleryThumbSrc(image: Pick<GalleryImage, 'id' | 'thumbPath'>): string {
+export function galleryThumbSrc(
+  image: Pick<GalleryImage, 'id' | 'thumbPath' | 'thumbToken'>,
+): string {
   const base = getEnvBaseUrl().replace(/\/$/, '')
   const path = image.thumbPath || `/device/v1/app/gallery/${image.id}/thumb`
-  const token = getBearerToken()
   const url = `${base}${path}`
+  if (image.thumbToken) {
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}thumb_token=${encodeURIComponent(image.thumbToken)}`
+  }
+  const token = getBearerToken()
   if (!token) {
     return url
   }
@@ -27,7 +33,7 @@ export type GalleryPreloadOptions = {
 }
 
 export function preloadGalleryThumbs(
-  images: Pick<GalleryImage, 'id' | 'thumbPath'>[],
+  images: Pick<GalleryImage, 'id' | 'thumbPath' | 'thumbToken'>[],
   options: number | GalleryPreloadOptions = GALLERY_PRELOAD_DEFAULT_COUNT,
 ): void {
   const offset = typeof options === 'number' ? 0 : (options.offset ?? 0)

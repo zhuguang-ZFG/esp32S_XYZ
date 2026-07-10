@@ -7,6 +7,38 @@ const appPrefix = '/device/v1/app'
 export const GALLERY_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 export const GALLERY_PAGE_SIZE = 24
 
+export function compressGalleryUploadPath(tempFilePath: string): Promise<string> {
+  return new Promise((resolve) => {
+    // #ifdef MP-WEIXIN
+    uni.compressImage({
+      src: tempFilePath,
+      quality: 80,
+      success: (res) => resolve(res.tempFilePath || tempFilePath),
+      fail: () => resolve(tempFilePath),
+    })
+    // #endif
+    // #ifndef MP-WEIXIN
+    resolve(tempFilePath)
+    // #endif
+  })
+}
+
+export function assertGalleryUploadSize(filePath: string, maxBytes: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    uni.getFileInfo({
+      filePath,
+      success: (info) => {
+        if ((info.size ?? 0) > maxBytes) {
+          reject(new Error(`file exceeds ${Math.round(maxBytes / 1024 / 1024)}MB`))
+          return
+        }
+        resolve()
+      },
+      fail: () => resolve(),
+    })
+  })
+}
+
 export async function listGalleryImages(limit = GALLERY_PAGE_SIZE, offset = 0) {
   const res = await http.Get<{ images: GalleryImage[], count: number, total: number }>(
     `${appPrefix}/gallery`,

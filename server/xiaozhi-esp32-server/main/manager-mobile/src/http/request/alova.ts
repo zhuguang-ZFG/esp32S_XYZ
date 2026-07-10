@@ -8,6 +8,7 @@ import VueHook from 'alova/vue'
 import { v2RefreshToken } from '@/api/v2'
 import { API_DEFAULT_TIMEOUT_MS, REFRESH_COOLDOWN_MS } from '@/config/timeouts'
 import { getEnvBaseUrl } from '@/utils'
+import { clearGalleryPreloadCache } from '@/utils/galleryPreload'
 import { toast } from '@/utils/toast'
 import { ContentTypeEnum, ResultEnum, ShowMessage } from './enum'
 
@@ -62,6 +63,8 @@ const { onAuthRequired, onResponseRefreshToken } = createServerTokenAuthenticati
       }
       try {
         await v2RefreshToken()
+        clearGalleryPreloadCache()
+        uni.$emit?.('gallery:token-refreshed')
         lastRefreshAt = Date.now()
       }
       catch (error) {

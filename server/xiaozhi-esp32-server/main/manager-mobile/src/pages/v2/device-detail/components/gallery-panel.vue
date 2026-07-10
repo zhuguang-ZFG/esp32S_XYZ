@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { GalleryImage } from '@/api/gallery'
-import { GALLERY_MAX_UPLOAD_BYTES, deleteGalleryImage, uploadGalleryImage } from '@/api/gallery'
+import { GALLERY_MAX_UPLOAD_BYTES, assertGalleryUploadSize, compressGalleryUploadPath, deleteGalleryImage, getGalleryDownloadUrl, uploadGalleryImage } from '@/api/gallery'
 import { t } from '@/i18n'
 import { useGalleryList } from '../composables/useGalleryList'
 import { galleryThumbSrc } from '@/utils/galleryPreload'
@@ -62,7 +62,9 @@ function chooseAndUpload() {
       uploading.value = true
       uploadProgress.value = 0
       try {
-        const image = await uploadGalleryImage(file.tempFilePath, (percent) => {
+        const uploadPath = await compressGalleryUploadPath(file.tempFilePath)
+        await assertGalleryUploadSize(uploadPath, GALLERY_MAX_UPLOAD_BYTES)
+        const image = await uploadGalleryImage(uploadPath, (percent) => {
           uploadProgress.value = Math.max(0, Math.min(100, Math.round(percent)))
         })
         prependImage(image)
@@ -88,11 +90,20 @@ function selectImage(image: GalleryImage) {
   selectedId.value = image.id
 }
 
-function previewImage(image: GalleryImage) {
-  uni.previewImage({
-    current: galleryThumbSrc(image),
-    urls: images.value.map(item => galleryThumbSrc(item)),
-  })
+async function previewImage(image: GalleryImage) {
+  try {
+    const download = await getGalleryDownloadUrl(image.id)
+    const urls = images.value.map((item) => {
+      return item.id === image.id ? download.url : galleryThumbSrc(item)
+    })
+    uni.previewImage({
+      current: download.url,
+      urls,
+    })
+  }
+  catch (error: any) {
+    uni.showToast({ title: error?.message || t('common.fail'), icon: 'none' })
+  }
 }
 
 function previewSelected() {

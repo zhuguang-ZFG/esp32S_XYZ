@@ -1,4 +1,5 @@
 import type { GalleryImage } from '@/api/gallery'
+import { onUnmounted } from 'vue'
 import { GALLERY_PAGE_SIZE, listGalleryImages } from '@/api/gallery'
 import { t } from '@/i18n'
 import {
@@ -114,6 +115,15 @@ export function useGalleryList() {
       totalCount.value = Math.max(0, totalCount.value - 1)
     }
   }
+
+
+uni.$on?.('gallery:token-refreshed', () => {
+  loadGallery(true)
+})
+
+onUnmounted(() => {
+  uni.$off?.('gallery:token-refreshed')
+})
 
   return {
     images,

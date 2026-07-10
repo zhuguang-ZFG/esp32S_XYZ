@@ -3,7 +3,6 @@ import type { V2ShareResponse } from '@/api/v2'
 import type { V2DeviceSupplyResponse, V2DeviceTransferResponse } from '@/api/v2/types'
 import { computed, ref } from 'vue'
 import type { GalleryImage } from '@/api/gallery'
-import { getGalleryDownloadUrl } from '@/api/gallery'
 import {
   v2AcceptDeviceTransfer,
   v2CancelDeviceTransfer,
@@ -189,17 +188,14 @@ export function useDeviceActions(opts: {
     }
     drawFromImageLoading.value = true
     try {
-      const download = await getGalleryDownloadUrl(image.id)
-      const imageUrl = download.url
-      if (!imageUrl) {
-        message.alert(t('v2.detail.galleryDownloadFailed'))
-        return
-      }
-      const r = await v2SubmitTask(deviceId(), 'draw_generated', { image_url: imageUrl, prompt: '' })
+      const r = await v2SubmitTask(deviceId(), 'draw_generated', {
+        gallery_image_id: image.id,
+        prompt: '',
+      })
       setPhase(r.status)
       resetProgress()
       showSubmitToast('v2.detail.galleryDrawSubmitted')
-      appendLog(`draw_generated(image): ${r.taskId}`)
+      appendLog(`draw_generated(gallery): ${r.taskId}`)
     }
     catch (e: any) {
       message.alert(taskSubmitErrorMessage(e))
