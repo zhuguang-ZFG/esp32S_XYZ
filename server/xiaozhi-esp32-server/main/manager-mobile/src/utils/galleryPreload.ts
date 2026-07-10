@@ -1,7 +1,13 @@
-﻿import type { GalleryImage } from '@/api/gallery'
+import type { GalleryImage } from '@/api/gallery'
 import { getBearerToken, getEnvBaseUrl } from '@/utils'
 
 export const GALLERY_PRELOAD_DEFAULT_COUNT = 6
+
+const _preloadedSrc = new Set<string>()
+
+export function clearGalleryPreloadCache(): void {
+  _preloadedSrc.clear()
+}
 
 export function galleryThumbSrc(image: Pick<GalleryImage, 'id' | 'thumbPath'>): string {
   const base = getEnvBaseUrl().replace(/\/$/, '')
@@ -15,15 +21,31 @@ export function galleryThumbSrc(image: Pick<GalleryImage, 'id' | 'thumbPath'>): 
   return `${url}${sep}access_token=${encodeURIComponent(token)}`
 }
 
+export type GalleryPreloadOptions = {
+  offset?: number
+  limit?: number
+}
+
 export function preloadGalleryThumbs(
   images: Pick<GalleryImage, 'id' | 'thumbPath'>[],
-  limit = GALLERY_PRELOAD_DEFAULT_COUNT,
+  options: number | GalleryPreloadOptions = GALLERY_PRELOAD_DEFAULT_COUNT,
 ): void {
-  const batch = images.slice(0, Math.max(0, limit))
+  const offset = typeof options === 'number' ? 0 : (options.offset ?? 0)
+  const limit = typeof options === 'number' ? options : (options.limit ?? GALLERY_PRELOAD_DEFAULT_COUNT)
+  const batch = images
+    .slice(offset, offset + Math.max(0, limit))
+    .map(image => galleryThumbSrc(image))
+    .filter((src) => {
+      if (_preloadedSrc.has(src)) {
+        return false
+      }
+      _preloadedSrc.add(src)
+      return true
+    })
   if (!batch.length) {
     return
   }
-  const data = batch.map(image => ({ type: 'image' as const, src: galleryThumbSrc(image) }))
+  const data = batch.map(src => ({ type: 'image' as const, src }))
   // #ifdef MP-WEIXIN
   const wxApi = typeof wx !== 'undefined' ? (wx as any) : null
   if (wxApi?.preloadAssets) {
@@ -31,7 +53,7 @@ export function preloadGalleryThumbs(
     return
   }
   // #endif
-  batch.forEach((image) => {
-    uni.getImageInfo({ src: galleryThumbSrc(image) })
+  batch.forEach((src) => {
+    uni.getImageInfo({ src })
   })
 }
