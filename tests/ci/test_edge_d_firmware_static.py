@@ -31,6 +31,7 @@ U8_PROVISIONING_CONTRACT = ROOT / "firmware" / "u8-xiaozhi" / "main" / "provisio
 U1_PROTOCOL = ROOT / "firmware" / "u1-grbl" / "Grbl_Esp32" / "src" / "Protocol.cpp"
 U1_SETTINGS_CC = ROOT / "firmware" / "u1-grbl" / "Grbl_Esp32" / "src" / "Settings.cpp"
 U1_MOTION_CONTROL_CC = ROOT / "firmware" / "u1-grbl" / "Grbl_Esp32" / "src" / "MotionControl.cpp"
+U1_CONFIG_H = ROOT / "firmware" / "u1-grbl" / "Grbl_Esp32" / "src" / "Config.h"
 M5_PROVISIONING_STATUS = ROOT / "docs" / "M5.1-provisioning-status.md"
 M5_AP_FALLBACK_STATUS = ROOT / "docs" / "M5.2-ap-fallback-status.md"
 M5_NVS_ENCRYPTION_STATUS = ROOT / "docs" / "M5.3-nvs-encryption-status.md"
@@ -685,6 +686,12 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         # 整段 path 必须能拿到 workspace 才继续；每段坐标在 [0, workspace_mm] 内。
         self.assertIn("FetchWorkspaceMm(", run_path)
         self.assertIn("path segment x/y outside workspace", run_path)
+
+    def test_u1_webui_authentication_is_enabled(self):
+        """WebUI must require auth; open WebUI is worse than weak default passwords."""
+        text = U1_CONFIG_H.read_text(encoding="utf-8", errors="replace")
+        self.assertIn("#define ENABLE_AUTHENTICATION", text)
+        self.assertNotIn("// #define ENABLE_AUTHENTICATION", text)
 
     def test_u1_error_codes_are_edge_d_schema_codes(self):
         text = U1_PROTOCOL.read_text(encoding="utf-8", errors="replace")
