@@ -318,13 +318,13 @@ void McpServer::AddUserOnlyTool(const std::string& name, const std::string& desc
     AddTool(tool);
 }
 
-void McpServer::ParseMessage(const std::string& message) {
+void McpServer::ParseMessage(const std::string& message, bool allow_user_only_tools) {
     cJSON* json = cJSON_Parse(message.c_str());
     if (json == nullptr) {
         ESP_LOGE(TAG, "Failed to parse MCP message: %s", message.c_str());
         return;
     }
-    ParseMessage(json);
+    ParseMessage(json, allow_user_only_tools);
     cJSON_Delete(json);
 }
 
@@ -347,7 +347,7 @@ void McpServer::ParseCapabilities(const cJSON* capabilities) {
     }
 }
 
-void McpServer::ParseMessage(const cJSON* json) {
+void McpServer::ParseMessage(const cJSON* json, bool allow_user_only_tools) {
     // Check JSONRPC version
     auto version = cJSON_GetObjectItem(json, "jsonrpc");
     if (version == nullptr || !cJSON_IsString(version) || strcmp(version->valuestring, "2.0") != 0) {
@@ -425,7 +425,7 @@ void McpServer::ParseMessage(const cJSON* json) {
             ReplyError(id_int, "Invalid arguments");
             return;
         }
-        DoToolCall(id_int, std::string(tool_name->valuestring), tool_arguments);
+        DoToolCall(id_int, std::string(tool_name->valuestring), tool_arguments, allow_user_only_tools);
     } else {
         ESP_LOGE(TAG, "Method not implemented: %s", method_str.c_str());
         ReplyError(id_int, "Method not implemented: " + method_str);
@@ -505,7 +505,7 @@ void McpServer::GetToolsList(int id, const std::string& cursor, bool list_user_o
     ReplyResult(id, json);
 }
 
-void McpServer::DoToolCall(int id, const std::string& tool_name, const cJSON* tool_arguments) {
+void McpServer::DoToolCall(int id, const std::string& tool_name, const cJSON* tool_arguments, bool allow_user_only_tools) {
     auto tool_iter = std::find_if(tools_.begin(), tools_.end(), 
                                  [&tool_name](const McpTool* tool) { 
                                      return tool->name() == tool_name; 
@@ -514,6 +514,14 @@ void McpServer::DoToolCall(int id, const std::string& tool_name, const cJSON* to
     if (tool_iter == tools_.end()) {
         ESP_LOGE(TAG, "tools/call: Unknown tool: %s", tool_name.c_str());
         ReplyError(id, "Unknown tool: " + tool_name);
+        return;
+    }
+
+    // user_only tools (reboot/upgrade/...) must not run on the cloud AI channel.
+    // Local control WS passes allow_user_only_tools=true after token auth.
+    if ((*tool_iter)->user_only() && !allow_user_only_tools) {
+        ESP_LOGW(TAG, "tools/call: user-only tool denied without user channel: %s", tool_name.c_str());
+        ReplyError(id, "Tool requires user channel: " + tool_name);
         return;
     }
 

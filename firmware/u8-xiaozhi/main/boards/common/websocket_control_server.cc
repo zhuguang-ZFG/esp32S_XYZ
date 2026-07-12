@@ -213,17 +213,18 @@ void WebSocketControlServer::HandleMessage(httpd_req_t *req, const char* data, s
     cJSON* payload = nullptr;
     cJSON* type = cJSON_GetObjectItem(root, "type");
     
+    // Token already verified at handshake; allow user_only tools on this channel.
     if (type && cJSON_IsString(type) && strcmp(type->valuestring, "mcp") == 0) {
         payload = cJSON_GetObjectItem(root, "payload");
         if (payload != nullptr) {
             cJSON_DetachItemViaPointer(root, payload);
-            McpServer::GetInstance().ParseMessage(payload);
+            McpServer::GetInstance().ParseMessage(payload, true);
             cJSON_Delete(payload); 
         }
     } else {
         payload = cJSON_Duplicate(root, 1);
         if (payload != nullptr) {
-            McpServer::GetInstance().ParseMessage(payload);
+            McpServer::GetInstance().ParseMessage(payload, true);
             cJSON_Delete(payload);
         }
     }
