@@ -64,7 +64,13 @@ esp_err_t WebSocketControlServer::ws_handler(httpd_req_t *req) {
                 }
             }
         }
-        if (provided != expected_token) {
+        // 常量时间比较：避免 LAN 内通过响应时延逐字节探测 token（AUDIT-12 LOW）。
+        unsigned char token_diff = provided.size() == expected_token.size() ? 0 : 1;
+        for (size_t i = 0; i < expected_token.size(); ++i) {
+            char c = i < provided.size() ? provided[i] : '\0';
+            token_diff |= (unsigned char)(c ^ expected_token[i]);
+        }
+        if (token_diff != 0) {
             ESP_LOGW(TAG, "WebSocket auth failed: invalid or missing token");
             httpd_resp_send_err(req, 401, "Unauthorized");
             return ESP_FAIL;

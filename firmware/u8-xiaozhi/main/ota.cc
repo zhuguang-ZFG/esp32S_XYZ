@@ -835,7 +835,7 @@ esp_err_t Ota::Activate() {
         return ESP_ERR_TIMEOUT;
     }
     if (status_code != 200) {
-        ESP_LOGE(TAG, "Failed to activate, code: %d, body: %s", status_code, http->ReadAll().c_str());
+        ESP_LOGE(TAG, "Failed to activate, code: %d", status_code);
         return ESP_FAIL;
     }
 
