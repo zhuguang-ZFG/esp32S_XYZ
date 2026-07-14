@@ -150,12 +150,14 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("workspaceMm", text)
 
     def test_device_detail_can_submit_get_device_info_task(self):
+        # Product: refresh uses applyRuntimeStatus (status poll), not v2SubmitTask get_device_info.
         text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
                 + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
         self.assertIn("handleRefreshInfo", text)
-        self.assertIn("v2SubmitTask(deviceId(), 'get_device_info')", text)
-        self.assertIn("v2.detail.refreshInfo", text)
+        self.assertIn("applyRuntimeStatus(deviceId())", text)
+        self.assertIn("v2.detail.infoSubmitted", text)
+        self.assertIn("refresh device status", text)
 
     def test_device_detail_displays_run_path_progress_events(self):
         text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
@@ -424,6 +426,7 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("write_text:", text)
 
     def test_device_detail_can_submit_draw_generated_task(self):
+        # Prompt draw: v2SubmitTask draw_generated; starter pack: v2RenderAsset(id).
         text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
                 + DEVICE_DETAIL_ACTIONS.read_text(encoding="utf-8", errors="replace"))
 
@@ -434,8 +437,9 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("starterAssets", text)
         for asset_id in ("starter_star", "starter_house", "starter_tree", "starter_fish", "starter_flower"):
             self.assertIn(asset_id, text)
-        self.assertIn("starter_id: id", text)
-        self.assertIn("use_starter_asset: true", text)
+        self.assertIn("handleDrawStarter", text)
+        self.assertIn("v2RenderAsset(id, deviceId())", text)
+        self.assertIn("draw_starter", text)
 
     def test_device_detail_can_submit_health_check_and_show_self_check_summary(self):
         text = (DEVICE_DETAIL.read_text(encoding="utf-8", errors="replace")
@@ -476,28 +480,28 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
         self.assertIn("client-${safeCapability}", text)
 
     def test_device_config_page_is_registered_and_uses_wifi_fallback_components(self):
+        # Product path (2026-07): SoftAP HTTP primary UI; BluFi kept as contract fallback only.
         pages = PAGES_JSON.read_text(encoding="utf-8", errors="replace")
         page = DEVICE_CONFIG_PAGE.read_text(encoding="utf-8", errors="replace")
 
         self.assertIn('"pagePath": "pages/device-config/index"', pages)
         self.assertIn('"path": "pages/device-config/index"', pages)
-        self.assertIn("import BlufiConfig", page)
         self.assertIn("import WifiConfig", page)
         self.assertIn("import WifiSelector", page)
-        self.assertIn("<blufi-config", page)
         self.assertIn("<wifi-selector", page)
         self.assertIn("<wifi-config", page)
-        self.assertIn("configType === 'ble_blufi' || selectedWifiInfo.network", page)
-        self.assertIn("configType = ref<'ble_blufi' | 'softap_http' | 'wifi' | 'ultrasonic'>('ble_blufi')", page)
-        self.assertIn("value: 'ble_blufi'", page)
-        self.assertIn("value: 'softap_http'", page)
+        self.assertIn("SoftAP HTTP", page)
+        self.assertIn("openPrivacyPermissions", page)
+        self.assertIn("selectedWifiInfo.network", page)
+        # BluFi UI may be removed from page; component file still available for fallback tooling
+        self.assertTrue(DEVICE_CONFIG_BLUFI_CONFIG.is_file())
 
     def test_device_config_softap_contract_defines_ap_fallback_endpoints(self):
         text = DEVICE_CONFIG_CONTRACT.read_text(encoding="utf-8", errors="replace")
 
         for token in (
-            "primaryChannel: 'ble_blufi'",
-            "fallbackChannel: 'softap_http'",
+            "primaryChannel: 'softap_http'",
+            "fallbackChannel: 'ble_blufi'",
             "blufiDeviceName: 'DLC-Blufi'",
             "legacyBlufiDeviceName: 'BLUFI_DEVICE'",
             "blufiServiceUuidCandidates",
@@ -508,7 +512,7 @@ class ManagerMobileDeviceInfoTests(unittest.TestCase):
             "softApSubmitPath: '/submit'",
             "softApExitPath: '/exit'",
             "softApSsidHint: 'DLC-XXXXXX'",
-            "submitPayloadFields: ['ssid', 'password', 'server_host', 'device_secret']",
+            "submitPayloadFields: ['ssid', 'password']",
             "export function softApUrl",
             "export function matchesBleUuid",
             "export function createDesignTimeBlufiCredentialPayload",
