@@ -43,6 +43,9 @@ build-u1: ## Build U1 firmware
 build-u8: ## Build U8 firmware (requires ESP-IDF environment)
 	cd $(U8_DIR) && idf.py build
 
+setup-idf-u8: ## Install IDF v5.5.2 (esp32s3) via eim + build U8 (Windows PowerShell only)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_idf_and_build_u8.ps1
+
 # ── Flash ────────────────────────────────────────────────
 PORT ?=
 
