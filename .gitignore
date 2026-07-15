@@ -10,6 +10,8 @@ Thumbs.db
 
 # 常见构建输出与本地环境
 build/
+build.old*/
+firmware/u8-xiaozhi/build.old*/
 dist/
 *.log
 

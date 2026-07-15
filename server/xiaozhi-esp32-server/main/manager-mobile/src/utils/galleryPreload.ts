@@ -13,13 +13,13 @@ export function galleryThumbSrc(
   image: Pick<GalleryImage, 'id' | 'thumbPath' | 'thumbToken'>,
 ): string {
   const base = getEnvBaseUrl().replace(/\/$/, '')
-  const path = image.thumbPath || /device/v1/app/gallery//thumb
-  const url = ${base}
+  const path = image.thumbPath || `/device/v1/app/gallery/${image.id}/thumb`
+  const url = `${base}${path}`
   if (!image.thumbToken) {
     return url
   }
   const sep = url.includes('?') ? '&' : '?'
-  return ${url}thumb_token=
+  return `${url}${sep}thumb_token=${encodeURIComponent(image.thumbToken)}`
 }
 
 export type GalleryPreloadOptions = {
