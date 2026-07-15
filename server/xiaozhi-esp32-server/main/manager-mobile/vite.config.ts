@@ -68,12 +68,20 @@ export default async ({ command, mode }) => {
           if (!fs.existsSync(appJsonPath))
             return
           const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf-8'))
+          // WeChat privacy fields are not always emitted by UniManifest into app.json;
+          // patch the build artifact so CI / review declarations stay consistent.
           appJson.permission = {
             ...(appJson.permission || {}),
             'scope.record': {
               desc: '用于语音指令和声纹录入',
             },
+            'scope.userLocation': {
+              desc: '用于设备配网时获取 Wi-Fi 列表',
+            },
           }
+          const privateInfos = new Set(appJson.requiredPrivateInfos || [])
+          privateInfos.add('getLocation')
+          appJson.requiredPrivateInfos = Array.from(privateInfos)
           fs.writeFileSync(appJsonPath, `${JSON.stringify(appJson, null, 2)}\n`, 'utf-8')
         },
       },

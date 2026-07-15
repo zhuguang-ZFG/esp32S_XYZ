@@ -37,8 +37,12 @@ class ManagerMobilePrivacyPermissionsTests(unittest.TestCase):
         self.assertIn("patch-mp-weixin-permissions", vite)
         self.assertIn("dist/build/mp-weixin/app.json", vite)
         self.assertIn("'scope.record'", vite)
+        self.assertIn("'scope.userLocation'", vite)
         self.assertIn("用于语音指令和声纹录入", vite)
+        self.assertIn("用于设备配网时获取 Wi-Fi 列表", vite)
         self.assertIn("appJson.permission", vite)
+        self.assertIn("requiredPrivateInfos", vite)
+        self.assertIn("getLocation", vite)
         # build-time artifact path used by CI verification
         self.assertIn("closeBundle", vite)
 
