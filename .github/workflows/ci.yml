@@ -140,8 +140,8 @@ jobs:
       - name: Check i18n key consistency
         run: corepack pnpm run check:i18n
 
-      - name: Unit tests (vitest)
-        run: corepack pnpm run test
+      # package.json has no "test" / vitest suite yet; do not call missing script.
+      # When vitest is added, restore: corepack pnpm run test
 
       - name: Build WeChat mini program
         run: corepack pnpm run build:mp-weixin
