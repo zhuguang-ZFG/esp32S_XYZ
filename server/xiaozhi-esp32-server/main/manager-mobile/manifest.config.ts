@@ -86,18 +86,21 @@ export default defineManifestConfig({
     appid: VITE_WX_APPID,
     darkmode: true,
     // __usePrivacyCheck__: true,
-    // 微信小程序 App 默认标题，如`
+    // 微信小程序 App 默认标题
     // navigationBarTitleText: 'uni-app',
     // 分包优化
     optimization: {
       subPackages: true,
     },
-    // 对微信小程序的 js 文件开启原生压缩，可能会导致部分 ES6 语法不兼容，需要关闭（例如：audioContext 的 setInterval）
-    // minified: true,
-    // 微信小程序自定义组件尺寸单位，默认为 rpx
-    // component2: true,
-    // 开启素描相机
-    // runtimeCompiler: true,
+    permission: {
+      'scope.record': {
+        desc: '用于语音对话识别',
+      },
+      'scope.userLocation': {
+        desc: '用于设备配网时获取 Wi-Fi 列表',
+      },
+    },
+    requiredPrivateInfos: ['getLocation'],
   },
   'mp-alipay': {
     usingComponents: true,
