@@ -111,7 +111,8 @@ private:
         http->SetHeader("Content-Type", "application/json");
         http->SetHeader("Accept", "application/json");
         http->SetHeader("Authorization", "Bearer " + token);
-        http->SetContent(body);
+        // Http::SetContent takes std::string&&; copy then move (body is const lvalue).
+        http->SetContent(std::string(body));
 
         std::string url = base_url + path;
         if (!http->Open("POST", url)) {

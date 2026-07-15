@@ -39,7 +39,7 @@ esp_err_t WebSocketControlServer::ws_handler(httpd_req_t *req) {
         }
         if (expected_token.empty()) {
             ESP_LOGE(TAG, "control_ws_token not set; refusing local WS handshake (set NVS 'control_ws_token' to enable)");
-            httpd_resp_send_err(req, 401, "Unauthorized");
+            httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
             return ESP_FAIL;
         }
         // 从 Authorization 头读取
@@ -72,7 +72,7 @@ esp_err_t WebSocketControlServer::ws_handler(httpd_req_t *req) {
         }
         if (token_diff != 0) {
             ESP_LOGW(TAG, "WebSocket auth failed: invalid or missing token");
-            httpd_resp_send_err(req, 401, "Unauthorized");
+            httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
             return ESP_FAIL;
         }
         ESP_LOGI(TAG, "Handshake done, the new connection was opened");

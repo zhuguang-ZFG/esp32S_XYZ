@@ -38,14 +38,23 @@ function Invoke-EimInstall {
 
     Write-Host "=== eim install $IdfVersion target=$Target ==="
     # non-interactive install; recurse submodules; only esp32s3 tools
-    # Note: do not pass flags not supported by this eim-cli build.
+    # CN mirrors: jihulab IDF + dl.espressif.cn tools + tuna pypi (Windows agent-friendly).
+    # Note: do not pass --do-not-track (some eim builds reject it).
+    # If eim fails mid-clone (tools.json missing), finish via:
+    #   D:\zhugu-home\.espressif\finish_idf_v552.ps1  (submodule + install.ps1)
     & $Eim install `
         --non-interactive true `
         --idf-versions $IdfVersion `
         --target $Target `
         --path $InstallBase `
+        --tool-install-folder-name (Join-Path $InstallBase "tools") `
+        --tool-download-folder-name (Join-Path $InstallBase "dist") `
+        --esp-idf-json-path (Join-Path $InstallBase "tools") `
         --recurse-submodules true `
         --install-all-prerequisites true `
+        --idf-mirror "https://jihulab.com/esp-mirror" `
+        --mirror "https://dl.espressif.cn/github_assets" `
+        --pypi-mirror "https://pypi.tuna.tsinghua.edu.cn/simple" `
         -v
     if ($LASTEXITCODE -ne 0) {
         throw "eim install failed exit=$LASTEXITCODE"
@@ -94,3 +103,7 @@ if (-not $SkipBuild) {
 
 Write-Host "Done. For daily builds after install:"
 Write-Host "  eim run `"cd /d $U8Dir && idf.py build`" $IdfVersion"
+Write-Host ""
+Write-Host "If eim list is empty but tools exist under $InstallBase, use local fallback (pure PowerShell, not Git Bash):"
+Write-Host "  powershell -NoProfile -ExecutionPolicy Bypass -File D:\zhugu-home\.espressif\build_u8_with_local_idf.ps1"
+Write-Host "  powershell -NoProfile -ExecutionPolicy Bypass -File D:\zhugu-home\.espressif\build_u8_only.ps1  # incremental"

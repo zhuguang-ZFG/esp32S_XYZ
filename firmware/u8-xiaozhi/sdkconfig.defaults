@@ -57,6 +57,8 @@ CONFIG_LV_USE_CLIB_STRING=y
 CONFIG_LV_USE_CLIB_SPRINTF=y
 CONFIG_LV_USE_IMGFONT=y
 CONFIG_LV_USE_ASSERT_STYLE=y
+# Examples need widgets we disable (LIST etc.); GH/local builds must not compile them.
+CONFIG_LV_BUILD_EXAMPLES=n
 
 # Use compressed font
 CONFIG_LV_FONT_FMT_TXT_LARGE=y
