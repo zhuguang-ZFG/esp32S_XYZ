@@ -71,7 +71,7 @@
     },
     "permission": {
       "scope.record": {
-        "desc": "用于语音指令和声纹录入"
+        "desc": "用于语音对话识别"
       },
       "scope.userLocation": {
         "desc": "用于设备配网时获取 Wi-Fi 列表"
