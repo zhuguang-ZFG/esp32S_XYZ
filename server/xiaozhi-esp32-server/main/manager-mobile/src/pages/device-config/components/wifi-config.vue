@@ -4,6 +4,8 @@ import { SOFTAP_PROBE_TIMEOUT_MS, SOFTAP_SUBMIT_TIMEOUT_MS } from '@/config/time
 import { t } from '@/i18n'
 import { toast } from '@/utils/toast'
 import { provisioningContract, softApUrl } from '../provisioning-contract'
+import { getEnvBaseUrl } from '@/utils'
+import { provisioningDlcSecret } from '@/utils/dlcToken'
 
 // 类型定义
 interface WiFiNetwork {

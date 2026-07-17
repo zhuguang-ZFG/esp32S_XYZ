@@ -17,6 +17,7 @@ import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import { v2AcceptDeviceTransfer, v2BindDevice, v2GetDevices, v2ListPendingIncomingDeviceTransfers, v2SubmitTask } from '@/api/v2'
 import { t } from '@/i18n'
 import { persistDeviceIds, updateM6PendingTabBarBadge } from '@/utils'
+import { persistDlcApiToken } from '@/utils/dlcToken'
 
 defineOptions({ name: 'V2DeviceList' })
 const message = useMessage()
