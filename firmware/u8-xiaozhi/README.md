@@ -21,15 +21,21 @@ All hardware running v1 can be upgraded to v2 by manually flashing the firmware.
 The stable version of v1 is 1.9.2. You can switch to v1 by running `git checkout v1`. The v1 branch will be maintained until February 2026.
 
 #
-## DLC SoftAP device_secret (required)
+## DLC SoftAP device_secret
 
-After `idf.py reconfigure` / `set-target`, before `build`:
+SoftAP portal (main Connect form) accepts optional device_secret and server_host.
+Empty fields do not overwrite existing NVS values. The tracked patch also wires
+/submit JSON into NVS (wifi namespace).
 
-```powershell
+After idf.py reconfigure / set-target, before uild:
+
+`powershell
 python scripts/ensure_softap_dlc_patch.py
-```
+`
 
-`release.py` runs this check automatically after `set-target`. See `README_zh.md`.
+
+elease.py runs this check automatically after set-target (requires both
+C++ SaveDlcProvisioningFields and HTML device_secret markers). See README_zh.md.
 
 ## Features Implemented
 

@@ -56,3 +56,31 @@
              cJSON_Delete(json);
              // 设置成功响应
              httpd_resp_set_type(req, "application/json");
+--- a/assets/wifi_configuration.html
++++ b/assets/wifi_configuration.html
+@@ -253,6 +253,14 @@
+                 <p>
+                     <label for="password" data-lang="password">Password:</label>
+                     <input type="password" id="password" name="password">
++                </p>
++                <p>
++                    <label for="device_secret" data-lang="device_secret">Device secret (optional):</label>
++                    <input type="password" id="device_secret" name="device_secret" autocomplete="off" placeholder="DLC device_secret">
++                </p>
++                <p>
++                    <label for="server_host" data-lang="server_host">Server host (optional):</label>
++                    <input type="text" id="server_host" name="server_host" autocomplete="off" placeholder="e.g. chat.donglicao.com">
+                 </p>
+                 <p style="text-align: center;">
+                     <input type="submit" value="Connect" id="button" data-lang-value="connect">
+@@ -1293,7 +1301,9 @@
+ 
+             const payload = {
+                 ssid: ssid.value,
+-                password: document.getElementById('password').value
++                password: document.getElementById('password').value,
++                device_secret: document.getElementById('device_secret').value,
++                server_host: document.getElementById('server_host').value
+             };
+ 
+             try {
