@@ -20,7 +20,18 @@ All hardware running v1 can be upgraded to v2 by manually flashing the firmware.
 
 The stable version of v1 is 1.9.2. You can switch to v1 by running `git checkout v1`. The v1 branch will be maintained until February 2026.
 
-### Features Implemented
+#
+## DLC SoftAP device_secret (required)
+
+After `idf.py reconfigure` / `set-target`, before `build`:
+
+```powershell
+python scripts/ensure_softap_dlc_patch.py
+```
+
+`release.py` runs this check automatically after `set-target`. See `README_zh.md`.
+
+## Features Implemented
 
 - Wi-Fi / ML307 Cat.1 4G
 - Offline voice wake-up [ESP-SR](https://github.com/espressif/esp-sr)

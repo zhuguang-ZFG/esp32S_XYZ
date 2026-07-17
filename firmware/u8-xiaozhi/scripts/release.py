@@ -39,6 +39,17 @@ def get_project_version() -> Optional[str]:
     return None
 
 
+
+def ensure_softap_dlc_patch() -> None:
+    """Fail the release build if SoftAP device_secret patch is missing."""
+    scripts_dir = Path(__file__).resolve().parent
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    from ensure_softap_dlc_patch import ensure_softap_dlc_patch as _ensure
+
+    _ensure(require_component=True)
+
+
 def merge_bin() -> None:
     if os.system("idf.py merge-bin") != 0:
         print("merge-bin failed", file=sys.stderr)
@@ -374,6 +385,8 @@ def release(board_type: str, config_filename: str = "config.json", *, filter_nam
         if os.system(f"idf.py set-target {target}") != 0:
             print("set-target failed", file=sys.stderr)
             sys.exit(1)
+
+        ensure_softap_dlc_patch()
 
         # Append sdkconfig
         with Path("sdkconfig").open("a", encoding='utf-8') as f:

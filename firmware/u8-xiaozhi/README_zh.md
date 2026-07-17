@@ -20,7 +20,26 @@
 
 v1 的稳定版本为 1.9.2，可以通过 `git checkout v1` 来切换到 v1 版本，该分支会持续维护到 2026 年 2 月。
 
-### 已实现功能
+#
+## DLC SoftAP device_secret（必做）
+
+`78/esp-wifi-connect` 的 `/submit` 默认只存 WiFi；DLC 需要把小程序下发的 `device_secret` / `server_host` 写入 NVS。
+
+在 `idf.py reconfigure` 或 `idf.py set-target` **之后**、`idf.py build` **之前**执行：
+
+```powershell
+python scripts/ensure_softap_dlc_patch.py
+# 或
+powershell -File scripts/apply_patches.ps1
+# 一键：apply + idf
+powershell -File scripts/idf_with_softap_patch.ps1 build
+```
+
+`scripts/release.py` 在 `set-target` 后会自动调用该检查；未打补丁则构建失败。
+
+补丁文件：`patches/esp-wifi-connect-softap-dlc.patch`。
+
+## 已实现功能
 
 - Wi-Fi / ML307 Cat.1 4G
 - 离线语音唤醒 [ESP-SR](https://github.com/espressif/esp-sr)
