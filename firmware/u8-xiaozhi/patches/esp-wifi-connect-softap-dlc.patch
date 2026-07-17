@@ -1,0 +1,58 @@
+﻿--- a/wifi_configuration_ap.cc
++++ b/wifi_configuration_ap.cc
+@@ -21,6 +21,33 @@
+ 
+ #define TAG "WifiConfigurationAp"
+ 
++
++static void SaveDlcProvisioningFields(const char* device_secret, const char* server_host) {
++    if ((!device_secret || device_secret[0] == '\0') && (!server_host || server_host[0] == '\0')) {
++        return;
++    }
++    nvs_handle_t nvs;
++    if (nvs_open("wifi", NVS_READWRITE, &nvs) != ESP_OK) {
++        ESP_LOGW(TAG, "dlc provisioning: failed to open wifi NVS");
++        return;
++    }
++    if (device_secret && device_secret[0] != '\0') {
++        if (strlen(device_secret) >= 128) {
++            ESP_LOGW(TAG, "dlc device_secret too long, skipping");
++        } else if (nvs_set_str(nvs, "device_secret", device_secret) == ESP_OK) {
++            ESP_LOGI(TAG, "dlc device_secret saved to NVS");
++        }
++    }
++    if (server_host && server_host[0] != '\0') {
++        if (strlen(server_host) >= 128) {
++            ESP_LOGW(TAG, "dlc server_host too long, skipping");
++        } else if (nvs_set_str(nvs, "server_host", server_host) == ESP_OK) {
++            ESP_LOGI(TAG, "dlc server_host saved to NVS");
++        }
++    }
++    nvs_commit(nvs);
++    nvs_close(nvs);
++}
++
+ #define WIFI_CONNECTED_BIT BIT0
+ #define WIFI_FAIL_BIT      BIT1
+@@ -401,6 +428,14 @@
+                 password_str = password_item->valuestring;
+             }
+ 
++            cJSON *device_secret_item = cJSON_GetObjectItemCaseSensitive(json, "device_secret");
++            cJSON *server_host_item = cJSON_GetObjectItemCaseSensitive(json, "server_host");
++            const char *device_secret = (cJSON_IsString(device_secret_item) && device_secret_item->valuestring)
++                ? device_secret_item->valuestring : nullptr;
++            const char *server_host = (cJSON_IsString(server_host_item) && server_host_item->valuestring)
++                ? server_host_item->valuestring : nullptr;
++
+             // 获取当前对象
+             auto *this_ = static_cast<WifiConfigurationAp *>(req->user_ctx);
+             if (!this_->ConnectToWifi(ssid_str, password_str)) {
+@@ -410,6 +445,7 @@
+             }
+ 
+             this_->Save(ssid_str, password_str);
++            SaveDlcProvisioningFields(device_secret, server_host);
+             cJSON_Delete(json);
+             // 设置成功响应
+             httpd_resp_set_type(req, "application/json");
