@@ -15,6 +15,7 @@ import {
   v2UnbindDevice,
   v2UpdateDeviceSupplies,
 } from '@/api/v2'
+import type { V2SubmitTaskResponse } from '@/api/v2/types'
 import { t } from '@/i18n'
 
 const defaultWriteTextFontId = 'kai_basic_v1'
@@ -43,6 +44,16 @@ function taskSubmitErrorMessage(error: any) {
 
 function showSubmitToast(key: string) {
   uni.showToast({ title: t(key), icon: 'none' })
+}
+
+function noteTaskDeliveryHonesty(result: V2SubmitTaskResponse) {
+  if (result.deliveryAvailable !== false || !result.message)
+    return
+  uni.showModal({
+    title: t('v2.detail.deliveryUnavailableTitle'),
+    content: result.message,
+    showCancel: false,
+  })
 }
 
 /**
@@ -115,6 +126,7 @@ export function useDeviceActions(opts: {
     homeLoading.value = true
     try {
       const r = await v2SubmitTask(deviceId(), 'home')
+      noteTaskDeliveryHonesty(r)
       showSubmitToast('v2.detail.homeSubmitted')
       appendLog(`home: ${r.taskId}`)
     }
@@ -141,6 +153,7 @@ export function useDeviceActions(opts: {
       const r = await v2SubmitTask(deviceId(), 'write_text', { text, font_id: defaultWriteTextFontId })
       setPhase(r.status)
       resetProgress()
+      noteTaskDeliveryHonesty(r)
       showSubmitToast('v2.detail.writeSubmitted')
       appendLog(`write_text: ${r.taskId}`)
     }
@@ -162,6 +175,7 @@ export function useDeviceActions(opts: {
       const r = await v2SubmitTask(deviceId(), 'draw_generated', params)
       setPhase(r.status)
       resetProgress()
+      noteTaskDeliveryHonesty(r)
       showSubmitToast('v2.detail.drawSubmitted')
       appendLog(`${label}: ${r.taskId}`)
     }
@@ -215,6 +229,7 @@ export function useDeviceActions(opts: {
       const r = await v2RenderAsset(id, deviceId())
       setPhase(r.status)
       resetProgress()
+      noteTaskDeliveryHonesty(r)
       showSubmitToast('v2.detail.drawSubmitted')
       appendLog(`draw_starter ${id}: ${r.taskId}`)
     }

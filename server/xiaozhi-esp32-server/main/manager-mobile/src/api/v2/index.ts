@@ -6,15 +6,15 @@ import { getEnvBaseUrl } from '@/utils'
 const appPrefix = '/device/v1/app'
 
 /**
- * 微信小程序一键登录�?
+ * å¾®ä¿¡å°ç¨åºä¸é®ç»å½ã?
  *
- * 注意：此接口 bypass alova，直接使�?uni.request�?
- * 原因：alova 在部分响应格�?网络环境下会把登录成功响应解析为 undefined�?
- * 导致 token 无法写入。uni.request 更可控，且登录接口不需�?alova 的鉴�?刷新能力�?
+ * æ³¨æï¼æ­¤æ¥å£ bypass alovaï¼ç´æ¥ä½¿ç?uni.requestã?
+ * åå ï¼alova å¨é¨åååºæ ¼å¼?ç½ç»ç¯å¢ä¸ä¼æç»å½æåååºè§£æä¸º undefinedï¼?
+ * å¯¼è´ token æ æ³åå¥ãuni.request æ´å¯æ§ï¼ä¸ç»å½æ¥å£ä¸éè¦?alova çé´æ?å·æ°è½åã?
  *
- * 超时与重试：
- * - timeout 设为 30s，覆盖微�?jscode2session 偶发慢响�?+ 网络抖动�?
- * - �?timeout / network 类错误自动重�?1 次，避免单次网络抖动导致登录失败�?
+ * è¶æ¶ä¸éè¯ï¼
+ * - timeout è®¾ä¸º 30sï¼è¦çå¾®ä¿?jscode2session å¶åæ¢ååº?+ ç½ç»æå¨ã?
+ * - å¯?timeout / network ç±»éè¯¯èªå¨éè¯?1 æ¬¡ï¼é¿ååæ¬¡ç½ç»æå¨å¯¼è´ç»å½å¤±è´¥ã?
  */
 const LOGIN_MAX_RETRIES = 2
 
@@ -30,7 +30,7 @@ async function _doLoginRequest(code: string): Promise<UniApp.RequestSuccessCallb
 }
 
 function _isRetryableError(res: UniApp.RequestSuccessCallbackResult): boolean {
-  // uni.request 成功回调�?statusCode �?0 �?errMsg �?fail/timeout 时视为网络层失败
+  // uni.request æååè°é?statusCode ä¸?0 æ?errMsg å?fail/timeout æ¶è§ä¸ºç½ç»å±å¤±è´¥
   if (!res.statusCode || res.statusCode <= 0)
     return true
   const errMsg = (res.errMsg || '').toLowerCase()
@@ -57,12 +57,12 @@ export async function v2Login(code: string): Promise<V2LoginResponse> {
 }
 
 /**
- * 静默刷新 token：微�?code �?换新 token �?更新本地存储
+ * éé»å·æ° tokenï¼å¾®ä¿?code â?æ¢æ° token â?æ´æ°æ¬å°å­å¨
  *
- * 调用时机：alova refreshTokenOnSuccess.handler �?token 临近过期/已过期时调用�?
- * 关键点：
- * 1. 微信 code 一次性使用，过期后无法复用，故每次刷新都重新 uni.login 拿新 code�?
- * 2. 抛错时由调用方（alova handler）决定是否回退到登录页；此处只负责刷新失败抛出�?
+ * è°ç¨æ¶æºï¼alova refreshTokenOnSuccess.handler å?token ä¸´è¿è¿æ/å·²è¿ææ¶è°ç¨ã?
+ * å³é®ç¹ï¼
+ * 1. å¾®ä¿¡ code ä¸æ¬¡æ§ä½¿ç¨ï¼è¿æåæ æ³å¤ç¨ï¼ææ¯æ¬¡å·æ°é½éæ° uni.login æ¿æ° codeã?
+ * 2. æéæ¶ç±è°ç¨æ¹ï¼alova handlerï¼å³å®æ¯å¦åéå°ç»å½é¡µï¼æ­¤å¤åªè´è´£å·æ°å¤±è´¥æåºã?
  */
 export async function v2RefreshToken(): Promise<{ token: string, expireAt: number }> {
   const res = await uni.login({ provider: 'weixin' })
@@ -255,7 +255,7 @@ export async function v2DeleteAccount() {
   return { status: 'deleted', affectedRows: res.accountId ? 1 : 0, auditRetentionDays: 0 } as V2DeletionResponse
 }
 
-// ── 设备分享（AUDIT gap 实现）──
+// ââ è®¾å¤åäº«ï¼AUDIT gap å®ç°ï¼ââ
 
 export interface V2ShareResponse {
   shareId: string
@@ -290,7 +290,7 @@ export async function v2ListShares(deviceId: string) {
   return res.shares || []
 }
 
-// ── 设备解绑 ──
+// ââ è®¾å¤è§£ç» ââ
 
 export function v2UnbindDevice(deviceId: string) {
   return http.Post<{ ok: boolean, message: string }>(
@@ -300,7 +300,7 @@ export function v2UnbindDevice(deviceId: string) {
   )
 }
 
-// ── 通知订阅 ──
+// ââ éç¥è®¢é ââ
 
 export interface V2NotificationSubscription {
   subscriptionId: string
@@ -330,6 +330,14 @@ export function v2UnsubscribeNotification(subscriptionId: string) {
   )
 }
 
+
+export function v2RotateDlcToken(deviceId: string) {
+  return http.Post<{ deviceId: string, dlcApiToken: string, dlcApiTokenIssued: boolean }>(
+    `${appPrefix}/devices/${deviceId}/dlc-token/rotate`,
+    {},
+    { meta: { ignoreAuth: false, toast: true } },
+  )
+}
 
 export async function v2IssueVoiceTicket() {
   return http.Post<{ ticket: string, expires_in: number }>(

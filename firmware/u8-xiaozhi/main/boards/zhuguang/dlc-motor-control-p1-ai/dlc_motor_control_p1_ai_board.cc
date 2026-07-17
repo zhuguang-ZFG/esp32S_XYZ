@@ -64,30 +64,49 @@ private:
     // --- DLC API helpers (strategy-1: device calls dlc_api to generate path) ---
 
     // SEC-007: Read per-device token from NVS; never compiled into firmware
+        static void MigrateDlcApiToken(const char* token) {
+        nvs_handle_t handle;
+        if (nvs_open("dlc", NVS_READWRITE, &handle) != ESP_OK) {
+            return;
+        }
+        if (nvs_set_str(handle, "api_token", token) == ESP_OK) {
+            nvs_commit(handle);
+        }
+        nvs_close(handle);
+    }
+
     std::string GetDlcApiToken() {
         char token[128] = {0};
         size_t len = sizeof(token);
         nvs_handle_t handle;
-        // 固件审查 P1：检查 nvs_get_str 返回值，禁止静默截断（token 超长时曾无声截断）。
         esp_err_t err = nvs_open("dlc", NVS_READONLY, &handle);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "dlc api_token: NVS open failed (%s)",
-                     esp_err_to_name(err));
+        if (err == ESP_OK) {
+            err = nvs_get_str(handle, "api_token", token, &len);
+            nvs_close(handle);
+            if (err == ESP_OK && token[0] != '\0') {
+                if (len > sizeof(token)) {
+                    ESP_LOGE(TAG, "dlc api_token too long (%zu bytes), refusing truncated token", len);
+                    return std::string();
+                }
+                return std::string(token);
+            }
+        } else {
+            ESP_LOGW(TAG, "dlc api_token: NVS open failed (%s)", esp_err_to_name(err));
+        }
+
+        char secret[128] = {0};
+        size_t secret_len = sizeof(secret);
+        if (nvs_open("wifi", NVS_READONLY, &handle) != ESP_OK) {
             return std::string();
         }
-        err = nvs_get_str(handle, "api_token", token, &len);
+        err = nvs_get_str(handle, "device_secret", secret, &secret_len);
         nvs_close(handle);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "dlc api_token: NVS read failed (%s)",
-                     esp_err_to_name(err));
+        if (err != ESP_OK || secret[0] == '\0') {
+            ESP_LOGE(TAG, "dlc api_token not found in NVS");
             return std::string();
         }
-        if (len > sizeof(token)) {
-            // 理论不会到这（nvs_get_str 会截断返回 ESP_ERR_NVS_INVALID_LENGTH），防御性记录。
-            ESP_LOGE(TAG, "dlc api_token too long (%zu bytes), refusing truncated token", len);
-            return std::string();
-        }
-        return std::string(token);
+        MigrateDlcApiToken(secret);
+        return std::string(secret);
     }
 
     // SEC-007: Force HTTPS; reject http:// to protect token

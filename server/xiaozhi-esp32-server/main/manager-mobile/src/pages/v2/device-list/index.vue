@@ -71,9 +71,14 @@ async function handleBind() {
     return
   bindLoading.value = true
   try {
-    await v2BindDevice(bindSn.value.trim(), bindCode.value.trim())
+    const res = await v2BindDevice(bindSn.value.trim(), bindCode.value.trim())
+    if (res.dlcApiToken && res.deviceId)
+      persistDlcApiToken(res.deviceId, res.dlcApiToken)
     showBind.value = false
-    uni.showToast({ title: t('v2.deviceList.confirm'), icon: 'none' })
+    uni.showToast({
+      title: res.dlcApiTokenIssued ? t('v2.deviceList.bindTokenSaved') : t('v2.deviceList.confirm'),
+      icon: 'none',
+    })
     await loadDevices()
   }
   catch (e: any) { message.alert(e?.message || t('v2.deviceList.bindFailed')) }

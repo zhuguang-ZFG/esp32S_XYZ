@@ -72,6 +72,8 @@ async function submitConfig() {
       data: {
         ssid: props.selectedNetwork.ssid,
         password: props.selectedNetwork.authmode > 0 ? props.password : '',
+        server_host: getEnvBaseUrl().replace(/^https?:\/\//, ''),
+        device_secret: provisioningDlcSecret(),
       },
       timeout: SOFTAP_SUBMIT_TIMEOUT_MS,
     })
