@@ -7,27 +7,33 @@ export interface V2DeviceInfo {
   status: string
   lastSeenAt: string
 }
-export interface V2BindResponse { deviceId: string, message: string }
+export interface V2BindResponse {
+  deviceId: string
+  bindingId?: string
+  message?: string
+  dlcApiToken?: string
+  dlcApiTokenIssued?: boolean
+}
 export interface V2SubmitTaskResponse { taskId: string, status: string, approvalRequiredBy?: string }
 
-/** 写字参数（write_text capability） */
+/** 写字参数（write_text capability�?*/
 export interface WriteTextParams {
   text: string
-  feed?: number // 1-2000 mm/min，默认 900
+  feed?: number // 1-2000 mm/min，默�?900
 }
 
-/** 仿手写参数（handwriting capability） */
+/** 仿手写参数（handwriting capability�?*/
 export interface HandwritingParams {
   text: string
-  font_type?: string // FONT_OPTIONS key，默认 "0"
+  font_type?: string // FONT_OPTIONS key，默�?"0"
   paper_bg_type?: string
-  mistake_rate?: number // 0-100，默认 3
-  messy_ratio?: number // 0-100，默认 0
-  char_random?: number // 0-100，默认 0
+  mistake_rate?: number // 0-100，默�?3
+  messy_ratio?: number // 0-100，默�?0
+  char_random?: number // 0-100，默�?0
   feed?: number // 1-2000 mm/min
 }
 
-/** AI 绘图参数（draw_generated capability） */
+/** AI 绘图参数（draw_generated capability�?*/
 export interface DrawGeneratedParams {
   prompt: string
   feed?: number

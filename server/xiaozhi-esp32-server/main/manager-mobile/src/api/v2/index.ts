@@ -6,15 +6,15 @@ import { getEnvBaseUrl } from '@/utils'
 const appPrefix = '/device/v1/app'
 
 /**
- * 微信小程序一键登录。
+ * 微信小程序一键登录�?
  *
- * 注意：此接口 bypass alova，直接使用 uni.request。
- * 原因：alova 在部分响应格式/网络环境下会把登录成功响应解析为 undefined，
- * 导致 token 无法写入。uni.request 更可控，且登录接口不需要 alova 的鉴权/刷新能力。
+ * 注意：此接口 bypass alova，直接使�?uni.request�?
+ * 原因：alova 在部分响应格�?网络环境下会把登录成功响应解析为 undefined�?
+ * 导致 token 无法写入。uni.request 更可控，且登录接口不需�?alova 的鉴�?刷新能力�?
  *
  * 超时与重试：
- * - timeout 设为 30s，覆盖微信 jscode2session 偶发慢响应 + 网络抖动。
- * - 对 timeout / network 类错误自动重试 1 次，避免单次网络抖动导致登录失败。
+ * - timeout 设为 30s，覆盖微�?jscode2session 偶发慢响�?+ 网络抖动�?
+ * - �?timeout / network 类错误自动重�?1 次，避免单次网络抖动导致登录失败�?
  */
 const LOGIN_MAX_RETRIES = 2
 
@@ -30,7 +30,7 @@ async function _doLoginRequest(code: string): Promise<UniApp.RequestSuccessCallb
 }
 
 function _isRetryableError(res: UniApp.RequestSuccessCallbackResult): boolean {
-  // uni.request 成功回调里 statusCode 为 0 或 errMsg 含 fail/timeout 时视为网络层失败
+  // uni.request 成功回调�?statusCode �?0 �?errMsg �?fail/timeout 时视为网络层失败
   if (!res.statusCode || res.statusCode <= 0)
     return true
   const errMsg = (res.errMsg || '').toLowerCase()
@@ -57,12 +57,12 @@ export async function v2Login(code: string): Promise<V2LoginResponse> {
 }
 
 /**
- * 静默刷新 token：微信 code → 换新 token → 更新本地存储
+ * 静默刷新 token：微�?code �?换新 token �?更新本地存储
  *
- * 调用时机：alova refreshTokenOnSuccess.handler 在 token 临近过期/已过期时调用。
+ * 调用时机：alova refreshTokenOnSuccess.handler �?token 临近过期/已过期时调用�?
  * 关键点：
- * 1. 微信 code 一次性使用，过期后无法复用，故每次刷新都重新 uni.login 拿新 code。
- * 2. 抛错时由调用方（alova handler）决定是否回退到登录页；此处只负责刷新失败抛出。
+ * 1. 微信 code 一次性使用，过期后无法复用，故每次刷新都重新 uni.login 拿新 code�?
+ * 2. 抛错时由调用方（alova handler）决定是否回退到登录页；此处只负责刷新失败抛出�?
  */
 export async function v2RefreshToken(): Promise<{ token: string, expireAt: number }> {
   const res = await uni.login({ provider: 'weixin' })
@@ -326,6 +326,15 @@ export async function v2ListNotificationSubscriptions() {
 export function v2UnsubscribeNotification(subscriptionId: string) {
   return http.Delete<V2NotificationSubscription>(
     `${appPrefix}/notifications/subscriptions/${subscriptionId}`,
+    { meta: { ignoreAuth: false, toast: false } },
+  )
+}
+
+
+export async function v2IssueVoiceTicket() {
+  return http.Post<{ ticket: string, expires_in: number }>(
+    `${appPrefix}/voice/ticket`,
+    {},
     { meta: { ignoreAuth: false, toast: false } },
   )
 }

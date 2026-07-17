@@ -7,7 +7,7 @@ type SubPackage = { root: string; pages: { path: string }[] }
 const safeSubPackages = (pagesJson as { subPackages?: SubPackage[] }).subPackages || []
 
 /**
- * 运行时服务端地址覆盖存储键
+ * 运行时服务端地址覆盖存储�?
  */
 export const SERVER_BASE_URL_OVERRIDE_KEY = 'server_base_url_override'
 
@@ -38,12 +38,12 @@ export function getServerBaseUrlOverride(): string | null {
 }
 
 /**
- * 从本地存储读取 Bearer token 字符串。
+ * 从本地存储读�?Bearer token 字符串�?
  *
- * token 存储格式为 `JSON.stringify({ token, expireAt })`，
- * 早期或异常情况下也可能是裸字符串。此函数统一解析为 token 值，
- * 解析失败（非 JSON）时回退为原始字符串，保证向后兼容。
- * @returns token 字符串；存储为空时返回 null
+ * token 存储格式�?`JSON.stringify({ token, expireAt })`�?
+ * 早期或异常情况下也可能是裸字符串。此函数统一解析�?token 值，
+ * 解析失败（非 JSON）时回退为原始字符串，保证向后兼容�?
+ * @returns token 字符串；存储为空时返�?null
  */
 export function getBearerToken(): string | null {
   const rawToken = uni.getStorageSync('token') || ''
@@ -59,24 +59,24 @@ export function getBearerToken(): string | null {
 }
 
 export function getLastPage() {
-  // getCurrentPages() 至少有1个元素，所以不再额外判断
+  // getCurrentPages() 至少�?个元素，所以不再额外判�?
   // const lastPage = getCurrentPages().at(-1)
-  // 上面那个在低版本安卓中打包会报错，所以改用下面这个【虽然我加了 src/interceptions/prototype.ts，但依然报错】
+  // 上面那个在低版本安卓中打包会报错，所以改用下面这个【虽然我加了 src/interceptions/prototype.ts，但依然报错�?
   const pages = getCurrentPages()
   return pages[pages.length - 1]
 }
 
 /**
- * 获取当前页面路由的 path 路径和 redirectPath 路径
- * path 如 '/pages/login/index'
- * redirectPath 如 '/pages/demo/base/route-interceptor'
+ * 获取当前页面路由�?path 路径�?redirectPath 路径
+ * path �?'/pages/login/index'
+ * redirectPath �?'/pages/demo/base/route-interceptor'
  */
 export function currRoute() {
   const lastPage = getLastPage()
   const currRoute = (lastPage as unknown as { $page?: { fullPath: string } }).$page
-  // 经过多端测试，只有 fullPath 靠谱，其他都不靠谱
+  // 经过多端测试，只�?fullPath 靠谱，其他都不靠�?
   const { fullPath } = currRoute as { fullPath: string }
-  // eg: /pages/login/index?redirect=%2Fpages%2Fdemo%2Fbase%2Froute-interceptor (小程序)
+  // eg: /pages/login/index?redirect=%2Fpages%2Fdemo%2Fbase%2Froute-interceptor (小程�?
   // eg: /pages/login/index?redirect=%2Fpages%2Froute-interceptor%2Findex%3Fname%3Dfeige%26age%3D30(h5)
   return getUrlObj(fullPath)
 }
@@ -88,7 +88,7 @@ function ensureDecodeURIComponent(url: string) {
   return url
 }
 /**
- * 解析 url 得到 path 和 query
+ * 解析 url 得到 path �?query
  * 比如输入url: /pages/login/index?redirect=%2Fpages%2Fdemo%2Fbase%2Froute-interceptor
  * 输出: {path: /pages/login/index, query: {redirect: /pages/demo/base/route-interceptor}}
  */
@@ -111,9 +111,9 @@ export function getUrlObj(url: string) {
   return { path, query }
 }
 /**
- * 得到所有的需要登录的 pages，包括主包和分包的
- * 这里设计得通用一点，可以传递 key 作为判断依据，默认是 needLogin, 与 route-block 配对使用
- * 如果没有传 key，则表示所有的 pages，如果传递了 key, 则表示通过 key 过滤
+ * 得到所有的需要登录的 pages，包括主包和分包�?
+ * 这里设计得通用一点，可以传�?key 作为判断依据，默认是 needLogin, �?route-block 配对使用
+ * 如果没有�?key，则表示所有的 pages，如果传递了 key, 则表示通过 key 过滤
  */
 export function getAllPages(key = 'needLogin') {
   // 这里处理主包
@@ -145,30 +145,30 @@ export function getAllPages(key = 'needLogin') {
 }
 
 /**
- * 得到所有的需要登录的 pages，包括主包和分包的
- * 只得到 path 数组
+ * 得到所有的需要登录的 pages，包括主包和分包�?
+ * 只得�?path 数组
  */
 export const getNeedLoginPages = (): string[] => getAllPages('needLogin').map(page => page.path)
 
 /**
- * 得到所有的需要登录的 pages，包括主包和分包的
- * 只得到 path 数组
+ * 得到所有的需要登录的 pages，包括主包和分包�?
+ * 只得�?path 数组
  */
 export const needLoginPages: string[] = getAllPages('needLogin').map(page => page.path)
 
 /**
- * 根据微信小程序当前环境，判断应该获取的 baseUrl
+ * 根据微信小程序当前环境，判断应该获取�?baseUrl
  */
 export function getEnvBaseUrl() {
-  // 若存在用户设置的覆盖地址，优先返回
+  // 若存在用户设置的覆盖地址，优先返�?
   const override = getServerBaseUrlOverride()
   if (override)
     return override
 
-  // 请求基准地址（默认来源于 env）
+  // 请求基准地址（默认来源于 env�?
   let baseUrl = import.meta.env.VITE_SERVER_BASEURL
 
-  // # 有些同学可能需要在微信小程序里面根据 develop、trial、release 分别设置上传地址，参考代码如下。
+  // # 有些同学可能需要在微信小程序里面根�?develop、trial、release 分别设置上传地址，参考代码如下�?
   // Migrated to LiMa: WeChat mini-program now talks to chat.donglicao.com by default.
   const VITE_SERVER_BASEURL__WEIXIN_DEVELOP = 'https://chat.donglicao.com'
   const VITE_SERVER_BASEURL__WEIXIN_TRIAL = 'https://chat.donglicao.com'
@@ -197,9 +197,9 @@ export function getEnvBaseUrl() {
 }
 
 /**
- * 构建单设备实时状态 WebSocket URL（M2 协议，服务端已实现）。
- * 路径：/device/v1/app/devices/{deviceId}/ws
- * 鉴权：一次性 ticket（由 POST /ws/ticket 换取），避免 Bearer token 出现在 URL。
+ * 构建单设备实时状�?WebSocket URL（M2 协议，服务端已实现）�?
+ * 路径�?device/v1/app/devices/{deviceId}/ws
+ * 鉴权：一次�?ticket（由 POST /ws/ticket 换取），避免 Bearer token 出现�?URL�?
  */
 export function buildDeviceStatusWsUrl(deviceId: string, ticket: string): string {
   const base = getEnvBaseUrl().replace(/\/$/, '')
@@ -207,13 +207,23 @@ export function buildDeviceStatusWsUrl(deviceId: string, ticket: string): string
   const rest = base.replace(/^https?:\/\//, '')
   return `${proto}://${rest}/device/v1/app/devices/${deviceId}/ws?ticket=${encodeURIComponent(ticket)}`
 }
+/**
+ * ����ʵʱ���� WebSocket URL��M2��voice_app_ws_ticket��.
+ * ·����/v1/voice?ticket=...��С������ݱ�����
+ */
+export function buildVoiceWsUrl(ticket: string): string {
+  const base = getEnvBaseUrl().replace(/\/$/, '')
+  const proto = base.startsWith('https') ? 'wss' : 'ws'
+  const rest = base.replace(/^https?:\/\//, '')
+  return `${proto}://${rest}/v1/voice?ticket=${encodeURIComponent(ticket)}`
+}
 
 export function persistDeviceIds(deviceIds: string[]) {
   uni.setStorageSync('device_ids', deviceIds.filter(Boolean))
 }
 
 /**
- * 根据微信小程序当前环境，判断应该获取的 UPLOAD_BASEURL
+ * 根据微信小程序当前环境，判断应该获取�?UPLOAD_BASEURL
  */
 const M6_PENDING_TABBAR_INDEX = 0
 const M6_PENDING_TRANSFER_BADGE_KEY = 'm6_pending_transfer_count'
