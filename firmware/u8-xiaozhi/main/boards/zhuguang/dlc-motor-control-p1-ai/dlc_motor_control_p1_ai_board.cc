@@ -244,6 +244,19 @@ private:
     void InitializeTools() {
         auto& mcp_server = McpServer::GetInstance();
 
+#if DLC_WDT_TEST_HOOK
+        // HIL 专用：挂死主循环（MCP 工具体经 mcp_server Schedule 在主循环执行），
+        // 用于验证任务看门狗 panic 重启路径。见任务 07-20-u8-wdt-panic-hil。
+        mcp_server.AddTool("self.debug.wdt_hang",
+                           "[HIL] Hang the main loop forever to trigger the task watchdog.",
+                           PropertyList(),
+                           [](const PropertyList&) -> ReturnValue {
+                               ESP_LOGW(TAG, "wdt_hang: blocking main loop forever (HIL test)");
+                               vTaskDelay(portMAX_DELAY);
+                               return true;
+                           });
+#endif
+
         mcp_server.AddTool("self.motor.home",
                            "Send HOME through the private protocol.",
                            PropertyList(),

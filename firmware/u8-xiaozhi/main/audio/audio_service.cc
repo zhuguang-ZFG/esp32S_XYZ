@@ -4,7 +4,7 @@
 #include <cstring>
 
 // 固件审查 H2（2026-07-20）：音频子系统任务注册看门狗。
-// 5s 心跳 << WDT 10s 超时（sdkconfig.defaults CONFIG_ESP_TASK_WDT_TIMEOUT_S=10），
+// 5s 心跳 << WDT 30s 超时（sdkconfig.defaults CONFIG_ESP_TASK_WDT_TIMEOUT_S=30，PANIC=y），
 // 且用有限超时代替无限等待（原 portMax），确保无事件时也能喂狗。
 namespace {
 constexpr TickType_t kAudioTaskHeartbeatTicks = pdMS_TO_TICKS(5000);

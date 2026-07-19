@@ -183,9 +183,11 @@ void Application::Run() {
         MAIN_EVENT_ACTIVATION_DONE |
         MAIN_EVENT_STATE_CHANGED;
 
-    // 注册主任务到任务看门狗（CONFIG_ESP_TASK_WDT_TIMEOUT_S=10）。
-    // 主循环卡死（如 U1 UART 阻塞、死锁）时看门狗触发系统重启，避免设备假死。
-    // 用有限超时（5s，< 看门狗 10s）替代 portMAX_DELAY，确保即使无事件也能喂狗。
+    // 注册主任务到任务看门狗（CONFIG_ESP_TASK_WDT_TIMEOUT_S=30，PANIC=y）。
+    // 主循环卡死（如 U1 UART 阻塞、死锁）时看门狗 panic 重启，避免设备假死。
+    // 超时取 30s：主循环上最坏有界阻塞 ~15s（DLC API HTTP / WS hello），
+    // 见父仓库任务 07-20-u8-wdt-panic-hil 的 research/schedule-blocking-audit.md。
+    // 用有限超时（5s）替代 portMAX_DELAY，确保即使无事件也能喂狗。
     esp_task_wdt_add(NULL);
     const TickType_t kMainLoopWaitTicks = pdMS_TO_TICKS(5000);
 
@@ -1047,6 +1049,14 @@ bool Application::UpgradeFirmware(const std::string& url, const std::string& ver
         return false;
     }
 
+    // 固件 WDT 立项（2026-07-20）：升级下载+写 flash 需数分钟且不喂狗，
+    // PANIC 模式下会被任务看门狗重启导致 OTA 永远失败。升级期间主动退出看护；
+    // 本函数也被未注册 WDT 的 ActivationTask 调用，故先查订阅状态。
+    const bool wdt_subscribed = (esp_task_wdt_status(NULL) == ESP_OK);
+    if (wdt_subscribed) {
+        esp_task_wdt_delete(NULL);
+    }
+
     std::string upgrade_url = url;
     std::string version_info = version.empty() ? "(Manual upgrade)" : version;
 
@@ -1084,6 +1094,9 @@ bool Application::UpgradeFirmware(const std::string& url, const std::string& ver
         board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER); // Restore power save level
         Alert(Lang::Strings::ERROR, Lang::Strings::UPGRADE_FAILED, "circle_xmark", Lang::Sounds::OGG_EXCLAMATION);
         vTaskDelay(pdMS_TO_TICKS(3000));
+        if (wdt_subscribed) {
+            esp_task_wdt_add(NULL);
+        }
         return false;
     } else {
         // Upgrade success, reboot immediately

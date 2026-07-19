@@ -68,4 +68,8 @@
 // DLC API response size limit (SEC-005: prevent OOM from oversized responses)
 #define DLC_API_MAX_RESPONSE_BYTES (128 * 1024)
 
+// 固件 WDT 立项（2026-07-20）：HIL 死锁注入挂钩。置 1 编译进 self.debug.wdt_hang
+// MCP 调试工具（挂死主循环以验证任务看门狗 panic 重启）。发布固件必须保持 0。
+#define DLC_WDT_TEST_HOOK 0
+
 #endif // _BOARD_CONFIG_H_

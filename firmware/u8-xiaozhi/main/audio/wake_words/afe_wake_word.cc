@@ -140,7 +140,7 @@ void AfeWakeWord::AudioDetectionTask() {
         feed_size, fetch_size);
 
     // 固件审查 H2（2026-07-20）：唤醒词检测任务注册 WDT，避免 AFE 底层
-    // fetch/feed 死锁时静默假死。5s 心跳 << WDT 10s 超时。
+    // fetch/feed 死锁时静默假死。5s 心跳 << WDT 30s 超时（PANIC=y）。
     esp_task_wdt_add(NULL);
     constexpr TickType_t kWakeWordHeartbeatTicks = pdMS_TO_TICKS(5000);
 
