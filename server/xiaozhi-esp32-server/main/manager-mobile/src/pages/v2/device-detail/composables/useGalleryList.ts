@@ -117,13 +117,12 @@ export function useGalleryList() {
   }
 
 
-uni.$on?.('gallery:token-refreshed', () => {
-  loadGallery(true)
-})
+  const onTokenRefreshed = () => loadGallery(true)
+  uni.$on?.('gallery:token-refreshed', onTokenRefreshed)
 
-onUnmounted(() => {
-  uni.$off?.('gallery:token-refreshed')
-})
+  onUnmounted(() => {
+    uni.$off?.('gallery:token-refreshed', onTokenRefreshed)
+  })
 
   return {
     images,

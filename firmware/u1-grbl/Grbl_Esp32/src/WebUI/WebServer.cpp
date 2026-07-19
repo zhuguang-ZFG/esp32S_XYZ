@@ -40,6 +40,7 @@
 #    include <StreamString.h>
 #    include <Update.h>
 #    include <esp_wifi_types.h>
+#    include <esp_system.h>
 #    ifdef ENABLE_MDNS
 #        include <ESPmDNS.h>
 #    endif
@@ -1707,28 +1708,27 @@ namespace WebUI {
         return true;
     }
 
-    //Session ID based on IP and time using 16 char
+    //Session ID based on hardware random number generator using 16 char
     char* Web_Server::create_session_ID() {
         static char sessionID[17];
         //reset SESSIONID
         for (int i = 0; i < 17; i++) {
             sessionID[i] = '\0';
         }
-        //get time
-        uint32_t now = millis();
-        //get remote IP
-        IPAddress remoteIP = _webserver->client().remoteIP();
+        //generate 8 random bytes from hardware RNG
+        uint8_t session_bytes[8];
+        esp_fill_random(session_bytes, sizeof(session_bytes));
         //generate SESSIONID
         if (0 > sprintf(sessionID,
                         "%02X%02X%02X%02X%02X%02X%02X%02X",
-                        remoteIP[0],
-                        remoteIP[1],
-                        remoteIP[2],
-                        remoteIP[3],
-                        (uint8_t)((now >> 0) & 0xff),
-                        (uint8_t)((now >> 8) & 0xff),
-                        (uint8_t)((now >> 16) & 0xff),
-                        (uint8_t)((now >> 24) & 0xff))) {
+                        session_bytes[0],
+                        session_bytes[1],
+                        session_bytes[2],
+                        session_bytes[3],
+                        session_bytes[4],
+                        session_bytes[5],
+                        session_bytes[6],
+                        session_bytes[7])) {
             strcpy(sessionID, "NONE");
         }
         return sessionID;

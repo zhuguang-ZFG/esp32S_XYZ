@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { BLE_CONNECT_TIMEOUT_MS } from '@/config/timeouts'
 import { toast } from '@/utils/toast'
 import { provisioningDlcSecret } from '@/utils/dlcToken'
+import { getEnvBaseUrl } from '@/utils/index'
 import {
   createDesignTimeBlufiCredentialPayload,
   matchesBleUuid,
@@ -192,7 +193,7 @@ async function submitBlufiConfig() {
       value: createDesignTimeBlufiCredentialPayload({
         ssid: selectedSsid.value,
         password: selectedPassword.value,
-        server_host: 'chat.donglicao.com',
+        server_host: getEnvBaseUrl().replace(/^https?:\/\//, ''),
         device_secret: provisioningDlcSecret(),
       }),
     })
