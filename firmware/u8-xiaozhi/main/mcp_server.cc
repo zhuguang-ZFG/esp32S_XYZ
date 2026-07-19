@@ -183,7 +183,7 @@ void McpServer::AddUserOnlyTools() {
                 } else {
                     cJSON_AddBoolToObject(json, "monochrome", false);
                 }
-                return json;
+                return CJsonPtr(json);
             });
 
 #if CONFIG_LV_USE_SNAPSHOT

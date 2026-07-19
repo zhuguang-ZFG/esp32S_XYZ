@@ -371,7 +371,7 @@ ReturnValue U1ProtocolClient::ParseCapabilityResponse(
         result.response_type = "invalid";
         result.error_code = "invalid_response";
         result.error_message = "u1 response is not valid json";
-        return BuildCapabilityResponseJson(result);
+        return ReturnValue(CJsonPtr(BuildCapabilityResponseJson(result)));
     }
 
     result.response_type = GetJsonStringValue(root, "type");
