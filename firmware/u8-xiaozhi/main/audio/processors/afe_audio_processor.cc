@@ -1,5 +1,6 @@
 #include "afe_audio_processor.h"
 #include <esp_log.h>
+#include <esp_task_wdt.h>
 
 #define PROCESSOR_RUNNING 0x01
 
@@ -138,10 +139,19 @@ void AfeAudioProcessor::AudioProcessorTask() {
     ESP_LOGI(TAG, "Audio communication task started, feed size: %d fetch size: %d",
         feed_size, fetch_size);
 
-    while (true) {
-        xEventGroupWaitBits(event_group_, PROCESSOR_RUNNING, pdFALSE, pdTRUE, portMAX_DELAY);
+    // 固件审查 H2（2026-07-20）：音频通信任务注册 WDT，避免 AEC/VAD 底层死锁静默假死。
+    esp_task_wdt_add(NULL);
+    constexpr TickType_t kProcessorHeartbeatTicks = pdMS_TO_TICKS(5000);
 
-        auto res = afe_iface_->fetch_with_delay(afe_data_, portMAX_DELAY);
+    while (true) {
+        esp_task_wdt_reset();
+        EventBits_t bits = xEventGroupWaitBits(event_group_, PROCESSOR_RUNNING,
+                                                pdFALSE, pdTRUE, kProcessorHeartbeatTicks);
+        if ((bits & PROCESSOR_RUNNING) == 0) {
+            continue;
+        }
+
+        auto res = afe_iface_->fetch_with_delay(afe_data_, kProcessorHeartbeatTicks);
         if ((xEventGroupGetBits(event_group_) & PROCESSOR_RUNNING) == 0) {
             continue;
         }
@@ -184,6 +194,8 @@ void AfeAudioProcessor::AudioProcessorTask() {
             }
         }
     }
+    // 循环理论上不 return（xTaskCreate 后调用者用 vTaskDelete 兜底），保留 defensive delete。
+    esp_task_wdt_delete(NULL);
 }
 
 void AfeAudioProcessor::EnableDeviceAec(bool enable) {

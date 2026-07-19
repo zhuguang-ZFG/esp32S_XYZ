@@ -745,6 +745,73 @@ class EdgeDFirmwareStaticTests(unittest.TestCase):
         self.assertGreater(found_idx, -1, "Found log not found")
         self.assertGreater(found_idx, success_idx, "Found log must follow probe success flag")
 
+    # ─── 2026-07-20 深度 review H2：subsystem 任务 WDT 覆盖 ─────────────────
+
+    def _u8_main(self, *parts) -> "Path":
+        return ROOT / "firmware" / "u8-xiaozhi" / "main" / Path(*parts)
+
+    def test_u8_audio_service_tasks_register_wdt(self):
+        """H2: audio_service.cc 三个长运行任务（input/output/opus）必须注册 WDT。"""
+        text = self._u8_main("audio", "audio_service.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        self.assertIn("<esp_task_wdt.h>", text)
+        # 三个任务函数各自 wdt_add(NULL) + wdt_reset()
+        for fn in ("AudioInputTask", "AudioOutputTask", "OpusCodecTask"):
+            body_start = text.index(f"void AudioService::{fn}()")
+            # 取该函数体（到下一个 void AudioService:: 或文件末尾）
+            rest = text[body_start:]
+            next_fn = rest.find("\nvoid AudioService::", 1)
+            body = rest if next_fn == -1 else rest[:next_fn]
+            self.assertIn("esp_task_wdt_add(NULL)", body, f"{fn} missing wdt_add")
+            self.assertIn("esp_task_wdt_reset()", body, f"{fn} missing wdt_reset")
+            # portMAX_DELAY 不应出现在任何 wait/cv 里（H2 关键：无限等 == 无法喂狗）
+            self.assertNotIn("portMAX_DELAY", body,
+                             f"{fn} still uses portMAX_DELAY (WDT can't fire on idle)")
+
+    def test_u8_afe_wake_word_task_registers_wdt(self):
+        """H2: afe_wake_word.cc AudioDetectionTask 必须注册 WDT，无 portMAX_DELAY。"""
+        text = self._u8_main("audio", "wake_words", "afe_wake_word.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        self.assertIn("<esp_task_wdt.h>", text)
+        body_start = text.index("void AfeWakeWord::AudioDetectionTask()")
+        rest = text[body_start:]
+        next_fn = rest.find("\nvoid AfeWakeWord::", 1)
+        body = rest if next_fn == -1 else rest[:next_fn]
+        self.assertIn("esp_task_wdt_add(NULL)", body)
+        self.assertIn("esp_task_wdt_reset()", body)
+        self.assertNotIn("portMAX_DELAY", body)
+
+    def test_u8_afe_audio_processor_task_registers_wdt(self):
+        """H2: afe_audio_processor.cc AudioProcessorTask 必须注册 WDT，无 portMAX_DELAY。"""
+        text = self._u8_main("audio", "processors", "afe_audio_processor.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        self.assertIn("<esp_task_wdt.h>", text)
+        body_start = text.index("void AfeAudioProcessor::AudioProcessorTask()")
+        rest = text[body_start:]
+        next_fn = rest.find("\nvoid AfeAudioProcessor::", 1)
+        body = rest if next_fn == -1 else rest[:next_fn]
+        self.assertIn("esp_task_wdt_add(NULL)", body)
+        self.assertIn("esp_task_wdt_reset()", body)
+        self.assertNotIn("portMAX_DELAY", body)
+
+    def test_u8_gpio_led_event_task_registers_wdt(self):
+        """H2: gpio_led.cc EventTask 必须注册 WDT，用有限超时替代 portMAX_DELAY。"""
+        text = self._u8_main("led", "gpio_led.cc").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        self.assertIn("<esp_task_wdt.h>", text)
+        body_start = text.index("void GpioLed::EventTask(void* arg)")
+        rest = text[body_start:]
+        # EventTask 是文件末尾函数，取到文件末
+        body = rest
+        self.assertIn("esp_task_wdt_add(NULL)", body)
+        self.assertIn("esp_task_wdt_reset()", body)
+        self.assertNotIn("portMAX_DELAY", body,
+                         "EventTask still blocks on portMAX_DELAY, WDT will trip on idle")
+
 
 if __name__ == "__main__":
     unittest.main()

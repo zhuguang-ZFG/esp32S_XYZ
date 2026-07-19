@@ -2,6 +2,7 @@
 #include "application.h"
 #include "device_state.h"
 #include <esp_log.h>
+#include <esp_task_wdt.h>
 
 #define TAG "GpioLed"
 
@@ -256,8 +257,16 @@ void GpioLed::OnStateChanged() {
 void GpioLed::EventTask(void* arg) {
     GpioLed* led = static_cast<GpioLed*>(arg);
 
+    // 固件审查 H2（2026-07-20）：LED 事件任务注册 WDT。
+    // LED 长期空闲是常态（idle 态可能数小时无 fade 事件），用有限超时喂狗。
+    esp_task_wdt_add(NULL);
+    constexpr TickType_t kLedHeartbeatTicks = pdMS_TO_TICKS(5000);
+
     while (1) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        led->OnFadeEnd();
+        esp_task_wdt_reset();
+        // 有 notify 就处理 fade end；无则超时喂狗后回顶。
+        if (ulTaskNotifyTake(pdTRUE, kLedHeartbeatTicks) > 0) {
+            led->OnFadeEnd();
+        }
     }
 }

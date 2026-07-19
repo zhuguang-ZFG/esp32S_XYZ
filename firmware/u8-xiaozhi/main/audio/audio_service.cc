@@ -1,6 +1,14 @@
 #include "audio_service.h"
 #include <esp_log.h>
+#include <esp_task_wdt.h>
 #include <cstring>
+
+// 固件审查 H2（2026-07-20）：音频子系统任务注册看门狗。
+// 5s 心跳 << WDT 10s 超时（sdkconfig.defaults CONFIG_ESP_TASK_WDT_TIMEOUT_S=10），
+// 且用有限超时代替无限等待（原 portMax），确保无事件时也能喂狗。
+namespace {
+constexpr TickType_t kAudioTaskHeartbeatTicks = pdMS_TO_TICKS(5000);
+}
 
 #define RATE_CVT_CFG(_src_rate, _dest_rate, _channel)        \
     (esp_ae_rate_cvt_cfg_t)                                  \
@@ -228,13 +236,19 @@ bool AudioService::ReadAudioData(std::vector<int16_t>& data, int sample_rate, in
 }
 
 void AudioService::AudioInputTask() {
+    esp_task_wdt_add(NULL);
     while (true) {
+        esp_task_wdt_reset();
         EventBits_t bits = xEventGroupWaitBits(event_group_, AS_EVENT_AUDIO_TESTING_RUNNING |
             AS_EVENT_WAKE_WORD_RUNNING | AS_EVENT_AUDIO_PROCESSOR_RUNNING,
-            pdFALSE, pdFALSE, portMAX_DELAY);
+            pdFALSE, pdFALSE, kAudioTaskHeartbeatTicks);
 
         if (service_stopped_) {
             break;
+        }
+        // 无事件时（idle）跳回循环顶继续喂狗。
+        if (bits == 0) {
+            continue;
         }
         if (audio_input_need_warmup_) {
             audio_input_need_warmup_ = false;
@@ -284,15 +298,24 @@ void AudioService::AudioInputTask() {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
+    esp_task_wdt_delete(NULL);
     ESP_LOGW(TAG, "Audio input task stopped");
 }
 
 void AudioService::AudioOutputTask() {
+    esp_task_wdt_add(NULL);
     while (true) {
+        esp_task_wdt_reset();
         std::unique_lock<std::mutex> lock(audio_queue_mutex_);
-        audio_queue_cv_.wait(lock, [this]() { return !audio_playback_queue_.empty() || service_stopped_; });
+        // 用 wait_for 5s 心跳替代无限等待，让 wdt_reset 在 idle 时也能喂狗。
+        audio_queue_cv_.wait_for(lock, std::chrono::milliseconds(5000),
+            [this]() { return !audio_playback_queue_.empty() || service_stopped_; });
         if (service_stopped_) {
             break;
+        }
+        if (audio_playback_queue_.empty()) {
+            // 5s 超时且无 playback 任务：跳回顶部继续喂狗。
+            continue;
         }
 
         auto task = std::move(audio_playback_queue_.front());
@@ -321,19 +344,27 @@ void AudioService::AudioOutputTask() {
 #endif
     }
 
+    esp_task_wdt_delete(NULL);
     ESP_LOGW(TAG, "Audio output task stopped");
 }
 
 void AudioService::OpusCodecTask() {
+    esp_task_wdt_add(NULL);
     while (true) {
+        esp_task_wdt_reset();
         std::unique_lock<std::mutex> lock(audio_queue_mutex_);
-        audio_queue_cv_.wait(lock, [this]() {
+        auto pred = [this]() {
             return service_stopped_ ||
                 (!audio_encode_queue_.empty() && audio_send_queue_.size() < MAX_SEND_PACKETS_IN_QUEUE) ||
                 (!audio_decode_queue_.empty() && audio_playback_queue_.size() < MAX_PLAYBACK_TASKS_IN_QUEUE);
-        });
+        };
+        audio_queue_cv_.wait_for(lock, std::chrono::milliseconds(5000), pred);
         if (service_stopped_) {
             break;
+        }
+        // 5s 超时且无任务：跳回顶部喂狗。
+        if (!pred()) {
+            continue;
         }
 
         /* Decode the audio from decode queue */
@@ -481,6 +512,7 @@ void AudioService::OpusCodecTask() {
         }
     }
 
+    esp_task_wdt_delete(NULL);
     ESP_LOGW(TAG, "Opus codec task stopped");
 }
 

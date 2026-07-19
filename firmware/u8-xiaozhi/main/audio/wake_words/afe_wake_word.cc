@@ -1,6 +1,7 @@
 #include "afe_wake_word.h"
 #include "audio_service.h"
 #include <esp_log.h>
+#include <esp_task_wdt.h>
 #include <sstream>
 
 #define DETECTION_RUNNING_EVENT 1
@@ -138,10 +139,22 @@ void AfeWakeWord::AudioDetectionTask() {
     ESP_LOGI(TAG, "Audio detection task started, feed size: %d fetch size: %d",
         feed_size, fetch_size);
 
-    while (true) {
-        xEventGroupWaitBits(event_group_, DETECTION_RUNNING_EVENT, pdFALSE, pdTRUE, portMAX_DELAY);
+    // 固件审查 H2（2026-07-20）：唤醒词检测任务注册 WDT，避免 AFE 底层
+    // fetch/feed 死锁时静默假死。5s 心跳 << WDT 10s 超时。
+    esp_task_wdt_add(NULL);
+    constexpr TickType_t kWakeWordHeartbeatTicks = pdMS_TO_TICKS(5000);
 
-        auto res = afe_iface_->fetch_with_delay(afe_data_, portMAX_DELAY);
+    while (true) {
+        esp_task_wdt_reset();
+        EventBits_t bits = xEventGroupWaitBits(event_group_, DETECTION_RUNNING_EVENT,
+                                                pdFALSE, pdTRUE, kWakeWordHeartbeatTicks);
+        if ((bits & DETECTION_RUNNING_EVENT) == 0) {
+            // idle heartbeat — 未触发 detection，喂完狗回顶。
+            continue;
+        }
+
+        // fetch_with_delay 用有限超时（心跳节拍）替代无限等待，让 wdt_reset 有机会执行。
+        auto res = afe_iface_->fetch_with_delay(afe_data_, kWakeWordHeartbeatTicks);
         if (res == nullptr || res->ret_value == ESP_FAIL) {
             continue;;
         }
@@ -158,6 +171,8 @@ void AfeWakeWord::AudioDetectionTask() {
             }
         }
     }
+    // 循环理论上不 return（xTaskCreate 后调用者用 vTaskDelete 兜底），保留 defensive delete。
+    esp_task_wdt_delete(NULL);
 }
 
 void AfeWakeWord::StoreWakeWordData(const int16_t* data, size_t samples) {
