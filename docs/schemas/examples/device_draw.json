@@ -1,6 +1,4 @@
 {
-  "_comment": "设备绘画路由示例 - 需要 AI 模型生成图像并转换为矢量路径",
-  "_note": "draw_generated 能力，prompt 为自然语言，需要 image_then_vector 策略",
   "type": "motion_task",
   "task_id": "draw-001",
   "device_id": "dev-1",

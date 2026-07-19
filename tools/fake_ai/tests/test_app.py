@@ -33,9 +33,9 @@ class FakeAITests(unittest.TestCase):
         self.assertEqual(data["session_id"], "sess1")
         self.assert_intent_schema_valid(data)
 
-    def test_device_intent_move_relative(self):
+    def test_device_intent_move_rel(self):
         data = fake_intent("往左一点", device_id="dev1", session_id="sess2")
-        self.assertEqual(data["intent"], "move_relative")
+        self.assertEqual(data["intent"], "move_rel")
         self.assertEqual(data["params"]["dx"], -1.0)
         self.assert_intent_schema_valid(data)
 

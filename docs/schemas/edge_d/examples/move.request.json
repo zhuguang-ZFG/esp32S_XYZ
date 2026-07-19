@@ -2,6 +2,7 @@
   "msg_id": "msg-move-001",
   "task_id": "task-move-001",
   "cmd": "MOVE",
+  "relative": false,
   "x": 120.5,
   "y": 45.0,
   "z": 0.0,

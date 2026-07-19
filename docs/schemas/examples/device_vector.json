@@ -1,6 +1,4 @@
 {
-  "_comment": "设备矢量路由示例 - SVG 路径直接作为输入，不需要 AI 模型",
-  "_note": "draw_generated + SVG-like prompt 触发 device_vector 路由",
   "type": "motion_task",
   "task_id": "vector-001",
   "device_id": "dev-1",

@@ -130,6 +130,24 @@ def _matching_schemas(example_file: Path, schema_files: Iterable[Path]) -> List[
     return matches
 
 
+def validate_root_examples(schemas_dir: Path) -> List[SchemaValidationResult]:
+    """Validate top-level examples (e.g. docs/schemas/examples/*.json) against edge_c motion_task."""
+    results: List[SchemaValidationResult] = []
+    examples_dir = schemas_dir / "examples"
+    if not examples_dir.exists():
+        return results
+    motion_task_schema = schemas_dir / "edge_c" / "motion_task.schema.json"
+    if not motion_task_schema.exists():
+        return results
+    for example_file in sorted(examples_dir.glob("*.json")):
+        if example_file.name.endswith(".schema.json"):
+            continue
+        results.append(
+            validate_example_against_schema(str(example_file), str(motion_task_schema))
+        )
+    return results
+
+
 def validate_schema_tree(schemas_dir: Path) -> List[SchemaValidationResult]:
     schema_files = find_schema_files(schemas_dir)
     results: List[SchemaValidationResult] = []
@@ -186,6 +204,7 @@ def main() -> None:
         sys.exit(1)
 
     results = validate_schema_tree(schemas_dir)
+    results.extend(validate_root_examples(schemas_dir))
     if not results:
         print(f"WARN: no schemas found under {schemas_dir}")
         sys.exit(0)

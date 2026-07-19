@@ -68,6 +68,24 @@ class FakeU1SimulatorTests(unittest.TestCase):
         self.assertEqual(move["error_code"], "E002")
         self.assert_schema_valid(self.error_schema, move)
 
+    def test_move_relative_updates_position(self):
+        self.send({"msg_id": "5c", "task_id": "t_home", "cmd": "HOME"})
+        self.send(
+            {
+                "msg_id": "5d",
+                "task_id": "t_move_rel",
+                "cmd": "MOVE",
+                "relative": True,
+                "x": 10,
+                "y": 5,
+                "z": 1,
+                "feed": 1200,
+            }
+        )
+        status = self.send({"msg_id": "5e", "task_id": "t_status_rel", "cmd": "GET_STATUS"})
+        self.assertEqual(status["position"], {"x": 10.0, "y": 5.0, "z": 1.0})
+        self.assert_schema_valid(self.status_schema, status)
+
     def test_injected_limit_e005(self):
         self.sim.queue_injection("E005")
         home = self.send({"msg_id": "6", "task_id": "t_home_limit", "cmd": "HOME"})

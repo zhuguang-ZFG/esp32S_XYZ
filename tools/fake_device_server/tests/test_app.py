@@ -51,7 +51,7 @@ class TestMotionTaskMapping(unittest.TestCase):
         )
         self.assertEqual(
             cmd,
-            {"msg_id": "1", "task_id": "task-move", "cmd": "MOVE", "x": 1, "y": 2, "z": 3, "feed": 400},
+            {"msg_id": "1", "task_id": "task-move", "cmd": "MOVE", "relative": False, "x": 1, "y": 2, "z": 3, "feed": 400},
         )
 
     def test_move_rel_is_explicit_fake_capability(self):
@@ -61,7 +61,7 @@ class TestMotionTaskMapping(unittest.TestCase):
 
         self.assertEqual(
             cmd,
-            {"msg_id": "1", "task_id": "task-rel", "cmd": "MOVE_REL", "dx": -1, "dy": 0, "dz": 1, "feed": 800},
+            {"msg_id": "1", "task_id": "task-rel", "cmd": "MOVE", "relative": True, "x": -1, "y": 0, "z": 1, "feed": 800},
         )
 
     def test_control_capabilities(self):

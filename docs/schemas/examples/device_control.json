@@ -1,6 +1,4 @@
 {
-  "_comment": "设备控制路由示例 - 简单控制指令（归位、暂停、恢复、停止、获取设备信息）",
-  "_note": "control 能力不走 run_path，直接派发到设备执行",
   "type": "motion_task",
   "task_id": "ctrl-001",
   "device_id": "dev-1",

@@ -34,7 +34,7 @@ def fake_intent(text: str, device_id: str = "dev_fake", session_id: str = "sessi
     elif any(token in normalized for token in ("型号", "设备信息", "device info")):
         intent = "get_device_info"
     elif any(token in normalized for token in ("左", "右", "上", "下", "抬高", "降低", "move")):
-        intent = "move_relative"
+        intent = "move_rel"
         params = {"dx": 0.0, "dy": 0.0, "dz": 0.0}
         if "左" in normalized:
             params["dx"] = -1.0

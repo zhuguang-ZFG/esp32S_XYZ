@@ -60,6 +60,104 @@
         "M",
         "L"
       ]
+    },
+    "relative": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, x/y/z are interpreted as delta offsets from the current position; U8 converts relative moves to absolute coordinates before sending to U1."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cmd": {
+            "const": "MOVE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "feed"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "x"
+            ]
+          },
+          {
+            "required": [
+              "y"
+            ]
+          },
+          {
+            "required": [
+              "z"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cmd": {
+            "const": "PATH_BEGIN"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "total_segments",
+          "feed"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cmd": {
+            "const": "PATH_SEG"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "segment_index",
+          "segment_cmd",
+          "feed"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "x"
+            ]
+          },
+          {
+            "required": [
+              "y"
+            ]
+          },
+          {
+            "required": [
+              "z"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cmd": {
+            "const": "HOME"
+          }
+        }
+      },
+      "then": {
+        "required": []
+      }
+    }
+  ]
 }

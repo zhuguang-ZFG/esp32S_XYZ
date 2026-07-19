@@ -183,10 +183,15 @@ class FakeU1Simulator:
         injected = self._consume_injected_error(msg_id, task_id)
         if injected is not None:
             return injected
+        relative = bool(payload.get("relative", False))
         next_position = dict(self.state.position)
         for axis in ("x", "y", "z"):
             if axis in payload:
-                next_position[axis] = float(payload[axis])
+                value = float(payload[axis])
+                if relative:
+                    next_position[axis] += value
+                else:
+                    next_position[axis] = value
         if not self._is_in_workspace(next_position):
             self.state.state = "ERROR"
             return self._error(msg_id, task_id, "E002", "soft limit exceeded", state="ERROR")

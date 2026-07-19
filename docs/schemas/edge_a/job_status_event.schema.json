@@ -52,8 +52,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "phase",
-            "capability"
+            "phase"
           ],
           "properties": {
             "phase": {

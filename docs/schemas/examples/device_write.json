@@ -1,6 +1,4 @@
 {
-  "_comment": "设备写字路由示例 - 预定义路径写字任务，不需要 AI 模型",
-  "_note": "write_text 能力，text 由服务端渲染为路径，deterministic 策略",
   "type": "motion_task",
   "task_id": "write-001",
   "device_id": "dev-1",

@@ -42,6 +42,7 @@ def motion_task_to_u1_command(body: Dict[str, Any]) -> Dict[str, Any]:
             "msg_id": "1",
             "task_id": task_id,
             "cmd": "MOVE",
+            "relative": False,
             "x": params.get("x", 0),
             "y": params.get("y", 0),
             "z": params.get("z", 0),
@@ -55,10 +56,11 @@ def motion_task_to_u1_command(body: Dict[str, Any]) -> Dict[str, Any]:
         cmd = {
             "msg_id": "1",
             "task_id": task_id,
-            "cmd": "MOVE_REL",
-            "dx": params.get("dx", 0),
-            "dy": params.get("dy", 0),
-            "dz": params.get("dz", 0),
+            "cmd": "MOVE",
+            "relative": True,
+            "x": params.get("dx", 0),
+            "y": params.get("dy", 0),
+            "z": params.get("dz", 0),
             "feed": params.get("feed", 800),
         }
         if isinstance(route_policy, dict):

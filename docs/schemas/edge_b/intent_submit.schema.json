@@ -26,7 +26,7 @@
         "resume",
         "stop",
         "get_device_info",
-        "move_relative"
+        "move_rel"
       ]
     },
     "params": {
