@@ -95,8 +95,8 @@ void MotionEventEmitter::EmitDoneOrFailed(const ReturnValue& rv,
 
 void MotionEventEmitter::EmitDeviceInfoIfOk(const ReturnValue& rv,
                                              const std::string& task_id) {
-    const auto* pj = std::get_if<cJSON*>(&rv);
-    if (pj == nullptr || *pj == nullptr ||
+    const auto* pj = std::get_if<CJsonPtr>(&rv);
+    if (pj == nullptr || pj->get() == nullptr ||
         !U1ProtocolClient::ReturnValueU1Ok(rv)) {
         return;
     }
@@ -104,7 +104,7 @@ void MotionEventEmitter::EmitDeviceInfoIfOk(const ReturnValue& rv,
         return;
     }
     cJSON* workspace =
-        cJSON_GetObjectItemCaseSensitive(*pj, "workspace_mm");
+        cJSON_GetObjectItemCaseSensitive(pj->get(), "workspace_mm");
     if (workspace == nullptr || !cJSON_IsObject(workspace)) {
         return;
     }
@@ -123,7 +123,7 @@ void MotionEventEmitter::EmitDeviceInfoIfOk(const ReturnValue& rv,
 
     const char* keys[] = {"model", "hw_rev", "fw_rev"};
     for (const char* key : keys) {
-        cJSON* value = cJSON_GetObjectItemCaseSensitive(*pj, key);
+        cJSON* value = cJSON_GetObjectItemCaseSensitive(pj->get(), key);
         if (!cJSON_IsString(value) || value->valuestring == nullptr ||
             value->valuestring[0] == '\0') {
             cJSON_Delete(o);

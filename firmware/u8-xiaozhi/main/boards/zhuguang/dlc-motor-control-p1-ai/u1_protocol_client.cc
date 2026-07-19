@@ -34,6 +34,10 @@ std::string U1ProtocolClient::NextLocalTaskId(const char* prefix) {
     return std::string("u8_") + prefix + "_" + std::to_string(NextProtocolMessageId());
 }
 
+/// Read response from U1 UART.
+/// The loop waits for data with up to 2 idle rounds; after the last byte the total
+/// blocking time can reach approx 3 x timeout_ms (1 data round + 2 idle rounds).
+/// Protected by uart_mutex_ (caller must hold it via SendU1Line).
 std::string U1ProtocolClient::ReadU1Response(int timeout_ms) {
     std::string response;
     uint8_t buffer[128];
@@ -227,20 +231,16 @@ bool U1ProtocolClient::JsonValueHasXyz(cJSON* root, const char* key,
 }
 
 void U1ProtocolClient::FreeReturnValueIfJson(ReturnValue& rv) {
-    if (auto* p = std::get_if<cJSON*>(&rv)) {
-        if (*p != nullptr) {
-            cJSON_Delete(*p);
-            *p = nullptr;
-        }
-    }
+    (void)rv;
+    // No-op: ReturnValue now uses unique_ptr, ownership managed via RAII.
 }
 
 bool U1ProtocolClient::ReturnValueU1Ok(const ReturnValue& rv) {
-    const auto* pj = std::get_if<cJSON*>(&rv);
-    if (pj == nullptr || *pj == nullptr) {
+    const auto* pj = std::get_if<CJsonPtr>(&rv);
+    if (pj == nullptr || pj->get() == nullptr) {
         return false;
     }
-    cJSON* ok = cJSON_GetObjectItemCaseSensitive(*pj, "ok");
+    cJSON* ok = cJSON_GetObjectItemCaseSensitive(pj->get(), "ok");
     return cJSON_IsBool(ok) && cJSON_IsTrue(ok);
 }
 
@@ -360,7 +360,7 @@ ReturnValue U1ProtocolClient::ParseCapabilityResponse(
         result.response_type = "timeout";
         result.error_code = "timeout";
         result.error_message = "empty response from u1";
-        return BuildCapabilityResponseJson(result);
+        return ReturnValue(CJsonPtr(BuildCapabilityResponseJson(result)));
     }
 
     cJSON* root = cJSON_Parse(raw_response.c_str());
@@ -429,5 +429,5 @@ ReturnValue U1ProtocolClient::ParseCapabilityResponse(
     }
 
     cJSON_Delete(root);
-    return BuildCapabilityResponseJson(result);
+    return ReturnValue(CJsonPtr(BuildCapabilityResponseJson(result)));
 }

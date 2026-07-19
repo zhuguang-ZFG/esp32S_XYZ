@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <functional>
+#include <memory>
 #include <variant>
 #include <optional>
 #include <stdexcept>
@@ -47,7 +48,12 @@ public:
 };
 
 // 添加类型别名
-using ReturnValue = std::variant<bool, int, std::string, cJSON*, ImageContent*>;
+struct CJsonDeleter {
+    void operator()(cJSON* p) const noexcept { if (p) cJSON_Delete(p); }
+};
+using CJsonPtr = std::unique_ptr<cJSON, CJsonDeleter>;
+
+using ReturnValue = std::variant<bool, int, std::string, CJsonPtr, std::unique_ptr<ImageContent>>;
 
 enum PropertyType {
     kPropertyTypeBoolean,
@@ -275,13 +281,12 @@ public:
         cJSON* result = cJSON_CreateObject();
         cJSON* content = cJSON_CreateArray();
 
-        if (std::holds_alternative<ImageContent*>(return_value)) {
-            auto image_content = std::get<ImageContent*>(return_value);
+        if (std::holds_alternative<std::unique_ptr<ImageContent>>(return_value)) {
+            auto image_content = std::move(std::get<std::unique_ptr<ImageContent>>(return_value));
             cJSON* image = cJSON_CreateObject();
             cJSON_AddStringToObject(image, "type", "image");
             cJSON_AddStringToObject(image, "image", image_content->to_json().c_str());
             cJSON_AddItemToArray(content, image);
-            delete image_content;
         } else {
             cJSON* text = cJSON_CreateObject();
             cJSON_AddStringToObject(text, "type", "text");
@@ -291,12 +296,11 @@ public:
                 cJSON_AddStringToObject(text, "text", std::get<bool>(return_value) ? "true" : "false");
             } else if (std::holds_alternative<int>(return_value)) {
                 cJSON_AddStringToObject(text, "text", std::to_string(std::get<int>(return_value)).c_str());
-            } else if (std::holds_alternative<cJSON*>(return_value)) {
-                cJSON* json = std::get<cJSON*>(return_value);
-                char* json_str = cJSON_PrintUnformatted(json);
+            } else if (std::holds_alternative<CJsonPtr>(return_value)) {
+                CJsonPtr json_ptr = std::move(std::get<CJsonPtr>(return_value));
+                char* json_str = cJSON_PrintUnformatted(json_ptr.get());
                 cJSON_AddStringToObject(text, "text", json_str);
                 cJSON_free(json_str);
-                cJSON_Delete(json);
             }
             cJSON_AddItemToArray(content, text);
         }

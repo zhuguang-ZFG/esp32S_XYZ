@@ -77,6 +77,7 @@ bool mc_line(float* target, plan_line_data_t* pl_data) {
         } else {
             break;
         }
+        taskYIELD();  // Yield so lower-priority tasks can run
     } while (1);
     // Plan and queue motion into planner buffer
     // uint8_t plan_status; // Not used in normal operation.

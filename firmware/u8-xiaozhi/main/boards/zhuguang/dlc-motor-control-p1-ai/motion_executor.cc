@@ -99,18 +99,18 @@ ReturnValue MotionExecutor::ExecuteStopWithTaskId(
     const std::string& task_id) {
     // 固件审查 P2：STOP 用抢占式写，避免在 PATH_END 长等待期间被 UART 锁阻塞。
     if (protocol_.SendU1PreemptiveCommand("STOP")) {
-        return BuildOkResponse("STOP");
+        return ReturnValue(CJsonPtr(BuildOkResponse("STOP")));
     }
-    return BuildErrorResponse("stop command failed to send");
+    return ReturnValue(CJsonPtr(BuildErrorResponse("stop command failed to send")));
 }
 
 ReturnValue MotionExecutor::ExecuteEstopWithTaskId(
     const std::string& task_id) {
     // 固件审查 P2：ESTOP 用抢占式写，确保夹手/撞机场景下能立即停电机。
     if (protocol_.SendU1PreemptiveCommand("ESTOP")) {
-        return BuildOkResponse("ESTOP");
+        return ReturnValue(CJsonPtr(BuildOkResponse("ESTOP")));
     }
-    return BuildErrorResponse("estop command failed to send");
+    return ReturnValue(CJsonPtr(BuildErrorResponse("estop command failed to send")));
 }
 
 ReturnValue MotionExecutor::ExecuteMoveWithTaskIdUnlocked(
@@ -135,11 +135,19 @@ std::string MotionExecutor::FetchWorkspaceMm(const std::string& task_id,
                                               double& workspace_x,
                                               double& workspace_y,
                                               double& workspace_z) {
+    // 固件审查 P3：缓存 workspace 到成员变量，避免每次绝对移动都发 GET_DEVICE_INFO。
+    if (has_workspace_cache_) {
+        workspace_x = cached_workspace_x_;
+        workspace_y = cached_workspace_y_;
+        workspace_z = cached_workspace_z_;
+        return {};
+    }
+
     ReturnValue info_rv = ExecuteGetDeviceInfoWithTaskId(task_id);
     ReturnValueJsonGuard info_guard(info_rv);
     cJSON* info = nullptr;
-    if (auto* p = std::get_if<cJSON*>(&info_rv)) {
-        info = *p;
+    if (auto* p = std::get_if<CJsonPtr>(&info_rv)) {
+        info = p->get();
     }
     if (!U1ProtocolClient::JsonValueIsOk(info) ||
         !U1ProtocolClient::JsonValueHasXyz(info, "workspace_mm", workspace_x,
@@ -154,6 +162,11 @@ std::string MotionExecutor::FetchWorkspaceMm(const std::string& task_id,
         workspace_z > kMaxWorkspaceMm) {
         return "workspace dimensions out of sanity bounds";
     }
+
+    cached_workspace_x_ = workspace_x;
+    cached_workspace_y_ = workspace_y;
+    cached_workspace_z_ = workspace_z;
+    has_workspace_cache_ = true;
     return {};
 }
 
@@ -218,8 +231,8 @@ ReturnValue MotionExecutor::ExecuteMoveRelWithTaskId(
         ReturnValue status_rv = ExecuteGetStatusWithTaskId(task_id);
         ReturnValueJsonGuard status_guard(status_rv);
         cJSON* status = nullptr;
-        if (auto* p = std::get_if<cJSON*>(&status_rv)) {
-            status = *p;
+        if (auto* p = std::get_if<CJsonPtr>(&status_rv)) {
+            status = p->get();
         }
 
         if (!U1ProtocolClient::JsonValueIsOk(status) ||

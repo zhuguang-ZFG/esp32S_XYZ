@@ -50,6 +50,12 @@ private:
     MotionEventEmitter& emitter_;
     std::atomic<bool> motion_busy_{false};
 
+    // Cache workspace after first successful fetch (rarely changes at runtime).
+    bool has_workspace_cache_ = false;
+    double cached_workspace_x_ = 0.0;
+    double cached_workspace_y_ = 0.0;
+    double cached_workspace_z_ = 0.0;
+
     bool TryAcquireMotionLock();
     void ReleaseMotionLock();
 
