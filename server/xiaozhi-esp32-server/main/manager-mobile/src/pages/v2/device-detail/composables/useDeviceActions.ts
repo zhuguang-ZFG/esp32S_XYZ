@@ -1,63 +1,25 @@
 import type { ComputedRef } from 'vue'
-import type { V2ShareResponse } from '@/api/v2'
-import type { V2DeviceSupplyResponse, V2DeviceTransferResponse } from '@/api/v2/types'
-import { computed, ref } from 'vue'
 import type { GalleryImage } from '@/api/gallery'
+import type { V2DeviceSupplyResponse } from '@/api/v2/types'
 import {
-  v2AcceptDeviceTransfer,
-  v2CancelDeviceTransfer,
-  v2CreateShare,
-  v2ListShares,
   v2RenderAsset,
-  v2RequestDeviceTransfer,
-  v2RevokeShare,
   v2SubmitTask,
-  v2UnbindDevice,
   v2UpdateDeviceSupplies,
 } from '@/api/v2'
-import type { V2SubmitTaskResponse } from '@/api/v2/types'
+import { computed, ref } from 'vue'
 import { t } from '@/i18n'
-
-const defaultWriteTextFontId = 'kai_basic_v1'
-const healthCheckPath = [
-  { cmd: 'M', x: 5, y: 5, z: 0 },
-  { cmd: 'L', x: 25, y: 5, z: 0 },
-  { cmd: 'L', x: 25, y: 25, z: 0 },
-  { cmd: 'L', x: 5, y: 25, z: 0 },
-  { cmd: 'L', x: 5, y: 5, z: 0 },
-]
-
-function taskSubmitErrorMessage(error: any) {
-  const text = String(error?.message || error || '')
-  if (text.includes('E_RUNTIME_STALE'))
-    return t('v2.detail.errorRuntimeStale')
-  if (text.includes('E_CONTENT_BLOCKED'))
-    return t('v2.detail.errorContentBlocked')
-  if (text.includes('E_INVALID_DRAWING'))
-    return t('v2.detail.errorInvalidDrawing')
-  if (text.includes('E_NOT_ENTITLED'))
-    return t('v2.detail.errorNotEntitled')
-  if (text.includes('E_NO_PAPER'))
-    return t('v2.detail.errorNoPaper')
-  return text || t('common.fail')
-}
-
-function showSubmitToast(key: string) {
-  uni.showToast({ title: t(key), icon: 'none' })
-}
-
-function noteTaskDeliveryHonesty(result: V2SubmitTaskResponse) {
-  if (result.deliveryAvailable !== false || !result.message)
-    return
-  uni.showModal({
-    title: t('v2.detail.deliveryUnavailableTitle'),
-    content: result.message,
-    showCancel: false,
-  })
-}
+import {
+  defaultWriteTextFontId,
+  healthCheckPath,
+  noteTaskDeliveryHonesty,
+  showSubmitToast,
+  taskSubmitErrorMessage,
+} from './useDeviceActionUtils'
+import { useDeviceTransferAndShare } from './useDeviceTransferAndShare'
 
 /**
- * 设备详情页的任务派发 / 耗材 / 转移 / 分享 / 解绑动作（P3.1 从 index.vue 提取）。
+ * 设备详情页的任务派发 / 耗材动作（P3.1 从 index.vue 提取）。
+ * 转移 / 分享 / 解绑由 useDeviceTransferAndShare 管理。
  *
  * 依赖 useDeviceEvents 暴露的进度 setter（setPhase/resetProgress/startInfoLoadingTimer 等），
  * 从而与事件流共享同一份 latestPhase/infoLoading 状态，而非各存一份。
@@ -83,17 +45,8 @@ export function useDeviceActions(opts: {
   const drawGeneratedLoading = ref(false)
   const drawFromImageLoading = ref(false)
   const suppliesLoading = ref(false)
-  const transferLoading = ref(false)
   const drawPromptInput = ref('星星')
   const deviceSupplies = ref<V2DeviceSupplyResponse | null>(null)
-  const deviceTransfer = ref<V2DeviceTransferResponse | null>(null)
-  const transferTargetPhone = ref('')
-  const transferAcceptId = ref('')
-  const shares = ref<V2ShareResponse[]>([])
-  const shareLoading = ref(false)
-  const sharePermission = ref('view')
-  const shareExpiry = ref('7d')
-  const unbindLoading = ref(false)
 
   const starterAssets = [
     { id: 'starter_star', label: '星星' },
@@ -111,11 +64,6 @@ export function useDeviceActions(opts: {
     if (!deviceSupplies.value?.penInstalledAt)
       return t('v2.detail.noPenRecord')
     return `${t('v2.detail.inkEstimate')} ${deviceSupplies.value.penInkPercentEst ?? 100}%`
-  })
-  const transferStateLabel = computed(() => {
-    if (!deviceTransfer.value)
-      return t('v2.detail.noTransferPending')
-    return `#${deviceTransfer.value.transferId} ${deviceTransfer.value.status}`
   })
 
   async function handleHome() {
@@ -304,139 +252,7 @@ export function useDeviceActions(opts: {
     }
   }
 
-  async function handleRequestTransfer() {
-    const target = transferTargetPhone.value.trim()
-    if (!target) {
-      message.alert(t('v2.detail.enterTargetPhone'))
-      return
-    }
-    transferLoading.value = true
-    try {
-      deviceTransfer.value = await v2RequestDeviceTransfer(deviceId(), { targetPhone: target })
-      transferAcceptId.value = String(deviceTransfer.value.transferId)
-      showSubmitToast('v2.detail.transferCreated')
-      appendLog(`transfer id=${deviceTransfer.value.transferId}`)
-    }
-    catch (e: any) {
-      message.alert(taskSubmitErrorMessage(e))
-    }
-    finally {
-      transferLoading.value = false
-    }
-  }
-
-  async function handleCancelTransfer() {
-    const tid = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '') || null
-    if (!tid) {
-      message.alert(t('v2.detail.enterTransferId'))
-      return
-    }
-    transferLoading.value = true
-    try {
-      deviceTransfer.value = await v2CancelDeviceTransfer(tid)
-      showSubmitToast('v2.detail.transferCancelled')
-      appendLog(`transfer cancelled`)
-    }
-    catch (e: any) {
-      message.alert(taskSubmitErrorMessage(e))
-    }
-    finally {
-      transferLoading.value = false
-    }
-  }
-
-  async function handleAcceptTransfer() {
-    const tid = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '') || null
-    if (!tid) {
-      message.alert(t('v2.detail.enterTransferId'))
-      return
-    }
-    transferLoading.value = true
-    try {
-      deviceTransfer.value = await v2AcceptDeviceTransfer(tid)
-      showSubmitToast('v2.detail.transferAccepted')
-      appendLog(`transfer accepted`)
-    }
-    catch (e: any) {
-      message.alert(taskSubmitErrorMessage(e))
-    }
-    finally {
-      transferLoading.value = false
-    }
-  }
-
-  async function loadShares() {
-    if (!deviceId())
-      return
-    try {
-      shares.value = await v2ListShares(deviceId())
-    }
-    catch (e: any) {
-      console.warn('load shares failed:', e?.message || e)
-    }
-  }
-
-  async function handleCreateShare() {
-    if (!deviceId())
-      return
-    shareLoading.value = true
-    try {
-      const days = Number.parseInt(shareExpiry.value.replace('d', ''), 10) || 7
-      const expiresAt = new Date(Date.now() + days * 86400000).toISOString()
-      await v2CreateShare(deviceId(), sharePermission.value, expiresAt)
-      uni.showToast({ title: t('v2.detail.shareCreated'), icon: 'success' })
-      await loadShares()
-    }
-    catch (e: any) {
-      message.alert(e?.message || t('v2.detail.shareFailed'))
-    }
-    finally {
-      shareLoading.value = false
-    }
-  }
-
-  async function handleRevokeShare(shareToken: string) {
-    if (!deviceId())
-      return
-    shareLoading.value = true
-    try {
-      await v2RevokeShare(deviceId(), shareToken)
-      uni.showToast({ title: t('v2.detail.shareRevoked'), icon: 'success' })
-      await loadShares()
-    }
-    catch (e: any) {
-      message.alert(e?.message || t('v2.detail.revokeFailed'))
-    }
-    finally {
-      shareLoading.value = false
-    }
-  }
-
-  async function handleUnbind() {
-    if (!deviceId())
-      return
-    uni.vibrateShort({ type: 'medium' })
-    try {
-      const confirmed = await message.confirm(t('v2.detail.unbindConfirm'))
-      if (!confirmed)
-        return
-    }
-    catch {
-      return
-    }
-    unbindLoading.value = true
-    try {
-      await v2UnbindDevice(deviceId())
-      uni.showToast({ title: t('v2.detail.unbindSuccess'), icon: 'success' })
-      setTimeout(() => uni.navigateBack(), 1000)
-    }
-    catch (e: any) {
-      message.alert(e?.message || t('v2.detail.unbindFailed'))
-    }
-    finally {
-      unbindLoading.value = false
-    }
-  }
+  const ts = useDeviceTransferAndShare({ deviceId, message, appendLog })
 
   return {
     homeLoading,
@@ -445,22 +261,12 @@ export function useDeviceActions(opts: {
     drawGeneratedLoading,
     drawFromImageLoading,
     suppliesLoading,
-    transferLoading,
     drawPromptInput,
     deviceSupplies,
-    deviceTransfer,
-    transferTargetPhone,
-    transferAcceptId,
-    shares,
-    shareLoading,
-    sharePermission,
-    shareExpiry,
-    unbindLoading,
     starterAssets,
     defaultWriteTextFontId,
     paperSlotStateLabel,
     penStateLabel,
-    transferStateLabel,
     taskSubmitErrorMessage,
     handleHome,
     handleWriteText,
@@ -471,12 +277,9 @@ export function useDeviceActions(opts: {
     handleHealthCheck,
     updatePaper,
     markNewPen,
-    handleRequestTransfer,
-    handleCancelTransfer,
-    handleAcceptTransfer,
-    loadShares,
-    handleCreateShare,
-    handleRevokeShare,
-    handleUnbind,
+    ...ts,
   }
 }
+
+// Re-export for backward compat in index.vue
+export type { V2DeviceSupplyResponse } from '@/api/v2/types'

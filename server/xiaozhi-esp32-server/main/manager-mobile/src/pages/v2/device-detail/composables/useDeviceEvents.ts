@@ -23,7 +23,7 @@ function normalizeWorkspace(value: WorkspaceMm | string | undefined) {
     try {
       return normalizeWorkspace(JSON.parse(value))
     }
-    catch { return null }
+    catch { console.warn('normalizeWorkspace JSON parse failed'); return null }
   }
   return { x: Number(value.x || 0), y: Number(value.y || 0), z: Number(value.z || 0) }
 }

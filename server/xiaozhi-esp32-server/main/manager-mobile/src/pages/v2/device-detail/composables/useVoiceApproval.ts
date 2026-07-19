@@ -37,7 +37,7 @@ export function useVoiceApproval(
       const p = JSON.parse(value)
       return p && typeof p === 'object' && !Array.isArray(p) ? p as Record<string, any> : null
     }
-    catch { return null }
+    catch { console.warn('parseJsonObject failed'); return null }
   }
 
   function voiceprintConstraintForTask(task: V2PendingVoiceTaskResponse): VoiceprintConstraint | null {

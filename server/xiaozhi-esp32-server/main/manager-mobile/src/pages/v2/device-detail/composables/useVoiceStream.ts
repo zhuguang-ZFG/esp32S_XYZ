@@ -29,14 +29,14 @@ export function useVoiceStream(): VoiceStreamState & {
   function cleanupSocket() {
     if (!socketTask)
       return
-    try { socketTask.close({}) } catch { /* ignore */ }
+    try { socketTask.close({}) } catch { console.warn('cleanupSocket close failed') }
     socketTask = null
   }
 
   function cleanupRecorder() {
     if (!recorder)
       return
-    try { recorder.stop() } catch { /* ignore */ }
+    try { recorder.stop() } catch { console.warn('cleanupRecorder stop failed') }
     recorder.onFrameRecorded(() => {})
     recorder.onStop(() => {})
     recorder.onError(() => {})
@@ -72,7 +72,7 @@ export function useVoiceStream(): VoiceStreamState & {
             if (payload.type === 'transcript' && payload.text)
               transcript.value = payload.text
           }
-          catch { /* ignore */ }
+          catch { console.warn('onMessage JSON parse failed') }
         })
       })
     }
@@ -113,7 +113,7 @@ export function useVoiceStream(): VoiceStreamState & {
     recording.value = false
     cleanupRecorder()
     if (socketTask) {
-      try { socketTask.send({ data: 'stop' }) } catch { /* ignore */ }
+      try { socketTask.send({ data: 'stop' }) } catch { console.warn('stopRecording send failed') }
     }
     cleanupSocket()
   }

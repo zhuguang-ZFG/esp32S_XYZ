@@ -51,6 +51,10 @@ async function checkESP32Connection() {
 }
 
 // 提交配网
+// ⚠️ 安全提示：SoftAP 配网阶段通过 HTTP（非 HTTPS）向 ESP32 的 192.168.4.1 发送
+// ssid / password / device_secret。这是 SoftAP 场景的行业常见做法，因 ESP32 SoftAP
+// 无 TLS 证书能力。风险限于局域网单跳链路（手机<->ESP32），不会经过公网。
+// 建议：若设备固件支持，优先启用 BluFi 蓝牙配网或 HTTPS 配网通道。
 async function submitConfig() {
   if (!props.selectedNetwork)
     return
