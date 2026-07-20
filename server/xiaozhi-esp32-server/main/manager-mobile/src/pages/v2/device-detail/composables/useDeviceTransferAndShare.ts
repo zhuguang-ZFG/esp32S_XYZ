@@ -43,6 +43,15 @@ export function useDeviceTransferAndShare(opts: {
       message.alert(t('v2.detail.enterTargetPhone'))
       return
     }
+    // M6:所有权变更需二次确认,文案含设备与目标手机号
+    try {
+      const confirmed = await message.confirm(t('v2.detail.transferConfirmRequest', { device: deviceId(), phone: target }))
+      if (!confirmed)
+        return
+    }
+    catch {
+      return
+    }
     transferLoading.value = true
     try {
       deviceTransfer.value = await v2RequestDeviceTransfer(deviceId(), { targetPhone: target })
@@ -64,6 +73,15 @@ export function useDeviceTransferAndShare(opts: {
       message.alert(t('v2.detail.enterTransferId'))
       return
     }
+    // M6:取消转赠确认
+    try {
+      const confirmed = await message.confirm(t('v2.detail.transferConfirmCancel', { id: tid }))
+      if (!confirmed)
+        return
+    }
+    catch {
+      return
+    }
     transferLoading.value = true
     try {
       deviceTransfer.value = await v2CancelDeviceTransfer(tid)
@@ -82,6 +100,15 @@ export function useDeviceTransferAndShare(opts: {
     const tid = transferAcceptId.value.trim() || String(deviceTransfer.value?.transferId || '') || null
     if (!tid) {
       message.alert(t('v2.detail.enterTransferId'))
+      return
+    }
+    // M6:接受转赠确认
+    try {
+      const confirmed = await message.confirm(t('v2.detail.transferConfirmAccept', { id: tid }))
+      if (!confirmed)
+        return
+    }
+    catch {
       return
     }
     transferLoading.value = true
@@ -131,6 +158,15 @@ export function useDeviceTransferAndShare(opts: {
   async function handleRevokeShare(shareToken: string) {
     if (!deviceId())
       return
+    // M6/M23:撤销分享让对方立即失去访问,加二次确认
+    try {
+      const confirmed = await message.confirm(t('v2.detail.revokeShareConfirm'))
+      if (!confirmed)
+        return
+    }
+    catch {
+      return
+    }
     shareLoading.value = true
     try {
       await v2RevokeShare(deviceId(), shareToken)

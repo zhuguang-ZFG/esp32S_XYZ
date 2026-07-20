@@ -1,14 +1,16 @@
 <script lang="ts" setup>
 import type { V2PendingVoiceTaskResponse } from '@/api/v2/types'
+import { computed, ref } from 'vue'
 import { t } from '@/i18n'
 
-defineProps<{
+const props = defineProps<{
   pendingVoiceTasks: V2PendingVoiceTaskResponse[]
   pendingVoiceApprovalCount: number
   pendingVoiceApprovalBadgeText: string
   voiceprintApprovalLabel: (task: V2PendingVoiceTaskResponse) => string
   voiceprintReenrollRequired: (task: V2PendingVoiceTaskResponse) => boolean
   voiceprintHasUnknownSpeaker: (task: V2PendingVoiceTaskResponse) => boolean
+  taskActionLoading?: Record<string, boolean>
 }>()
 
 const emit = defineEmits<{
@@ -17,12 +19,57 @@ const emit = defineEmits<{
   reject: [taskId: string]
 }>()
 const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { default: false })
+
+// M16:原始 JSON 收进展开区,默认显示人话摘要
+const rawExpanded = ref<Record<string, boolean>>({})
+
+const CAPABILITY_KEYS: Record<string, string> = {
+  write_text: 'v2.detail.capWriteText',
+  draw_generated: 'v2.detail.capDraw',
+  home: 'v2.detail.capHome',
+  pause: 'v2.detail.capPause',
+  resume: 'v2.detail.capResume',
+  run_path: 'v2.detail.capRunPath',
+}
+
+function capabilityLabel(capability: string) {
+  const key = CAPABILITY_KEYS[capability]
+  return key ? t(key) : capability
+}
+
+function paramsSummary(task: V2PendingVoiceTaskResponse): string {
+  if (!task.paramsJson)
+    return ''
+  try {
+    const p = JSON.parse(task.paramsJson) as Record<string, unknown>
+    if (typeof p.text === 'string' && p.text)
+      return `${t('v2.detail.paramText')}: “${p.text}”`
+    if (typeof p.prompt === 'string' && p.prompt)
+      return `${t('v2.detail.paramPrompt')}: “${p.prompt}”`
+    return ''
+  }
+  catch {
+    return ''
+  }
+}
+
+// S2: 模板里每个 task 只读一次摘要（避免 v-if + 插值双次 JSON.parse）
+const summaryByTaskId = computed(() => {
+  const map: Record<string, string> = {}
+  for (const task of props.pendingVoiceTasks)
+    map[task.taskId] = paramsSummary(task)
+  return map
+})
+
+function toggleRaw(taskId: string) {
+  rawExpanded.value[taskId] = !rawExpanded.value[taskId]
+}
 </script>
 
 <template>
   <view class="bento-card">
     <view class="voice-header">
-      <text class="bento-title">
+      <text class="bento-title voice-title">
         {{ t('v2.deviceDetail.pendingVoiceApprovals') }}
       </text>
       <view class="header-right">
@@ -46,17 +93,15 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
       >
         <view class="task-top">
           <text class="task-capability">
-            {{ task.capability }}
+            {{ capabilityLabel(task.capability) }}
           </text>
           <wd-tag type="warning" size="mini" round>
             {{ task.status }}
           </wd-tag>
         </view>
-        <text class="task-id">
-          {{ task.requestId || task.taskId }}
-        </text>
-        <text v-if="task.paramsJson" class="task-params">
-          {{ task.paramsJson.slice(0, 120) }}
+        <!-- M16/S2:关键参数人话化；摘要按 taskId 预计算 -->
+        <text v-if="summaryByTaskId[task.taskId]" class="task-summary">
+          {{ summaryByTaskId[task.taskId] }}
         </text>
         <view v-if="task.constraintsJson" class="task-constraints">
           <text class="constraint-text">
@@ -69,11 +114,35 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
             {{ t('v2.detail.unknownSpeaker') }}
           </wd-tag>
         </view>
+        <view class="raw-toggle" @click="toggleRaw(task.taskId)">
+          <text class="raw-toggle-text">
+            {{ t('v2.detail.rawParams') }}
+          </text>
+          <wd-icon :name="rawExpanded[task.taskId] ? 'arrow-up' : 'arrow-down'" size="12" color="var(--dim)" />
+        </view>
+        <view v-if="rawExpanded[task.taskId]" class="raw-block">
+          <text class="task-id">
+            {{ task.requestId || task.taskId }}
+          </text>
+          <text v-if="task.paramsJson" class="task-params">
+            {{ task.paramsJson.slice(0, 200) }}
+          </text>
+        </view>
         <view class="task-actions">
-          <wd-button type="success" round size="small" :loading="voiceApprovalLoading" @click="emit('approve', task.taskId)">
+          <wd-button
+            type="success" round size="small"
+            :loading="taskActionLoading?.[task.taskId]"
+            :disabled="taskActionLoading?.[task.taskId]"
+            @click="emit('approve', task.taskId)"
+          >
             {{ t('v2.deviceDetail.approve') }}
           </wd-button>
-          <wd-button type="danger" round size="small" :disabled="voiceApprovalLoading" @click="emit('reject', task.taskId)">
+          <wd-button
+            type="danger" round size="small"
+            :loading="taskActionLoading?.[task.taskId]"
+            :disabled="taskActionLoading?.[task.taskId]"
+            @click="emit('reject', task.taskId)"
+          >
             {{ t('v2.deviceDetail.reject') }}
           </wd-button>
         </view>
@@ -86,26 +155,15 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
 </template>
 
 <style lang="scss" scoped>
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(24rpx);
-}
-
-.bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
-}
-
 .voice-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8rpx;
+}
+
+.voice-title {
+  margin-bottom: 0;
 }
 
 .header-right {
@@ -141,6 +199,13 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
   color: var(--text);
 }
 
+.task-summary {
+  display: block;
+  font-size: 24rpx;
+  color: var(--text);
+  margin-bottom: 8rpx;
+}
+
 .task-id {
   display: block;
   font-size: 22rpx;
@@ -152,7 +217,7 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
   display: block;
   font-size: 22rpx;
   color: var(--muted);
-  margin-bottom: 8rpx;
+  word-break: break-all;
 }
 
 .task-constraints {
@@ -165,6 +230,26 @@ const voiceApprovalLoading = defineModel<boolean>('voiceApprovalLoading', { defa
 .constraint-text {
   font-size: 22rpx;
   color: var(--muted);
+}
+
+.raw-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 0;
+  margin-bottom: 8rpx;
+
+  .raw-toggle-text {
+    font-size: 22rpx;
+    color: var(--dim);
+  }
+}
+
+.raw-block {
+  background: var(--bg);
+  border-radius: 12rpx;
+  padding: 12rpx 16rpx;
+  margin-bottom: 12rpx;
 }
 
 .task-actions {

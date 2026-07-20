@@ -108,6 +108,21 @@ page {
   position: relative;
 }
 
+// Bento 卡片（M9:原 10 处组件内重复定义统一收敛到此，阴影统一为无）
+.bento-card {
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: var(--r);
+  padding: 28rpx;
+}
+
+.bento-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 16rpx;
+}
+
 .workshop-panel-interactive,
 .nebula-card-interactive {
   background: var(--surface);

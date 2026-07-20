@@ -203,8 +203,13 @@ defineExpose({ reload: () => loadGallery(true) })
       <view v-if="loading && !images.length" class="skeleton-row">
         <view v-for="n in 4" :key="n" class="gallery-skeleton" />
       </view>
-      <view v-else-if="!images.length" class="empty-hint">
-        {{ t('v2.detail.galleryEmpty') }}
+      <!-- M15:空态三件套 icon+文案+直接动作 -->
+      <view v-else-if="!images.length" class="empty-block">
+        <wd-icon name="photo" size="48" color="var(--dim)" />
+        <text class="empty-hint">{{ t('v2.detail.galleryEmpty') }}</text>
+        <wd-button type="primary" round size="small" :disabled="deviceBusy || uploading" @click="chooseAndUpload">
+          {{ t('v2.detail.galleryUploadFirst') }}
+        </wd-button>
       </view>
       <template v-else>
         <view
@@ -226,6 +231,14 @@ defineExpose({ reload: () => loadGallery(true) })
             />
             <view v-else class="gallery-thumb thumb-fallback">
               <text class="fallback-text">{{ t('v2.detail.galleryThumbFailed') }}</text>
+            </view>
+            <!-- M14:选中态显式删除入口(longpress 仍保留),走同一确认弹窗 -->
+            <view
+              v-if="selectedId === item.id"
+              class="delete-badge"
+              @click.stop="confirmRemoveImage(item)"
+            >
+              <wd-icon name="close" size="14" color="var(--text)" />
             </view>
           </view>
           <text class="gallery-name">{{ item.filename }}</text>
@@ -259,24 +272,15 @@ defineExpose({ reload: () => loadGallery(true) })
 </template>
 
 <style lang="scss" scoped>
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-}
-
 .title-row {
   display: flex;
   align-items: center;
   gap: 12rpx;
   margin-bottom: 8rpx;
-}
 
-.bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
+  .bento-title {
+    margin-bottom: 0;
+  }
 }
 
 .count-badge {
@@ -296,10 +300,11 @@ defineExpose({ reload: () => loadGallery(true) })
   margin-bottom: 20rpx;
 }
 
+/* M18:busy 是等待态非错误态,danger → amber */
 .busy-hint {
   display: block;
   font-size: 24rpx;
-  color: var(--danger);
+  color: var(--amber);
   margin-bottom: 12rpx;
 }
 
@@ -372,6 +377,16 @@ defineExpose({ reload: () => loadGallery(true) })
   padding: 12rpx 0;
 }
 
+/* M15:空态块 */
+.empty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 24rpx 0;
+  width: 100%;
+}
+
 .gallery-item {
   display: inline-flex;
   flex-direction: column;
@@ -383,8 +398,27 @@ defineExpose({ reload: () => loadGallery(true) })
   &.selected .thumb-fallback,
   &.selected .load-more-box {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2rpx rgba(59, 130, 246, 0.35);
+    box-shadow: 0 0 0 2rpx var(--accent-glow);
   }
+}
+
+.thumb-wrap {
+  position: relative;
+}
+
+/* M14:选中角标删除钮(视觉 56rpx,含 padding 触控 ≥72rpx) */
+.delete-badge {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
 
 .thumb-wrap,

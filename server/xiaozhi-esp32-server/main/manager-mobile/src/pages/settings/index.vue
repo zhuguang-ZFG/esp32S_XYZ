@@ -96,34 +96,34 @@ onMounted(async () => {
 </script>
 
 <template>
-  <view class="page-enter min-h-screen" style="background: #07070f;">
+  <view class="page-enter min-h-screen" style="background: var(--bg);">
     <wd-navbar
       :title="t('settings.title')" safe-area-inset-top placeholder fixed
-      custom-class="!bg-[#07070f]"
-      title-class="!text-[#f0f4f8]"
+      custom-class="!bg-[var(--bg)]"
+      title-class="!text-[var(--text)]"
     />
 
     <view class="p-[24rpx]">
       <!-- 网络设置 - 仅在非小程序环境显示 -->
       <SectionCard v-if="!isMp" :title="t('settings.networkSettings')">
         <view class="mb-[24rpx]">
-          <text class="text-[28rpx] text-[#f0f4f8] font-semibold">
+          <text class="text-[28rpx] text-[var(--text)] font-semibold">
             {{ t('settings.serverApiUrl') }}
           </text>
-          <text class="mt-[8rpx] block text-[24rpx] text-[#5a6372]">
+          <text class="mt-[8rpx] block text-[24rpx] text-[var(--dim)]">
             {{ t('settings.modifyWillClearCache') }}
           </text>
         </view>
         <view class="mb-[24rpx]">
-          <view class="w-full overflow-hidden border border-[rgba(255,255,255,0.04)] rounded-[16rpx]" style="background: #14181f;">
+          <view class="w-full overflow-hidden border border-[var(--border)] rounded-[16rpx]" style="background: var(--bg2);">
             <wd-input
               v-model="baseUrlInput" type="text" clearable :maxlength="200"
               :placeholder="t('settings.enterServerUrl')"
               custom-class="!border-none !bg-transparent h-[64rpx] px-[24rpx] items-center"
-              input-class="text-[28rpx] text-[#f0f4f8]" @input="validateUrl" @blur="validateUrl"
+              input-class="text-[28rpx] text-[var(--text)]" @input="validateUrl" @blur="validateUrl"
             />
           </view>
-          <text v-if="urlError" class="mt-[8rpx] block text-[24rpx] text-[#ff4d4f]">
+          <text v-if="urlError" class="mt-[8rpx] block text-[24rpx] text-[var(--danger)]">
             {{ urlError }}
           </text>
         </view>
@@ -137,7 +137,7 @@ onMounted(async () => {
           </wd-button>
           <wd-button
             type="default"
-            custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-[rgba(255,255,255,0.04)] text-[#8b95a8]"
+            custom-class="flex-1 h-[88rpx] rounded-[20rpx] text-[28rpx] font-semibold border-[var(--border)] text-[var(--muted)]"
             @click="resetServerBaseUrl"
           >
             {{ t('settings.resetDefault') }}
@@ -149,30 +149,30 @@ onMounted(async () => {
       <SectionCard :title="t('settings.cacheManagement')">
         <view class="space-y-[16rpx]">
           <view
-            class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #14181f;"
+            class="flex items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+            style="background: var(--bg2);"
           >
             <view>
-              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              <text class="text-[28rpx] text-[var(--text)] font-medium">
                 {{ t('settings.totalCacheSize') }}
               </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+              <text class="mt-[4rpx] block text-[24rpx] text-[var(--dim)]">
                 {{ t('settings.appDataSize') }}
               </text>
             </view>
-            <text class="text-[28rpx] text-[#8b95a8] font-semibold">
+            <text class="text-[28rpx] text-[var(--muted)] font-semibold">
               {{ cacheInfo.storageSize }}
             </text>
           </view>
           <view
-            class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-            style="background: #14181f;"
+            class="flex items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+            style="background: var(--bg2);"
           >
             <view>
-              <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+              <text class="text-[28rpx] text-[var(--text)] font-medium">
                 {{ t('settings.cacheClear') }}
               </text>
-              <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+              <text class="mt-[4rpx] block text-[24rpx] text-[var(--dim)]">
                 {{ t('settings.clearAllCache') }}
               </text>
             </view>
@@ -190,33 +190,33 @@ onMounted(async () => {
       <!-- 隐私与权限 -->
       <SectionCard :title="t('settings.privacyTitle')">
         <view
-          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-          style="background: #14181f;"
+          class="flex cursor-pointer items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+          style="background: var(--bg2);"
           @click="openPrivacyPermissions"
         >
           <view>
-            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+            <text class="text-[28rpx] text-[var(--text)] font-medium">
               {{ t('settings.privacyAuth') }}
             </text>
-            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+            <text class="mt-[4rpx] block text-[24rpx] text-[var(--dim)]">
               {{ t('settings.privacyDesc') }}
             </text>
           </view>
-          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[var(--dim)]" />
         </view>
       </SectionCard>
 
       <!-- 通知订阅 -->
       <SectionCard :title="t('settings.notificationsTitle')">
         <view
-          class="flex items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-          style="background: #14181f;"
+          class="flex items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+          style="background: var(--bg2);"
         >
           <view>
-            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+            <text class="text-[28rpx] text-[var(--text)] font-medium">
               {{ t('settings.pushNotifications') }}
             </text>
-            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+            <text class="mt-[4rpx] block text-[24rpx] text-[var(--dim)]">
               {{ t('settings.pushNotificationsDesc') }}
             </text>
           </view>
@@ -232,10 +232,10 @@ onMounted(async () => {
       <SectionCard :title="t('settings.accountDeletion')" variant="danger">
         <view class="flex items-center justify-between gap-[24rpx]">
           <view class="min-w-0 flex-1">
-            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+            <text class="text-[28rpx] text-[var(--text)] font-medium">
               {{ t('settings.accountDeletionTitle') }}
             </text>
-            <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a] leading-[34rpx]">
+            <text class="mt-[4rpx] block text-[24rpx] text-[var(--danger)] leading-[34rpx]">
               {{ t('settings.accountDeletionDesc') }}
             </text>
           </view>
@@ -253,42 +253,42 @@ onMounted(async () => {
       <!-- 关于 -->
       <SectionCard :title="t('settings.appInfo')">
         <view
-          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-          style="background: #14181f;"
+          class="flex cursor-pointer items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+          style="background: var(--bg2);"
           @click="showAbout"
         >
           <view>
-            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+            <text class="text-[28rpx] text-[var(--text)] font-medium">
               {{ t('settings.aboutUs') }}
             </text>
-            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+            <text class="mt-[4rpx] block text-[24rpx] text-[var(--dim)]">
               {{ t('settings.appVersion') }}
             </text>
           </view>
-          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[var(--dim)]" />
         </view>
       </SectionCard>
 
       <!-- 语言设置 -->
       <SectionCard :title="t('settings.languageSettings')">
         <view
-          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-          style="background: #14181f;"
+          class="flex cursor-pointer items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+          style="background: var(--bg2);"
           @click="showLanguageSheet = true"
         >
           <view>
-            <text class="text-[32rpx] text-[#f0f4f8] font-medium">
+            <text class="text-[32rpx] text-[var(--text)] font-medium">
               {{ t('settings.language') }}
             </text>
-            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+            <text class="mt-[4rpx] block text-[24rpx] text-[var(--dim)]">
               {{ t('settings.selectLanguage') }}
             </text>
           </view>
           <view class="flex items-center">
-            <text class="mr-[16rpx] text-[32rpx] text-[#5a6372] font-semibold">
+            <text class="mr-[16rpx] text-[32rpx] text-[var(--dim)] font-semibold">
               {{ supportedLanguages.find(lang => lang.code === currentLanguage)?.name }}
             </text>
-            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+            <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[var(--dim)]" />
           </view>
         </view>
       </SectionCard>
@@ -296,38 +296,38 @@ onMounted(async () => {
       <!-- 声纹录入（P2-18 从 mine 页合并） -->
       <SectionCard :title="t('mine.featureCenter')">
         <view
-          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-          style="background: #14181f;"
+          class="flex cursor-pointer items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+          style="background: var(--bg2);"
           @click="goVoiceprint"
         >
           <view>
-            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+            <text class="text-[28rpx] text-[var(--text)] font-medium">
               {{ t('mine.voiceprint') }}
             </text>
-            <text class="mt-[4rpx] block text-[24rpx] text-[#5a6372]">
+            <text class="mt-[4rpx] block text-[24rpx] text-[var(--dim)]">
               {{ t('mine.voiceprintDesc') }}
             </text>
           </view>
-          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[var(--dim)]" />
         </view>
       </SectionCard>
 
       <!-- 退出登录（P2-18 从 mine 页合并） -->
       <SectionCard :title="t('mine.system')" variant="danger">
         <view
-          class="flex cursor-pointer items-center justify-between border border-[rgba(255,255,255,0.04)] rounded-[16rpx] p-[24rpx]"
-          style="background: #14181f;"
+          class="flex cursor-pointer items-center justify-between border border-[var(--border)] rounded-[16rpx] p-[24rpx]"
+          style="background: var(--bg2);"
           @click="goLogout"
         >
           <view>
-            <text class="text-[28rpx] text-[#f0f4f8] font-medium">
+            <text class="text-[28rpx] text-[var(--text)] font-medium">
               {{ t('mine.logout') }}
             </text>
-            <text class="mt-[4rpx] block text-[24rpx] text-[#8f4a4a]">
+            <text class="mt-[4rpx] block text-[24rpx] text-[var(--danger)]">
               {{ t('mine.logoutConfirmContent') }}
             </text>
           </view>
-          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[#5a6372]" />
+          <wd-icon name="arrow-right" custom-class="text-[32rpx] text-[var(--dim)]" />
         </view>
       </SectionCard>
 
@@ -361,11 +361,11 @@ onMounted(async () => {
     .language-item {
       padding: 30rpx 0;
       text-align: center;
-      border-bottom: 1rpx solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1rpx solid var(--border);
 
       .language-name {
         font-size: 28rpx;
-        color: #f0f4f8;
+        color: var(--text);
       }
 
       &:last-child {

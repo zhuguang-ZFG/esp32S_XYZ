@@ -7,6 +7,7 @@ defineProps<{
   latestDiagnosticSummary: string
   latestDiagnosticAt: string
   selfCheckHistory: V2SelfCheckHistoryResponse[]
+  deviceOnline?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -34,6 +35,14 @@ const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default:
     <text class="time-text">
       {{ t('v2.detail.latestDiagnosis') }}: {{ latestDiagnosticAt || t('v2.detail.waitingResult') }}
     </text>
+
+    <!-- M13:自检进行中就地反馈 -->
+    <view v-if="healthCheckLoading" class="checking-row">
+      <wd-loading size="32rpx" />
+      <text class="checking-text">
+        {{ t('v2.detail.selfCheckRunning') }}
+      </text>
+    </view>
 
     <view v-if="selfCheckHistory.length" class="history-list">
       <view
@@ -64,35 +73,49 @@ const healthCheckLoading = defineModel<boolean>('healthCheckLoading', { default:
     <wd-button
       type="primary" round block size="large"
       :loading="healthCheckLoading"
+      :disabled="deviceOnline === false"
       custom-class="!h-[88rpx] !text-[30rpx] !mt-[20rpx]"
       @click="emit('runHealthCheck')"
     >
       {{ healthCheckLoading ? t('v2.detail.checking') : t('v2.detail.startHealthCheck') }}
     </wd-button>
+    <!-- M13:disabled 时给出原因,不让用户猜 -->
+    <text v-if="deviceOnline === false" class="offline-hint">
+      {{ t('v2.detail.offlineCannotCheck') }}
+    </text>
   </view>
 </template>
 
 <style lang="scss" scoped>
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(24rpx);
-}
-
-.bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
-}
-
 .health-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12rpx;
+
+  .bento-title {
+    margin-bottom: 0;
+  }
+}
+
+.checking-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 12rpx 0;
+
+  .checking-text {
+    font-size: 24rpx;
+    color: var(--muted);
+  }
+}
+
+.offline-hint {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--dim);
+  text-align: center;
 }
 
 .summary-text {

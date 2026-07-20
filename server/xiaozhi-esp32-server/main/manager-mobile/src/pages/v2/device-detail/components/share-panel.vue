@@ -29,14 +29,21 @@ function expiryToISO(expiry: string): string {
   return now.toISOString()
 }
 
+// M7:分享码可复制(此前空 handler,分享事实不可用)
+function copyShareToken(token: string) {
+  uni.setClipboardData({
+    data: token,
+    success: () => {
+      uni.showToast({ title: t('v2.detail.copied'), icon: 'success' })
+    },
+  })
+}
+
 defineExpose({ expiryToISO })
 </script>
 
 <template>
-  <view class="bento-card">
-    <view class="bento-title">
-      {{ t('v2.detail.shareTitle') }}
-    </view>
+  <view class="share-panel">
     <text class="state-label">
       {{ t('v2.detail.shareDesc') }}
     </text>
@@ -103,8 +110,11 @@ defineExpose({ expiryToISO })
             <text class="share-token-label">
               {{ t('v2.detail.shareToken') }}:
             </text>
-            <text class="share-token-value" @click="() => {}">
+            <text class="share-token-value" @click="copyShareToken(share.shareToken)">
               {{ share.shareToken.slice(0, 8) }}...{{ share.shareToken.slice(-4) }}
+            </text>
+            <text class="share-copy-btn" @click="copyShareToken(share.shareToken)">
+              {{ t('v2.detail.copy') }}
             </text>
           </view>
           <view class="share-meta">
@@ -125,22 +135,6 @@ defineExpose({ expiryToISO })
 </template>
 
 <style lang="scss" scoped>
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(24rpx);
-}
-
-.bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8rpx;
-}
-
 .state-label {
   font-size: 24rpx;
   color: var(--muted);
@@ -222,6 +216,14 @@ defineExpose({ expiryToISO })
   font-size: 24rpx;
   color: var(--text);
   font-family: monospace;
+}
+
+/* M7:显式复制入口,触控区拉大到 ≥44rpx 行高 + padding */
+.share-copy-btn {
+  font-size: 24rpx;
+  color: var(--accent);
+  padding: 8rpx 16rpx;
+  margin-left: 4rpx;
 }
 
 .share-meta {

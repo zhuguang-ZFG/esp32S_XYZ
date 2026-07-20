@@ -35,7 +35,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星�
       :maxlength="40"
       :placeholder="t('v2.detail.writePlaceholder')"
       :disabled="deviceBusy"
-      custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="dark-input !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"
@@ -44,7 +44,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星�
       custom-class="!h-[88rpx] !text-[30rpx]"
       @click="emit('writeText')"
     >
-      {{ writeTextLoading ? t('v2.detail.submitting') : t('v2.detail.startWrite') }}
+      {{ deviceBusy ? t('v2.detail.deviceBusyLabel') : writeTextLoading ? t('v2.detail.submitting') : t('v2.detail.startWrite') }}
     </wd-button>
   </view>
 
@@ -65,7 +65,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星�
       :maxlength="60"
       :placeholder="t('v2.detail.drawPlaceholder')"
       :disabled="deviceBusy"
-      custom-class="!bg-[#14181f] !text-[#f0f4f8] !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
+      custom-class="dark-input !rounded-[16rpx] !px-[20rpx] !mb-[20rpx]"
     />
     <wd-button
       type="primary" round block size="large"
@@ -74,7 +74,7 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星�
       custom-class="!h-[88rpx] !text-[30rpx]"
       @click="emit('drawPrompt')"
     >
-      {{ drawGeneratedLoading ? t('v2.detail.submitting') : t('v2.detail.generateDraw') }}
+      {{ deviceBusy ? t('v2.detail.deviceBusyLabel') : drawGeneratedLoading ? t('v2.detail.submitting') : t('v2.detail.generateDraw') }}
     </wd-button>
     <view class="starter-row">
       <wd-button
@@ -92,22 +92,6 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星�
 </template>
 
 <style lang="scss" scoped>
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(24rpx);
-}
-
-.bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8rpx;
-}
-
 .hint-text {
   display: block;
   font-size: 24rpx;
@@ -115,10 +99,11 @@ const drawPromptInput = defineModel<string>('drawPromptInput', { default: '星�
   margin-bottom: 20rpx;
 }
 
+/* M18:busy 是等待态非错误态,danger → amber */
 .busy-hint {
   display: block;
   font-size: 24rpx;
-  color: var(--danger);
+  color: var(--amber);
   margin-bottom: 12rpx;
 }
 

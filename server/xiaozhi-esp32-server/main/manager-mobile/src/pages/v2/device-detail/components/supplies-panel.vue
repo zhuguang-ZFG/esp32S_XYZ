@@ -20,27 +20,35 @@ const suppliesLoading = defineModel<boolean>('suppliesLoading', { default: false
     <view class="bento-title">
       {{ t('v2.detail.supplies') }}
     </view>
-    <view class="supply-row">
-      <view class="supply-item">
-        <wd-tag
-          :type="deviceSupplies?.paperSlotState === 'loaded' ? 'success' : deviceSupplies?.paperSlotState === 'empty' ? 'danger' : 'default'"
-          size="small" round
-        >
-          {{ paperSlotStateLabel }}
-        </wd-tag>
-        <text class="supply-label">
-          {{ penStateLabel }}
-        </text>
-      </view>
+    <!-- M12:纸/笔拆两行 telemetry,主次分明 -->
+    <view class="telemetry-row">
+      <text class="telemetry-label">
+        {{ t('v2.detail.paperLabel') }}
+      </text>
+      <wd-tag
+        :type="deviceSupplies?.paperSlotState === 'loaded' ? 'success' : deviceSupplies?.paperSlotState === 'empty' ? 'danger' : 'default'"
+        size="small" round
+      >
+        {{ paperSlotStateLabel }}
+      </wd-tag>
     </view>
+    <view class="telemetry-row supply-pen-row">
+      <text class="telemetry-label">
+        {{ t('v2.detail.penLabel') }}
+      </text>
+      <text class="telemetry-value">
+        {{ penStateLabel }}
+      </text>
+    </view>
+    <!-- M12:仅主操作 primary,其余 plain 收敛 -->
     <view class="supply-actions">
-      <wd-button type="success" round size="small" :loading="suppliesLoading" @click="emit('updatePaper', 'loaded')">
+      <wd-button type="primary" round size="small" :loading="suppliesLoading" @click="emit('updatePaper', 'loaded')">
         {{ t('v2.detail.paperLoaded') }}
       </wd-button>
-      <wd-button type="warning" round size="small" :disabled="suppliesLoading" @click="emit('updatePaper', 'empty')">
+      <wd-button type="warning" plain round size="small" :disabled="suppliesLoading" @click="emit('updatePaper', 'empty')">
         {{ t('v2.detail.paperEmpty') }}
       </wd-button>
-      <wd-button type="info" round size="small" :disabled="suppliesLoading" @click="emit('newPen')">
+      <wd-button type="info" plain round size="small" :disabled="suppliesLoading" @click="emit('newPen')">
         {{ t('v2.detail.newPen') }}
       </wd-button>
     </view>
@@ -48,35 +56,8 @@ const suppliesLoading = defineModel<boolean>('suppliesLoading', { default: false
 </template>
 
 <style lang="scss" scoped>
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(24rpx);
-}
-
-.bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 16rpx;
-}
-
-.supply-row {
+.supply-pen-row {
   margin-bottom: 20rpx;
-}
-
-.supply-item {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-}
-
-.supply-label {
-  font-size: 24rpx;
-  color: var(--muted);
 }
 
 .supply-actions {

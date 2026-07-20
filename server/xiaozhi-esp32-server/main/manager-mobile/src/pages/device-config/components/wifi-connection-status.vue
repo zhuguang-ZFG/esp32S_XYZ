@@ -57,15 +57,15 @@ const emit = defineEmits<{
 
 .status-warning {
   padding: 24rpx;
-  background-color: #fff3cd;
-  border: 1rpx solid #ffeaa7;
+  background-color: var(--amber-g);
+  border: 1rpx solid var(--amber);
   border-radius: 16rpx;
 }
 
 .status-success {
   padding: 24rpx;
-  background-color: #d4edda;
-  border: 1rpx solid #c3e6cb;
+  background-color: var(--green-g);
+  border: 1rpx solid var(--green);
   border-radius: 16rpx;
 }
 
@@ -77,12 +77,12 @@ const emit = defineEmits<{
 }
 
 .warning-text {
-  color: #856404;
+  color: var(--amber);
   font-size: 28rpx;
 }
 
 .success-text {
-  color: #155724;
+  color: var(--green);
   font-size: 28rpx;
 }
 </style>

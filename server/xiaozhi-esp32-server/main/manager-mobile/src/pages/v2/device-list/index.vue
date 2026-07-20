@@ -22,6 +22,8 @@ import { persistDlcApiToken } from '@/utils/dlcToken'
 defineOptions({ name: 'V2DeviceList' })
 const message = useMessage()
 const loading = ref(false)
+// M31:列表失败页内可恢复,不只 toast
+const loadError = ref(false)
 const devices = ref<V2DeviceInfo[]>([])
 const pendingIncomingTransfers = ref<V2DeviceTransferResponse[]>([])
 const showBind = ref(false)
@@ -43,6 +45,7 @@ async function loadPageData() {
 
 async function loadDevices() {
   loading.value = true
+  loadError.value = false
   try {
     const res = await v2GetDevices()
     devices.value = res.rows || []
@@ -50,6 +53,7 @@ async function loadDevices() {
   }
   catch (e) {
     console.error(e)
+    loadError.value = true
     uni.showToast({ title: t('v2.deviceList.loadFailed'), icon: 'none' })
   }
   finally { loading.value = false }
@@ -86,7 +90,18 @@ async function handleBind() {
   finally { bindLoading.value = false }
 }
 
-async function handleAcceptIncomingTransfer(transferId: string) {
+async function handleAcceptIncomingTransfer(transferId: string, transferDeviceId?: string) {
+  // M28:接受转赠是所有权变更,先确认再发;防连点 guard
+  if (transferLoading.value)
+    return
+  try {
+    const confirmed = await message.confirm(t('v2.deviceList.acceptConfirm', { device: transferDeviceId || transferId }))
+    if (!confirmed)
+      return
+  }
+  catch {
+    return
+  }
   transferLoading.value = true
   try {
     await v2AcceptDeviceTransfer(transferId)
@@ -106,6 +121,25 @@ function goToProvision() {
 
 async function quickControl(deviceId: string, action: string) {
   const key = `${deviceId}-${action}`
+  // M29:入口 guard 放 handler 第一行——离线/在途请求直接拦截,不再只是样式变淡
+  if (quickLoading.value[key])
+    return
+  const device = devices.value.find(d => d.deviceId === deviceId)
+  if (device && device.status !== 'online') {
+    uni.showToast({ title: t('v2.deviceList.offlineCannotControl'), icon: 'none' })
+    return
+  }
+  // M28:快捷"暂停"是急停语义,需二次确认
+  if (action === 'pause') {
+    try {
+      const confirmed = await message.confirm(t('v2.deviceList.pauseConfirm', { device: deviceId }))
+      if (!confirmed)
+        return
+    }
+    catch {
+      return
+    }
+  }
   quickLoading.value[key] = true
   const labelMap: Record<string, string> = {
     draw: t('v2.deviceList.quickDraw'),
@@ -138,7 +172,10 @@ function deviceIconName(model?: string) {
   <view class="device-list-page page-enter">
     <wd-navbar :title="t('v2.deviceList.title')" safe-area-inset-top placeholder fixed />
 
-    <wd-status-tip v-if="loading" image="loading" tip="" />
+    <!-- M27:首载骨架屏(替代孤零零 spinner) -->
+    <view v-if="loading && !devices.length" class="skeleton-list">
+      <view v-for="n in 3" :key="n" class="skeleton skeleton-card" />
+    </view>
 
     <!-- Pending Transfers -->
     <view v-if="pendingIncomingTransfers.length" class="bento-card transfer-card">
@@ -159,17 +196,44 @@ function deviceIconName(model?: string) {
             {{ t('v2.deviceList.fromAccount') }} {{ transfer.sourceAccountId }}
           </text>
         </view>
-        <wd-button type="success" round size="small" :loading="transferLoading" @click="handleAcceptIncomingTransfer(transfer.transferId)">
+        <wd-button type="success" round size="small" :loading="transferLoading" @click="handleAcceptIncomingTransfer(transfer.transferId, transfer.deviceId)">
           {{ t('v2.deviceList.accept') }}
         </wd-button>
       </view>
     </view>
 
+    <!-- M31:冷启动失败 → 全页重试；有缓存时只 toast + 顶栏 banner（W3） -->
+    <view v-if="!loading && loadError && !devices.length" class="empty-state">
+      <wd-icon name="warning" size="80" color="var(--dim)" />
+      <text class="empty-title">
+        {{ t('v2.deviceList.loadFailed') }}
+      </text>
+      <view class="empty-actions">
+        <wd-button type="primary" round @click="loadPageData">
+          {{ t('v2.deviceList.retryLoad') }}
+        </wd-button>
+      </view>
+    </view>
+
+    <!-- W3: 刷新失败但列表仍有缓存 → 轻量 banner，不盖住旧数据 -->
+    <view v-if="!loading && loadError && devices.length" class="load-error-banner">
+      <text class="load-error-text">
+        {{ t('v2.deviceList.loadFailed') }}
+      </text>
+      <wd-button type="warning" plain round size="small" @click="loadPageData">
+        {{ t('v2.deviceList.retryLoad') }}
+      </wd-button>
+    </view>
+
     <!-- Empty State -->
-    <view v-if="!loading && !devices.length" class="empty-state">
-      <wd-icon name="notification" size="80" color="#c7c7cc" />
+    <view v-if="!loading && !loadError && !devices.length" class="empty-state">
+      <!-- M30:图标换设备语义 + 引导副文案 -->
+      <wd-icon name="phone" size="80" color="var(--dim)" />
       <text class="empty-title">
         {{ t('v2.deviceList.empty') }}
+      </text>
+      <text class="empty-sub">
+        {{ t('v2.deviceList.emptyHint') }}
       </text>
       <view class="empty-actions">
         <wd-button type="primary" round @click="showBind = true; bindSn = ''; bindCode = ''">
@@ -182,7 +246,7 @@ function deviceIconName(model?: string) {
     </view>
 
     <!-- Device Cards -->
-    <view v-if="!loading && devices.length" class="device-grid">
+    <view v-if="devices.length" class="device-grid">
       <view v-for="d in devices" :key="d.deviceId" class="bento-card device-card" @click="openDevice(d.deviceId)">
         <view class="device-card-header">
           <view class="device-icon-wrap">
@@ -200,28 +264,32 @@ function deviceIconName(model?: string) {
             {{ d.deviceId }}
           </text>
         </view>
-        <!-- Quick Controls -->
+        <!-- Quick Controls: M29 per-key spinner,guard 在 quickControl 首行 -->
         <view class="device-controls" @click.stop>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-draw`] }" @click="quickControl(d.deviceId, 'draw')">
-            <wd-icon name="photo" size="20" color="var(--muted)" />
+            <wd-loading v-if="quickLoading[`${d.deviceId}-draw`]" size="20px" />
+            <wd-icon v-else name="photo" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickDraw') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-write`] }" @click="quickControl(d.deviceId, 'write')">
-            <wd-icon name="edit-2" size="20" color="var(--muted)" />
+            <wd-loading v-if="quickLoading[`${d.deviceId}-write`]" size="20px" />
+            <wd-icon v-else name="edit-2" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickWrite') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-home`] }" @click="quickControl(d.deviceId, 'home')">
-            <wd-icon name="home" size="20" color="var(--muted)" />
+            <wd-loading v-if="quickLoading[`${d.deviceId}-home`]" size="20px" />
+            <wd-icon v-else name="home" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickHome') }}
             </text>
           </view>
           <view class="control-btn" :class="{ disabled: d.status !== 'online' || quickLoading[`${d.deviceId}-pause`] }" @click="quickControl(d.deviceId, 'pause')">
-            <wd-icon name="pause-circle" size="20" color="var(--muted)" />
+            <wd-loading v-if="quickLoading[`${d.deviceId}-pause`]" size="20px" />
+            <wd-icon v-else name="pause-circle" size="20" color="var(--muted)" />
             <text class="control-label">
               {{ t('v2.deviceList.quickPause') }}
             </text>
@@ -231,7 +299,7 @@ function deviceIconName(model?: string) {
     </view>
 
     <!-- Add Device -->
-    <view v-if="!loading && devices.length" class="add-device-bar">
+    <view v-if="devices.length" class="add-device-bar">
       <wd-button type="primary" round block @click="showBind = true; bindSn = ''; bindCode = ''">
         {{ t('v2.deviceList.addDevice') }}
       </wd-button>
@@ -268,19 +336,6 @@ function deviceIconName(model?: string) {
   padding-bottom: 24rpx;
 }
 
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-}
-
-.bento-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
-}
-
 /* Transfer */
 .transfer-card {
   margin-top: 20rpx;
@@ -290,6 +345,10 @@ function deviceIconName(model?: string) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16rpx;
+
+  .bento-title {
+    margin-bottom: 0;
+  }
 }
 .transfer-item {
   display: flex;
@@ -329,6 +388,35 @@ function deviceIconName(model?: string) {
     color: var(--dim);
     font-weight: 500;
   }
+  .empty-sub {
+    margin-top: 12rpx;
+    font-size: 24rpx;
+    color: var(--dim);
+  }
+}
+
+/* W3: 有缓存时的刷新失败条 */
+.load-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin: 16rpx 24rpx 0;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: var(--amber-g);
+  border: 1rpx solid var(--amber);
+
+  .load-error-text {
+    flex: 1;
+    font-size: 24rpx;
+    color: var(--amber);
+  }
+}
+
+/* M27:骨架列表 */
+.skeleton-list {
+  padding-top: 20rpx;
 }
 
 .empty-actions {

@@ -12,12 +12,18 @@ defineProps<{
 </script>
 
 <template>
-  <view class="bento-card device-header">
+  <!-- M2:首屏加载骨架（激活原死 prop infoLoading） -->
+  <view v-if="infoLoading && !deviceInfo" class="bento-card device-header">
+    <view class="skeleton skeleton-text" style="width: 40%;" />
+    <view class="skeleton skeleton-text" style="width: 70%;" />
+    <view class="skeleton skeleton-text" />
+  </view>
+  <view v-else class="bento-card device-header">
     <view class="device-top-row">
       <view class="device-name">
         {{ deviceInfo?.model || deviceId }}
       </view>
-      <view class="status-dot" :class="deviceOnline ? 'online' : 'offline'" />
+      <view class="pulse-dot" :class="deviceOnline ? 'online' : 'offline'" />
     </view>
     <view class="device-meta">
       <text>{{ t('v2.detail.hwRev') }} {{ deviceInfo?.hwRev || '—' }} · {{ t('v2.detail.fwRev') }} {{ deviceInfo?.fwRev || '—' }}</text>
@@ -42,18 +48,9 @@ defineProps<{
 </template>
 
 <style lang="scss" scoped>
-.bento-card {
-  background: var(--surface);
-  border: 1rpx solid var(--border);
-  border-radius: var(--r);
-  padding: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(24rpx);
-}
-
+/* M8:去大渐变 → surface 底 + 左侧 accent 竖条（全 app 渐变仅登录页保留） */
 .device-header {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  color: #ffffff;
+  border-left: 6rpx solid var(--accent);
 }
 
 .device-top-row {
@@ -66,26 +63,12 @@ defineProps<{
 .device-name {
   font-size: 36rpx;
   font-weight: 700;
-}
-
-.status-dot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 50%;
-
-  &.online {
-    background: #4ade80;
-    box-shadow: 0 0 8rpx #4ade80;
-  }
-
-  &.offline {
-    background: rgba(255, 255, 255, 0.4);
-  }
+  color: var(--text);
 }
 
 .device-meta {
   font-size: 24rpx;
-  opacity: 0.85;
+  color: var(--muted);
   margin-bottom: 20rpx;
 }
 
@@ -96,11 +79,11 @@ defineProps<{
   font-size: 24rpx;
 
   .label {
-    opacity: 0.7;
+    color: var(--muted);
   }
 
   .value {
-    opacity: 0.95;
+    color: var(--text);
     text-align: right;
     max-width: 60%;
     word-break: break-all;

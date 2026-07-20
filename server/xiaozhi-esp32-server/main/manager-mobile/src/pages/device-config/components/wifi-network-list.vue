@@ -44,7 +44,15 @@ const emit = defineEmits<{
       </view>
 
       <view class="network-list">
-        <view v-if="wifiNetworks.length === 0 && !scanning" class="empty-state">
+        <!-- M38:扫描中给骨架行 + 文案,不再空白 -->
+        <view v-if="scanning && wifiNetworks.length === 0" class="scanning-state">
+          <text class="scanning-text">
+            {{ t('deviceConfig.scanningHint') }}
+          </text>
+          <view v-for="n in 3" :key="n" class="skeleton skeleton-row" />
+        </view>
+
+        <view v-else-if="wifiNetworks.length === 0 && !scanning" class="empty-state">
           <text class="empty-text">
             {{ t('deviceConfig.noWifiNetworks') }}
           </text>
@@ -150,7 +158,24 @@ const emit = defineEmits<{
 
 .empty-tip {
   font-size: 24rpx;
-  color: #9d9ea3;
+  color: var(--dim);
+}
+
+.scanning-state {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.scanning-text {
+  font-size: 24rpx;
+  color: var(--muted);
+  margin-bottom: 8rpx;
+}
+
+.skeleton-row {
+  height: 96rpx;
+  border-radius: 16rpx;
 }
 
 .wifi-list {

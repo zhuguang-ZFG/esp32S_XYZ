@@ -71,6 +71,15 @@ export function useDeviceActions(opts: {
       showSubmitToast('v2.detail.deviceBusy')
       return
     }
+    // M10:回原点是物理动作,加二次确认
+    try {
+      const confirmed = await message.confirm(t('v2.detail.homeConfirm'))
+      if (!confirmed)
+        return
+    }
+    catch {
+      return
+    }
     homeLoading.value = true
     try {
       const r = await v2SubmitTask(deviceId(), 'home')
@@ -223,9 +232,12 @@ export function useDeviceActions(opts: {
   }
 
   async function updatePaper(state: 'empty' | 'loaded' | 'unknown') {
+    if (suppliesLoading.value)
+      return
     suppliesLoading.value = true
     try {
       deviceSupplies.value = await v2UpdateDeviceSupplies(deviceId(), { paperSlotState: state })
+      uni.vibrateShort({ type: 'light' })
       showSubmitToast(state === 'loaded' ? 'v2.detail.paperMarkedLoaded' : state === 'empty' ? 'v2.detail.paperMarkedEmpty' : 'v2.detail.paperMarkedUnknown')
       appendLog(`supplies paper=${state}`)
     }
@@ -238,9 +250,12 @@ export function useDeviceActions(opts: {
   }
 
   async function markNewPen() {
+    if (suppliesLoading.value)
+      return
     suppliesLoading.value = true
     try {
       deviceSupplies.value = await v2UpdateDeviceSupplies(deviceId(), { penInstalledAt: new Date().toISOString(), penInkPercentEst: 100, resetPenMileage: true })
+      uni.vibrateShort({ type: 'light' })
       showSubmitToast('v2.detail.penRecorded')
       appendLog('supplies pen installed')
     }

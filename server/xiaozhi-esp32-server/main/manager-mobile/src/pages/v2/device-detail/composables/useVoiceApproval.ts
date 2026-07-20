@@ -27,6 +27,8 @@ export function useVoiceApproval(
 ) {
   const pendingVoiceTasks = ref<V2PendingVoiceTaskResponse[]>([])
   const voiceApprovalLoading = ref(false)
+  // M16:per-task loading,单个任务审批不再让全列表按钮转圈
+  const voiceTaskActionLoading = ref<Record<string, boolean>>({})
   const pendingVoiceApprovalCount = computed(() => pendingVoiceTasks.value.length)
   const pendingVoiceApprovalBadgeText = computed(() => String(pendingVoiceApprovalCount.value))
 
@@ -92,7 +94,9 @@ export function useVoiceApproval(
   }
 
   async function handleApproveVoiceTask(taskId: string) {
-    voiceApprovalLoading.value = true
+    if (voiceTaskActionLoading.value[taskId])
+      return
+    voiceTaskActionLoading.value[taskId] = true
     try {
       const r = await v2ApproveVoiceTask(taskId, 'approved from mobile')
       uni.showToast({ title: t('v2.detail.approved'), icon: 'none' })
@@ -100,11 +104,22 @@ export function useVoiceApproval(
       await loadPendingVoiceTasks()
     }
     catch (e: any) { message.alert(taskSubmitErrorMessage(e)) }
-    finally { voiceApprovalLoading.value = false }
+    finally { voiceTaskActionLoading.value[taskId] = false }
   }
 
   async function handleRejectVoiceTask(taskId: string) {
-    voiceApprovalLoading.value = true
+    if (voiceTaskActionLoading.value[taskId])
+      return
+    // M16:拒绝是不可逆决定,加二次确认
+    try {
+      const confirmed = await message.confirm(t('v2.detail.rejectConfirm'))
+      if (!confirmed)
+        return
+    }
+    catch {
+      return
+    }
+    voiceTaskActionLoading.value[taskId] = true
     try {
       const r = await v2RejectVoiceTask(taskId, 'rejected from mobile')
       uni.showToast({ title: t('v2.detail.rejected'), icon: 'none' })
@@ -112,12 +127,13 @@ export function useVoiceApproval(
       await loadPendingVoiceTasks()
     }
     catch (e: any) { message.alert(taskSubmitErrorMessage(e)) }
-    finally { voiceApprovalLoading.value = false }
+    finally { voiceTaskActionLoading.value[taskId] = false }
   }
 
   return {
     pendingVoiceTasks,
     voiceApprovalLoading,
+    voiceTaskActionLoading,
     pendingVoiceApprovalCount,
     pendingVoiceApprovalBadgeText,
     voiceprintApprovalLabel,
