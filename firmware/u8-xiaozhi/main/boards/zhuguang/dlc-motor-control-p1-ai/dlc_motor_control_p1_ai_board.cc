@@ -14,6 +14,7 @@
 #include <nvs.h>
 #include <cJSON.h>
 
+#include <climits>
 #include <string>
 
 #include "motion_event_emitter.h"
@@ -125,8 +126,11 @@ private:
         }
 
         auto& board = Board::GetInstance();
-        // 固件审查 P1：CreateHttp(timeout_seconds)。0=无限阻塞，改 15s 防半开连接挂死 MCP 线程。
-        auto http = board.GetNetwork()->CreateHttp(15);
+        // 固件审查 P1 + 第二轮复核修正：CreateHttp(int) 的参数是 connect_id（蜂窝
+        // 多路复用通道，WiFi 路径忽略），不是超时秒数。真正的超时用 SetTimeout(ms)，
+        // 语义为单次等待上限（默认 30s）；此处收紧到 15s 防半开连接挂死 MCP 线程。
+        auto http = board.GetNetwork()->CreateHttp(0);
+        http->SetTimeout(15 * 1000);
         http->SetHeader("Content-Type", "application/json");
         http->SetHeader("Accept", "application/json");
         http->SetHeader("Authorization", "Bearer " + token);
@@ -299,20 +303,27 @@ private:
                                return executor_.ExecuteStopCapability();
                            });
 
+        // 固件审查第二轮 FW-F6：MCP Property 无"是否显式传参"标记，用哨兵默认值
+        // 区分"未传 z"。未显式提供 z 时不下发 Z（has_z=false），让 U1 保持当前 Z 高度，
+        // 对齐 motion_task 路径的 MotionParamsGetOptionalInt 语义（防 2D 移动落笔/撞机）。
+        constexpr int kMoveAbsZUnset = INT_MIN;
         mcp_server.AddTool("self.motor.move_abs",
-                           "Send MOVE through the private protocol.",
+                           "Send MOVE through the private protocol. "
+                           "Omit z to keep the current Z height.",
                            PropertyList({
                                 Property("x", kPropertyTypeInteger, 0),
                                 Property("y", kPropertyTypeInteger, 0),
-                               Property("z", kPropertyTypeInteger, 0),
+                               Property("z", kPropertyTypeInteger, kMoveAbsZUnset),
                                Property("feed", kPropertyTypeInteger, 1000, 1, 20000)
                            }),
                            [this](const PropertyList& properties) -> ReturnValue {
                                 int x = properties["x"].value<int>();
                                 int y = properties["y"].value<int>();
-                                int z = properties["z"].value<int>();
+                                const int z_raw = properties["z"].value<int>();
+                                const bool has_z = (z_raw != kMoveAbsZUnset);
                                 int feed = properties["feed"].value<int>();
-                                return executor_.ExecuteMoveCapability(x, y, z, feed);
+                                return executor_.ExecuteMoveCapability(
+                                    x, y, has_z ? z_raw : 0, feed, has_z);
                             });
 
         mcp_server.AddTool("self.motor.move_rel",

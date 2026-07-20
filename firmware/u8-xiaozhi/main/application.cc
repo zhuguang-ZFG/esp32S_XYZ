@@ -541,9 +541,18 @@ void Application::InitializeProtocol() {
     protocol_->OnIncomingJson([this, display](const cJSON* root) {
         // Parse JSON data
         auto type = cJSON_GetObjectItem(root, "type");
+        // 固件审查第二轮 FW-F9 同类（trellis-check 补）：type 缺失/非字符串时忽略，
+        // 防 type->valuestring 空指针解引用远程 crash。
+        if (!cJSON_IsString(type) || type->valuestring == nullptr) {
+            ESP_LOGW(TAG, "incoming json missing string type, ignored");
+            return;
+        }
         if (strcmp(type->valuestring, "tts") == 0) {
             auto state = cJSON_GetObjectItem(root, "state");
-            if (strcmp(state->valuestring, "start") == 0) {
+            // 固件审查第二轮 FW-F9：state 缺失/非字符串时跳过，防空指针解引用远程 crash。
+            if (!cJSON_IsString(state) || state->valuestring == nullptr) {
+                ESP_LOGW(TAG, "tts message missing string state, ignored");
+            } else if (strcmp(state->valuestring, "start") == 0) {
                 Schedule([this]() {
                     aborted_ = false;
                     SetDeviceState(kDeviceStateSpeaking);

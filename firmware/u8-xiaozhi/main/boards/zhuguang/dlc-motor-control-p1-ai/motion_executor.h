@@ -36,7 +36,10 @@ public:
     ReturnValue ExecuteResumeCapability();
     ReturnValue ExecuteStopCapability();
     ReturnValue ExecuteEstopCapability();
-    ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed);
+    // 固件审查第二轮 FW-F6：MCP move_abs 同样支持 z 缺失不下发（has_z=false），
+    // 对齐 motion_task 路径的 MotionParamsGetOptionalInt 语义。
+    ReturnValue ExecuteMoveCapability(int x, int y, int z, int feed,
+                                       bool has_z = true);
     ReturnValue ExecuteMoveRelCapability(int dx, int dy, int dz, int feed);
 
     // Run a path (PATH_BEGIN / PATH_SEG / PATH_END sequence)

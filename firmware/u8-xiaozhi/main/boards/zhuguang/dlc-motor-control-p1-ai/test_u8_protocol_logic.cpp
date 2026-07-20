@@ -8,6 +8,7 @@
 // we re-implement the pure logic here for native testing.
 
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -45,6 +46,19 @@ static std::string NormalizeMotionCapabilityName(const char* raw) {
         s = s.substr(5);
     }
     return ToLowerAscii(std::move(s));
+}
+
+// Mirrors the msg_id serialization in U1ProtocolClient::BuildProtocolCommandJson.
+// 固件审查第二轮 FW-F3：cmd.schema.json 要求 msg_id 为 string；发出帧必须形如
+// "msg_id":"123"（带引号），否则 U1 json_utils 解析失败、全链路 msg_id_mismatch。
+static std::string FormatProtocolMsgId(uint32_t msg_id) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%u", static_cast<unsigned>(msg_id));
+    return std::string(buf);
+}
+
+static std::string BuildMsgIdWireFragment(uint32_t msg_id) {
+    return std::string("\"msg_id\":\"") + FormatProtocolMsgId(msg_id) + "\"";
 }
 
 // --- Test cases ---
@@ -227,6 +241,16 @@ void test_normalize_response_multiline_json() {
     PASS();
 }
 
+void test_msg_id_wire_format_is_string() {
+    TEST("msg_id wire format: serialized as JSON string");
+    // cmd.schema.json contract: msg_id must be a quoted string on the wire.
+    ASSERT_EQ(FormatProtocolMsgId(0), std::string("0"));
+    ASSERT_EQ(FormatProtocolMsgId(42), std::string("42"));
+    ASSERT_EQ(FormatProtocolMsgId(4294967295u), std::string("4294967295"));
+    ASSERT_EQ(BuildMsgIdWireFragment(42), std::string("\"msg_id\":\"42\""));
+    PASS();
+}
+
 int main() {
     printf("U8 protocol logic native tests\n");
     printf("==============================\n\n");
@@ -257,6 +281,9 @@ int main() {
     test_normalize_cap_no_prefix();
     test_normalize_cap_short_self();
     test_normalize_cap_all_known_capabilities();
+
+    // msg_id wire contract tests (FW-F3)
+    test_msg_id_wire_format_is_string();
 
     printf("\n==============================\n");
     printf("Results: %d passed, %d failed\n", passed, failed);

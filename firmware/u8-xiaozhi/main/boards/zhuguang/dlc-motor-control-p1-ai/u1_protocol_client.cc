@@ -98,7 +98,11 @@ std::string U1ProtocolClient::BuildProtocolCommandJson(uint32_t msg_id,
         ESP_LOGE(TAG_U1_PROTOCOL, "Failed to allocate U1 command JSON");
         return "";
     }
-    if (cJSON_AddNumberToObject(root, "msg_id", msg_id) == nullptr ||
+    // 固件审查第二轮 FW-F3：cmd.schema.json 要求 msg_id 为 string；U1 json_utils
+    // 只解析带引号的值，数字 msg_id 会导致所有 capability 响应被判 msg_id_mismatch。
+    char msg_id_buf[16];
+    snprintf(msg_id_buf, sizeof(msg_id_buf), "%u", static_cast<unsigned>(msg_id));
+    if (cJSON_AddStringToObject(root, "msg_id", msg_id_buf) == nullptr ||
         cJSON_AddStringToObject(root, "task_id", task_id.c_str()) == nullptr ||
         cJSON_AddStringToObject(root, "cmd", cmd.c_str()) == nullptr) {
         ESP_LOGE(TAG_U1_PROTOCOL, "Failed to populate U1 command JSON");
@@ -163,8 +167,21 @@ std::string U1ProtocolClient::SendU1ProtocolJson(uint32_t msg_id,
 bool U1ProtocolClient::SendU1PreemptiveCommand(const std::string& cmd) {
     // 固件审查 P2：急停命令必须绕过 uart_mutex_，否则 PATH_END 等长等待会阻塞
     // STOP/ESTOP 达 120s，导致夹手/撞机时无法立即停车。
-    // 本函数不持锁、不等待响应，直接写 UART；U1 收到 ESTOP 后立即停电机。
-    std::string line = cmd + "\n";
+    // 本函数不持锁、不等待响应，直接写 UART。
+    // 固件审查第二轮 FW-F1：裸文本 "STOP\n" 在 U1 私有协议（只认 '@' 开头 JSON 帧）
+    // 中被当坏 G-code 排队，且 PATH_END 执行期间行命令根本进不了主循环。
+    // 改发 Grbl 实时字符：U1 Serial.cpp clientCheckTask 在行缓冲之前拦截
+    // （is_realtime_command 路径），即时生效：
+    //   STOP  -> '!'  (0x21, Cmd::FeedHold，减速保持，可 RESUME 恢复)
+    //   ESTOP -> 0x18 (Ctrl-X, Cmd::Reset，mc_reset 立即停电机，需 HOME 复位)
+    std::string line;
+    if (cmd == "STOP") {
+        line = "!";
+    } else if (cmd == "ESTOP") {
+        line.push_back('\x18');
+    } else {
+        line = cmd + "\n";
+    }
     const int written =
         uart_write_bytes(U1_UART_PORT_NUM, line.data(), line.size());
     if (written < 0 || static_cast<size_t>(written) != line.size()) {

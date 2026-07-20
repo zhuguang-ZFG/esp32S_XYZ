@@ -27,6 +27,18 @@
 
 #define TAG "Ota"
 
+// 固件审查第二轮 FW-F10（trellis-check 修正）：CreateHttp(int) 的参数是 connect_id
+// （蜂窝模组多路复用通道号，WiFi 路径 EspNetwork 直接忽略），不是超时秒数。
+// 真正的超时 API 是 Http::SetTimeout(timeout_ms)，语义为"单次等待"上限
+// （等响应头 / 等下一块 body / ReadAll 等 eof），不是总时长；组件默认 30s。
+// 控制面请求收紧到 15s；固件下载是 4KB 分块循环读，按"单块停滞检测"给 30s
+// （总时长由分块循环自然累计，不受此值限制）。
+static constexpr int kOtaHttpTimeoutMs = 15 * 1000;
+static constexpr int kOtaDownloadStallTimeoutMs = 30 * 1000;
+// 固件审查第二轮 FW-F10：CheckVersion 响应字节上限（对齐 SEC-005 的
+// DLC_API_MAX_RESPONSE_BYTES 量级），防恶意/异常服务器撑爆堆内存。
+static constexpr size_t kOtaMaxCheckVersionResponseBytes = 128 * 1024;
+
 static bool IsHttpsUrl(const std::string& url) {
     return url.rfind("https://", 0) == 0;
 }
@@ -210,6 +222,7 @@ std::unique_ptr<Http> Ota::SetupHttp() {
     auto& board = Board::GetInstance();
     auto network = board.GetNetwork();
     auto http = network->CreateHttp(0);
+    http->SetTimeout(kOtaHttpTimeoutMs);
     auto user_agent = SystemInfo::GetUserAgent();
     http->SetHeader("Activation-Version", has_serial_number_ ? "2" : "1");
     http->SetHeader("Device-Id", SystemInfo::GetMacAddress().c_str());
@@ -260,8 +273,24 @@ esp_err_t Ota::CheckVersion() {
         return status_code;
     }
 
+    // 固件审查第二轮 FW-F10：ReadAll 前用 Content-Length 预检 + 读后兜底校验
+    // （chunked 无 Content-Length 时 GetBodyLength 为 0，靠读后校验兜底）。
+    size_t body_length = http->GetBodyLength();
+    if (body_length > kOtaMaxCheckVersionResponseBytes) {
+        ESP_LOGE(TAG, "Check version response too large (declared %u bytes)",
+                 static_cast<unsigned>(body_length));
+        http->Close();
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+
     data = http->ReadAll();
     http->Close();
+
+    if (data.size() > kOtaMaxCheckVersionResponseBytes) {
+        ESP_LOGE(TAG, "Check version response exceeded limit after read: %u bytes",
+                 static_cast<unsigned>(data.size()));
+        return ESP_ERR_INVALID_RESPONSE;
+    }
 
     // Response: { "firmware": { "version": "1.0.0", "url": "http://" } }
     // Parse the JSON response and check if the version is newer
@@ -524,6 +553,8 @@ bool Ota::Upgrade(const std::string& firmware_url, const std::string& expected_s
 
     auto network = Board::GetInstance().GetNetwork();
     auto http = network->CreateHttp(0);
+    // FW-F10：下载为 4KB 分块循环读，SetTimeout 是"单块停滞"上限而非总时长。
+    http->SetTimeout(kOtaDownloadStallTimeoutMs);
     if (!http->Open("GET", firmware_url)) {
         ESP_LOGE(TAG, "Failed to open HTTP connection");
         return false;
@@ -724,6 +755,7 @@ bool Ota::ReportInstallResult(const std::string& release_id, bool success, const
     cJSON_Delete(root);
 
     auto http = network->CreateHttp(0);
+    http->SetTimeout(kOtaHttpTimeoutMs);
     http->SetHeader("Device-Id", SystemInfo::GetMacAddress().c_str());
     http->SetHeader("Client-Id", board.GetUuid());
     http->SetHeader("Content-Type", "application/json");
@@ -748,7 +780,16 @@ std::vector<int> Ota::ParseVersion(const std::string& version) {
     std::string segment;
     
     while (std::getline(ss, segment, '.')) {
-        versionNumbers.push_back(std::stoi(segment));
+        // 固件审查第二轮 FW-F11：std::stoi 遇非数字段（如 "1.2.0-rc1"）抛异常会
+        // terminate → panic 重启循环。异常段按 0 处理并告警。
+        int value = 0;
+        try {
+            value = std::stoi(segment);
+        } catch (const std::exception&) {
+            ESP_LOGW(TAG, "Non-numeric version segment '%s' in '%s', treated as 0",
+                     segment.c_str(), version.c_str());
+        }
+        versionNumbers.push_back(value);
     }
     
     return versionNumbers;

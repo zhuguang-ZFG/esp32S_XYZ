@@ -2,6 +2,7 @@
 #define MOTION_EVENT_EMITTER_H
 
 #include <cJSON.h>
+#include <mutex>
 #include <string>
 
 #include "u1_protocol_client.h"
@@ -29,6 +30,9 @@ public:
 private:
     cJSON* BuildBaseEvent(const std::string& task_id, const char* phase);
 
+    // 固件审查第二轮 FW-F12：last_motion_* 被协议线程写、主循环读（std::string
+    // 非原子），加互斥防数据竞争。锁只保护下面三个成员。
+    std::mutex context_mutex_;
     std::string last_motion_device_id_;
     std::string last_motion_capability_raw_;
     std::string last_motion_source_;

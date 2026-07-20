@@ -9,12 +9,15 @@
 void MotionEventEmitter::SetMotionContext(const std::string& device_id,
                                            const std::string& capability_raw,
                                            const std::string& source) {
+    // 固件审查第二轮 FW-F12：跨线程读写 last_motion_*，必须持锁。
+    std::lock_guard<std::mutex> lock(context_mutex_);
     last_motion_device_id_ = device_id;
     last_motion_capability_raw_ = capability_raw;
     last_motion_source_ = source;
 }
 
 void MotionEventEmitter::ClearMotionContext() {
+    std::lock_guard<std::mutex> lock(context_mutex_);
     last_motion_device_id_.clear();
     last_motion_capability_raw_.clear();
     last_motion_source_.clear();
@@ -28,6 +31,8 @@ cJSON* MotionEventEmitter::BuildBaseEvent(const std::string& task_id,
     }
     cJSON_AddStringToObject(o, "task_id", task_id.c_str());
     cJSON_AddStringToObject(o, "phase", phase);
+    // 固件审查第二轮 FW-F12：读 last_motion_* 需持锁。
+    std::lock_guard<std::mutex> lock(context_mutex_);
     if (!last_motion_device_id_.empty()) {
         cJSON_AddStringToObject(o, "device_id",
                                 last_motion_device_id_.c_str());
@@ -100,7 +105,15 @@ void MotionEventEmitter::EmitDeviceInfoIfOk(const ReturnValue& rv,
         !U1ProtocolClient::ReturnValueU1Ok(rv)) {
         return;
     }
-    if (last_motion_device_id_.empty()) {
+    // 固件审查第二轮 FW-F12：持锁快照 last_motion_*，避免跨线程数据竞争。
+    std::string device_id;
+    std::string capability_raw;
+    {
+        std::lock_guard<std::mutex> lock(context_mutex_);
+        device_id = last_motion_device_id_;
+        capability_raw = last_motion_capability_raw_;
+    }
+    if (device_id.empty()) {
         return;
     }
     cJSON* workspace =
@@ -114,11 +127,9 @@ void MotionEventEmitter::EmitDeviceInfoIfOk(const ReturnValue& rv,
         return;
     }
     cJSON_AddStringToObject(o, "task_id", task_id.c_str());
-    cJSON_AddStringToObject(o, "device_id",
-                            last_motion_device_id_.c_str());
-    if (!last_motion_capability_raw_.empty()) {
-        cJSON_AddStringToObject(o, "capability",
-                                last_motion_capability_raw_.c_str());
+    cJSON_AddStringToObject(o, "device_id", device_id.c_str());
+    if (!capability_raw.empty()) {
+        cJSON_AddStringToObject(o, "capability", capability_raw.c_str());
     }
 
     const char* keys[] = {"model", "hw_rev", "fw_rev"};

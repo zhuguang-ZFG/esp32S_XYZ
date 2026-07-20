@@ -73,13 +73,17 @@ ReturnValue MotionExecutor::ExecuteControlWithTaskId(
 
 namespace {
 
-cJSON* BuildOkResponse(const char* cmd) {
+// 固件审查第二轮 FW-F1：回执诚实——ok=true 仅表示急停实时字符已成功写入 UART
+// （signal sent），不代表 U1 已确认停车；真正"已停"确认留待 HIL 观察 U1 状态帧。
+cJSON* BuildSignalSentResponse(const char* cmd, const char* message) {
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         return nullptr;
     }
     cJSON_AddBoolToObject(root, "ok", true);
     cJSON_AddStringToObject(root, "cmd", cmd);
+    cJSON_AddStringToObject(root, "state", "signal_sent");
+    cJSON_AddStringToObject(root, "message", message);
     return root;
 }
 
@@ -98,8 +102,10 @@ cJSON* BuildErrorResponse(const char* message) {
 ReturnValue MotionExecutor::ExecuteStopWithTaskId(
     const std::string& task_id) {
     // 固件审查 P2：STOP 用抢占式写，避免在 PATH_END 长等待期间被 UART 锁阻塞。
+    // 固件审查第二轮 FW-F1：STOP 走 Grbl 实时字符 '!'(FeedHold)；回执只承诺"已发送"。
     if (protocol_.SendU1PreemptiveCommand("STOP")) {
-        return ReturnValue(CJsonPtr(BuildOkResponse("STOP")));
+        return ReturnValue(CJsonPtr(BuildSignalSentResponse(
+            "STOP", "stop signal sent (feed hold); halt not yet confirmed")));
     }
     return ReturnValue(CJsonPtr(BuildErrorResponse("stop command failed to send")));
 }
@@ -107,8 +113,10 @@ ReturnValue MotionExecutor::ExecuteStopWithTaskId(
 ReturnValue MotionExecutor::ExecuteEstopWithTaskId(
     const std::string& task_id) {
     // 固件审查 P2：ESTOP 用抢占式写，确保夹手/撞机场景下能立即停电机。
+    // 固件审查第二轮 FW-F1：ESTOP 走 Grbl 实时字符 0x18(Reset)；回执只承诺"已发送"。
     if (protocol_.SendU1PreemptiveCommand("ESTOP")) {
-        return ReturnValue(CJsonPtr(BuildOkResponse("ESTOP")));
+        return ReturnValue(CJsonPtr(BuildSignalSentResponse(
+            "ESTOP", "estop signal sent (reset); halt not yet confirmed")));
     }
     return ReturnValue(CJsonPtr(BuildErrorResponse("estop command failed to send")));
 }
@@ -300,9 +308,9 @@ ReturnValue MotionExecutor::ExecuteEstopCapability() {
 }
 
 ReturnValue MotionExecutor::ExecuteMoveCapability(int x, int y, int z,
-                                                   int feed) {
+                                                   int feed, bool has_z) {
     return ExecuteMoveWithTaskId(protocol_.NextLocalTaskId("move"), x, y, z,
-                                 feed);
+                                 feed, has_z);
 }
 
 ReturnValue MotionExecutor::ExecuteMoveRelCapability(int dx, int dy, int dz,
