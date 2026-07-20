@@ -11,6 +11,7 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { useToast } from 'wot-design-uni/components/wd-toast'
+import SectionCard from '@/components/section-card.vue'
 
 defineOptions({ name: 'PrivacyPermissionsPage' })
 
@@ -161,60 +162,54 @@ function setPermissionDenied(item: PermissionItem) {
     <wd-navbar title="隐私与权限" left-arrow placeholder safe-area-inset-top fixed @click-left="goBack" />
 
     <view class="p-[24rpx]">
-      <view class="mb-[32rpx] rounded-[24rpx] p-[32rpx]" style="background: var(--surface); border: 1rpx solid var(--border); box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);">
-        <text class="block text-[32rpx] font-bold" style="color: var(--text);">
-          隐私协议
-        </text>
-        <text class="mt-[12rpx] block text-[24rpx] leading-[1.6]" style="color: var(--muted);">
+      <!-- M45: reuse SectionCard (same shell as settings/index) instead of a third card style -->
+      <SectionCard title="隐私协议">
+        <text class="block text-[24rpx] leading-[1.6]" style="color: var(--muted);">
           查看个人信息收集、使用、保存和第三方服务说明。
         </text>
         <wd-button type="primary" block custom-class="!mt-[24rpx] !h-[80rpx] !rounded-[16rpx]" @click="openPrivacyPolicy">
           查看隐私政策
         </wd-button>
-      </view>
+      </SectionCard>
 
-      <view class="mb-[24rpx] flex items-center">
-        <text class="text-[32rpx] font-bold" style="color: var(--text);">
-          权限授权
-        </text>
-      </view>
-
-      <view class="space-y-[20rpx]">
-        <view
-          v-for="item in permissionItems"
-          :key="item.id"
-          class="rounded-[24rpx] p-[28rpx]"
-          style="background: var(--surface); border: 1rpx solid var(--border); box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);"
-        >
-          <view class="mb-[16rpx] flex items-center justify-between">
-            <text class="text-[30rpx] font-semibold" style="color: var(--text);">
-              {{ item.title }}
+      <SectionCard title="权限授权">
+        <view class="space-y-[20rpx]">
+          <view
+            v-for="item in permissionItems"
+            :key="item.id"
+            class="rounded-[16rpx] p-[20rpx]"
+            style="background: rgba(255,255,255,0.02); border: 1rpx solid var(--border);"
+          >
+            <view class="mb-[16rpx] flex items-center justify-between">
+              <text class="text-[30rpx] font-semibold" style="color: var(--text);">
+                {{ item.title }}
+              </text>
+              <wd-tag :type="stateTagType(permissionState[item.id])" size="mini">
+                {{ stateLabel(permissionState[item.id]) }}
+              </wd-tag>
+            </view>
+            <text class="block text-[24rpx] leading-[1.6]" style="color: var(--muted);">
+              {{ item.purpose }}
             </text>
-            <wd-tag :type="stateTagType(permissionState[item.id])" size="mini">
-              {{ stateLabel(permissionState[item.id]) }}
-            </wd-tag>
+            <text class="mt-[8rpx] block text-[24rpx] leading-[1.6]" style="color: var(--dim);">
+              {{ item.fallback }}
+            </text>
+            <wd-button type="info" plain block custom-class="!mt-[20rpx] !h-[72rpx] !rounded-[16rpx]" @click="requestPermission(item)">
+              单独授权
+            </wd-button>
           </view>
-          <text class="block text-[24rpx] leading-[1.6]" style="color: var(--muted);">
-            {{ item.purpose }}
-          </text>
-          <text class="mt-[8rpx] block text-[24rpx] leading-[1.6]" style="color: var(--dim);">
-            {{ item.fallback }}
-          </text>
-          <wd-button type="info" plain block custom-class="!mt-[20rpx] !h-[72rpx] !rounded-[16rpx]" @click="requestPermission(item)">
-            单独授权
-          </wd-button>
         </view>
-      </view>
 
-      <view v-if="fallbackHint" class="mt-[28rpx] rounded-[20rpx] p-[24rpx]" style="background: rgba(245,158,11,0.06); border: 1rpx solid rgba(245,158,11,0.15);">
-        <text class="block text-[26rpx] leading-[1.6]" style="color: var(--amber);">
-          {{ fallbackHint }}
-        </text>
-      </view>
+        <view v-if="fallbackHint" class="mt-[28rpx] rounded-[20rpx] p-[24rpx]" style="background: rgba(245,158,11,0.06); border: 1rpx solid rgba(245,158,11,0.15);">
+          <text class="block text-[26rpx] leading-[1.6]" style="color: var(--amber);">
+            {{ fallbackHint }}
+          </text>
+        </view>
 
-      <wd-button type="default" block custom-class="!mt-[28rpx] !h-[80rpx] !rounded-[16rpx]" @click="openSystemPermissionSettings">
-        打开系统授权设置
-      </wd-button>
+        <wd-button type="default" block custom-class="!mt-[28rpx] !h-[80rpx] !rounded-[16rpx]" @click="openSystemPermissionSettings">
+          打开系统授权设置
+        </wd-button>
+      </SectionCard>
     </view>
   </view>
 </template>

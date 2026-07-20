@@ -147,9 +147,10 @@ function goToVoiceprint() {
 }
 // S1: 任务失败「重试」→ 滚到写画区（无服务端 task 重放，只能引导重新提交）
 function scrollToWriteDraw() {
+  // uni-app typings require a callback on scrollOffset even when using exec().
   const q = uni.createSelectorQuery()
   q.select('#write-draw-anchor').boundingClientRect()
-  q.selectViewport().scrollOffset()
+  q.selectViewport().scrollOffset(() => {})
   q.exec((res) => {
     const rect = res?.[0] as UniApp.NodeInfo | undefined
     const viewport = res?.[1] as UniApp.NodeInfo | undefined

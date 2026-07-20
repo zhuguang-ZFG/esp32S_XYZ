@@ -122,36 +122,39 @@ defineExpose({
       <!-- 声纹卡片列表 -->
       <view class="box-border flex flex-col gap-[24rpx] p-[20rpx]">
         <view v-for="item in voicePrintList" :key="item.id">
-          <wd-swipe-action
-            :model-value="swipeStates[item.id] || 'close'"
-            @update:model-value="swipeStates[item.id] = $event"
-          >
-            <view class="bg-[var(--surface)] border border-[1rpx] border-[var(--border)] p-[32rpx] shadow-[0_4rpx_20rpx_rgba(0,0,0,0.2)]" @click="handleEdit(item)">
-              <view>
-                <text class="mb-[12rpx] block text-[32rpx] text-[var(--text)] font-semibold">
-                  {{ item.sourceName }}
-                </text>
-                <text class="mb-[12rpx] block text-[28rpx] text-[var(--muted)] leading-[1.4]">
-                  {{ item.introduce || '暂无描述' }}
-                </text>
-                <text class="block text-[24rpx] text-[var(--dim)]">
-                  {{ item.createDate }}
-                </text>
-              </view>
-            </view>
-
-            <template #right>
-              <view class="h-full flex">
-                <view
-                  class="h-full min-w-[120rpx] flex items-center justify-center bg-[#ff4d4f] p-x-[32rpx] text-[28rpx] text-white font-medium"
-                  @click="handleDelete(item.id)"
-                >
-                  <wd-icon name="delete" />
-                  {{ t('voiceprint.delete') }}
+          <!-- M36: only square cards in the app — round + clip swipe actions -->
+          <view class="overflow-hidden rounded-[24rpx]">
+            <wd-swipe-action
+              :model-value="swipeStates[item.id] || 'close'"
+              @update:model-value="swipeStates[item.id] = $event"
+            >
+              <view class="bg-[var(--surface)] border border-[1rpx] border-[var(--border)] p-[32rpx] shadow-[0_4rpx_20rpx_rgba(0,0,0,0.2)]" @click="handleEdit(item)">
+                <view>
+                  <text class="mb-[12rpx] block text-[32rpx] text-[var(--text)] font-semibold">
+                    {{ item.sourceName }}
+                  </text>
+                  <text class="mb-[12rpx] block text-[28rpx] text-[var(--muted)] leading-[1.4]">
+                    {{ item.introduce || '暂无描述' }}
+                  </text>
+                  <text class="block text-[24rpx] text-[var(--dim)]">
+                    {{ item.createDate }}
+                  </text>
                 </view>
               </view>
-            </template>
-          </wd-swipe-action>
+
+              <template #right>
+                <view class="h-full flex">
+                  <view
+                    class="h-full min-w-[120rpx] flex items-center justify-center bg-[#ff4d4f] p-x-[32rpx] text-[28rpx] text-white font-medium"
+                    @click="handleDelete(item.id)"
+                  >
+                    <wd-icon name="delete" />
+                    {{ t('voiceprint.delete') }}
+                  </view>
+                </view>
+              </template>
+            </wd-swipe-action>
+          </view>
         </view>
       </view>
     </view>
