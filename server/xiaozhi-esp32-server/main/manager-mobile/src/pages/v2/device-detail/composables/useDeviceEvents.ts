@@ -81,8 +81,12 @@ export function useDeviceEvents(deviceId: () => string, appendLog: (msg: string)
       }
       infoLoading.value = false
       clearInfoLoadingTimer()
-      if (snap?.working)
-        latestPhase.value = 'running'
+      // MP-3:直接采用 mapServerEvent 已算好的 phase(working ? 'running' : 'idle')。
+      // 此前只在 working 时置 running、从不回置 idle,错过 completed/failed 事件后永久假忙。
+      if (typeof snap?.phase === 'string')
+        latestPhase.value = snap.phase
+      else if (snap?.working !== undefined)
+        latestPhase.value = snap.working ? 'running' : 'idle'
       return
     }
     if (event?.event_type === 'device_info_reply') {
@@ -212,8 +216,8 @@ export function useDeviceEvents(deviceId: () => string, appendLog: (msg: string)
     }
     infoLoading.value = false
     clearInfoLoadingTimer()
-    if (status.working)
-      latestPhase.value = 'running'
+    // MP-3:手动刷新同样要能把 working=false 回置 idle,否则任务失败后无法恢复
+    latestPhase.value = status.working ? 'running' : 'idle'
   }
 
   return {

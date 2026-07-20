@@ -8,7 +8,14 @@ const { recording, connecting, transcript, error, startRecording, stopRecording 
 async function onTouchStart() {
   if (connecting.value)
     return
-  await startRecording()
+  try {
+    await startRecording()
+  }
+  catch (e) {
+    // MP-4:connectVoiceWs 失败（ticket/WS）不再抛成未捕获 rejection，写入 error 提示用户
+    const err = e as { errMsg?: string, message?: string }
+    error.value = err?.errMsg || err?.message || String(e)
+  }
 }
 
 async function onTouchEnd() {

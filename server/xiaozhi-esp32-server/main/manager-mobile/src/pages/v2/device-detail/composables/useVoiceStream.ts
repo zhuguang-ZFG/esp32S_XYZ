@@ -25,6 +25,12 @@ export function useVoiceStream(): VoiceStreamState & {
 
   let socketTask: UniApp.SocketTask | null = null
   let recorder: UniApp.RecorderManager | null = null
+  /**
+   * MP-4 竞态守卫:用户在 connectVoiceWs() await 期间松手时,recording 尚为 false,
+   * stopRecording 直接返回,连接完成后 recorder.start() 仍会执行 → 麦克风持续录音(隐私)。
+   * touchend 先置此标志,startRecording 连接完成后检查,若已请求停止则不启动录音。
+   */
+  let stopRequested = false
 
   function cleanupSocket() {
     if (!socketTask)
@@ -82,10 +88,16 @@ export function useVoiceStream(): VoiceStreamState & {
   }
 
   async function startRecording() {
-    if (recording.value)
+    if (recording.value || connecting.value)
       return
+    stopRequested = false
     transcript.value = ''
     await connectVoiceWs()
+    if (stopRequested) {
+      // 连接期间用户已松手：不启动录音，释放刚建立的连接
+      cleanupSocket()
+      return
+    }
     recorder = uni.getRecorderManager()
     recorder.onFrameRecorded((res) => {
       if (!socketTask || !recording.value)
@@ -108,6 +120,7 @@ export function useVoiceStream(): VoiceStreamState & {
   }
 
   async function stopRecording() {
+    stopRequested = true
     if (!recording.value)
       return
     recording.value = false

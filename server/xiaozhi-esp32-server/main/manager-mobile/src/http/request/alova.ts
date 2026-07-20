@@ -151,12 +151,24 @@ const alovaInstance = createAlova({
       return response
     }
 
-    // 处理 HTTP 状态码错误
+    // 处理 HTTP 状态码错误（MP-1）：后端错误统一 envelope {code:int, message:str} + 4xx，
+    // 优先透出响应体里的业务 message，而非传输层 errMsg（恒为 "request:ok"）
     if (statusCode !== 200) {
-      const errorMessage = ShowMessage(statusCode) || `HTTP请求错误[${statusCode}]`
-      console.error('errorMessage===>', errorMessage)
+      let body: Partial<IResponse> | null = null
+      if (typeof rawData === 'string') {
+        try {
+          body = JSON.parse(rawData)
+        }
+        catch { body = null }
+      }
+      else if (rawData && typeof rawData === 'object') {
+        body = rawData as Partial<IResponse>
+      }
+      const bodyMsg = body?.message || body?.msg || ''
+      const errorMessage = bodyMsg || ShowMessage(statusCode) || `HTTP请求错误[${statusCode}]`
+      console.error('errorMessage===>', statusCode, errorMessage, errMsg)
       toast.error(errorMessage)
-      throw new Error(`${errorMessage}：${errMsg}`)
+      throw new Error(`请求错误[${body?.code ?? statusCode}]：${errorMessage}`)
     }
 
     // 处理业务逻辑错误

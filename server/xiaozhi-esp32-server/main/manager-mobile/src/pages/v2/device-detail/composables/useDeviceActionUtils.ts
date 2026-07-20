@@ -10,18 +10,14 @@ export const healthCheckPath = [
   { cmd: 'L', x: 5, y: 5, z: 0 },
 ]
 
+/**
+ * 任务提交错误 → 用户可读文案。
+ * 后端错误 envelope 统一为 {code, message}，HTTP 层（alova.ts）已透出后端 message，
+ * 此处直接展示；历史 E_RUNTIME_STALE/E_CONTENT_BLOCKED/E_INVALID_DRAWING/
+ * E_NOT_ENTITLED/E_NO_PAPER 码后端从未返回（2026-07-20 审查确认为死代码，已删除映射）。
+ */
 export function taskSubmitErrorMessage(error: any) {
   const text = String(error?.message || error || '')
-  if (text.includes('E_RUNTIME_STALE'))
-    return t('v2.detail.errorRuntimeStale')
-  if (text.includes('E_CONTENT_BLOCKED'))
-    return t('v2.detail.errorContentBlocked')
-  if (text.includes('E_INVALID_DRAWING'))
-    return t('v2.detail.errorInvalidDrawing')
-  if (text.includes('E_NOT_ENTITLED'))
-    return t('v2.detail.errorNotEntitled')
-  if (text.includes('E_NO_PAPER'))
-    return t('v2.detail.errorNoPaper')
   return text || t('common.fail')
 }
 

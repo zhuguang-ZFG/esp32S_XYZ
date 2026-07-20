@@ -3,7 +3,9 @@ import { t } from '@/i18n'
 
 interface Props {
   autoConnect?: boolean
-  isConnectedToESP32: boolean
+  // MP-6:父组件以 :is-connected-to-esp32 传参(camelize → isConnectedToEsp32),
+  // 此前声明为 isConnectedToESP32 导致 prop 永远 undefined、状态恒显"未连接"(TS2345)
+  isConnectedToEsp32: boolean
   checkingConnection: boolean
 }
 
@@ -16,7 +18,7 @@ const emit = defineEmits<{
 
 <template>
   <view v-if="autoConnect" class="connection-status">
-    <view v-if="!isConnectedToESP32" class="status-warning">
+    <view v-if="!isConnectedToEsp32" class="status-warning">
       <view class="status-content">
         <text class="warning-text">
           {{ t('deviceConfig.connectDlcHotspot') }} (DLC-XXXXXX)
