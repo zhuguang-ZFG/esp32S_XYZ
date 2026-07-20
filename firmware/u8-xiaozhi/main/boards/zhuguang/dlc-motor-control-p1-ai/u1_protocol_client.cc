@@ -34,30 +34,36 @@ std::string U1ProtocolClient::NextLocalTaskId(const char* prefix) {
     return std::string("u8_") + prefix + "_" + std::to_string(NextProtocolMessageId());
 }
 
-/// Read response from U1 UART.
-/// The loop waits for data with up to 2 idle rounds; after the last byte the total
-/// blocking time can reach approx 3 x timeout_ms (1 data round + 2 idle rounds).
+/// Read one response line from U1 UART.
+/// 固件审查第二轮 FW-F4：U1 私有协议全部响应（ack/status/result/error/device_info，
+/// 见 U1 Protocol.cpp grbl_sendf 格式串）均以 "\r\n" 结尾，故按行读——读到 '\n'
+/// 立即返回。旧实现"2 轮空闲判结束"每次调用尾部多等 2×timeout_ms（PATH_END
+/// timeout=120000ms 时白等 240s），是 30s 任务看门狗 panic 的直接根因。
+/// 逐字节读取以保证 '\n' 一到即返（uart_read_bytes 会等满请求长度，块读无法早退）；
+/// timeout_ms 为等待下一字节的超时，首字节等待即覆盖 U1 开始响应前的耗时。
+/// 某轮读到 0 字节视为 U1 无响应/发半行即停，返回已收内容（可能为空串）。
 /// Protected by uart_mutex_ (caller must hold it via SendU1Line).
 std::string U1ProtocolClient::ReadU1Response(int timeout_ms) {
     std::string response;
-    uint8_t buffer[128];
-    int idle_rounds = 0;
+    uint8_t byte = 0;
 
-    while (idle_rounds < 2) {
-        // 防止 U1 故障时持续发送导致 response 无界增长耗尽堆（OOM）。
+    while (true) {
+        // 防止 U1 故障时持续发送无换行数据导致 response 无界增长耗尽堆（OOM）。
         if (response.size() >= kU1MaxResponseBytes) {
             ESP_LOGW(TAG_U1_PROTOCOL,
                      "U1 response exceeded %zu bytes, truncating (possible U1 flood)",
                      kU1MaxResponseBytes);
             break;
         }
-        int len = uart_read_bytes(U1_UART_PORT_NUM, buffer, sizeof(buffer),
-                                  pdMS_TO_TICKS(timeout_ms));
-        if (len > 0) {
-            response.append(reinterpret_cast<char*>(buffer), len);
-            idle_rounds = 0;
-        } else {
-            ++idle_rounds;
+        const int len = uart_read_bytes(U1_UART_PORT_NUM, &byte, 1,
+                                        pdMS_TO_TICKS(timeout_ms));
+        if (len <= 0) {
+            // 本轮超时：正常响应必带 '\n' 不会走到这里；说明 U1 无响应或异常中断。
+            break;
+        }
+        response.push_back(static_cast<char>(byte));
+        if (byte == '\n') {
+            break;
         }
     }
 
